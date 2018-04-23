@@ -66,21 +66,26 @@ nuts0<-as.character(rgdx.set(setfile,ts = TRUE,symName = "NUTS0")[,1])
 cntr<-substr(nuts0,1,2)
 srnuts2<-as.character(rgdx.set(setfile,ts = TRUE,symName = "SRNUTS2")[,1])
 nuts2<-substr(srnuts2,1,4)
+rall<-rgdx.set(setfile,ts = TRUE,te=TRUE,symName = "RALL")
 
-# GHG emissions
-# Sets according to x:\adrian\models\capri\dndc\gams\capreg\nitrogenlcasets.gms
-#
-# SET sAREA(sNGHG) /LCAREA/;
-# SET sGHGcdir(sNGHG) GHG fluxes - direct - from crop activities according to IPCC       /N2OAPL,N2OGRC,N2OSYN,N2OCRO,CH4RIC/; #N2OFIX,
-# SET sGHGclus(sNGHG) GHG fluxes from land use - cultivated histosols according to IPCC  /N2OHIS,CO2HIS,CO2SEQ/;
-# SET sGHGcind(sNGHG) GHG fluxes - indirect - form crop activities according to IPCC     /N2OLEA,N2OAMM/;
-# SET sGHGcene(sNGHG) GHG fluxes from energy use in crop-production                      /N2OPRD,CO2PRD,CO2DIC,CO2OFC,CO2ELC,CO2INC,CO2SEE,CO2PPT/
-# SET sGHGcluc(sNGHG) GHG fluxes from land use change in LCA for livestock production    /N2OBUR,N2OSOI,CH4BUR,CO2SOI,CO2BIO/;
-# sGHGc(sNGHG)=sGHGcdir(sNGHG)+sGHGclus(sNGHG)+sGHGcind(sNGHG)+sGHGcluc(sNGHG)+sGHGcene(sNGHG);
+ghgsets<-paste0("# Selected GHG emissions used:\n")
+ghgsets<-paste0(ghgsets,"#,Sets according to x:\adrian\models\capri\dndc\gams\capreg\nitrogenlcasets.gms\n")
+ghgsets<-paste0(ghgsets,"#,SET sAREA(sNGHG) /LCAREA/;\n")
+ghgsets<-paste0(ghgsets,"#,SET sGHGcdir(sNGHG) GHG fluxes - direct - from crop activities according to IPCC       /,N2OAPL,N2OGRC,N2OSYN,N2OCRO,CH4RIC,/; #N2OFIX,\n")
+ghgsets<-paste0(ghgsets,"#,SET sGHGclus(sNGHG) GHG fluxes from land use - cultivated histosols according to IPCC  /,N2OHIS,CO2HIS,CO2SEQ,/;\n")
+ghgsets<-paste0(ghgsets,"#,SET sGHGcind(sNGHG) GHG fluxes - indirect - form crop activities according to IPCC     /,N2OLEA,N2OAMM,/;\n")
+ghgsets<-paste0(ghgsets,"#,SET sGHGcene(sNGHG) GHG fluxes from energy use in crop-production                      /,N2OPRD,CO2PRD,CO2DIC,CO2OFC,CO2ELC,CO2INC,CO2SEE,CO2PPT,/\n")
+ghgsets<-paste0(ghgsets,"#,SET sGHGcluc(sNGHG) GHG fluxes from land use change in LCA for livestock production    /,N2OBUR,N2OSOI,CH4BUR,CO2SOI,CO2BIO,/;\n")
+ghgsets<-paste0(ghgsets,"#,sGHGc(sNGHG)=sGHGcdir(sNGHG)+sGHGclus(sNGHG)+sGHGcind(sNGHG)+sGHGcluc(sNGHG)+sGHGcene(sNGHG);\n")
 sghgexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "sGHGc")
 sghg<-as.character(sghgexp[,1])
 sghg<-c(sghg,"LCAREA")
+# do exclude C-sequestration
+sghg<-setdiff(sghg,c("CO2SEQ"))
 cols<-c(sghg,"GROF")
+
+allghgs<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "GHG")
+names(allghgs)<-c("GHG","Description")
 
 datapath<-"c:/adrian/models/capri/trunk_to_star/output/results/capreg/"
 datapath<-paste0(capridat,"capreg/")
@@ -127,39 +132,47 @@ getdata<-function(datafile,dataparm,variables){
     ghgtotal<-aggregate(ghgcountry[,intersect(cropo,names(ghgcountry))],
                         by=list(ghgcountry$NUTS0),
                         sum,na.rm=TRUE,drop=TRUE)
-
+    
+    ghgcountry<-rbind(ghgcountry,area)
+    ghgcountry[is.na(ghgcountry)]<-0
+    ghgtotal<-rbind(ghgtotal,area)
 }
 
 
 
 
+curdate<-format(Sys.time(), "%Y%m%d")
+commonheader<-paste0("#,Data Source: NITROGENLCA - as used in Leip et al. (2014) and Leip et al. (2015)\n")
+commonheader<-paste0(commonheader,"#,Data referring to the base year 2008\n")
+commonheader<-paste0(commonheader,"#,Extracted ",curdate," for the paper on Future foods (Parodi et al.)\n")
+commonheader<-paste0(commonheader,"#, - script extract_nitrogenlac_for_alejandro - github https://github.com/aleip/capriextract\n")
+commonheader<-paste0(commonheader,"#,Content: Area per kg of crop (fresh weight) [ha/kg crop]\n")
+commonheader<-paste0(commonheader,"#,         GHG emissions by source category and country [kg CO2eq/kg crop]\n")
+commonheader<-paste0(commonheader,"#,GWPs used: IPCC 2007 (AR4)\n")
+commonheader<-paste0(commonheader,"#,Values are weighted averages on the basis of NUTS2 values using GROF (gross production) for weighting\n")
+commonheader<-paste0(commonheader,"#,Files included: - nitrogenlca_ghgcountry.csv\n")
+commonheader<-paste0(commonheader,"#,                - nitrogenlca_ghgtotal\n")
+commonheader<-paste0(commonheader,"#,                - nitrogenlca_sets\n")
 
 
 
-
-
-
-
-
-onefeed<-getfeed(cntr[1])
-allfeed<-Reduce(rbind,lapply(cntr,function(x) getfeed(x)))
-allfedm<-Reduce(rbind,lapply(cntr,function(x) getfedm(x)))
-
-write.csv(rbind(maactexp,daactexp),paste0("animalactivities",format(Sys.time(), "%Y%m%d"),".csv"),row.names=FALSE)
-write.csv(feed_rowsexp,paste0("feedingstuff",format(Sys.time(), "%Y%m%d"),".csv"),row.names=FALSE)
-write.csv(feed_to_o,paste0("feedingstuffcrops",format(Sys.time(), "%Y%m%d"),".csv"),row.names=FALSE)
-write.csv(allfedm,paste0("crops2feed",format(Sys.time(), "%Y%m%d"),".csv"),row.names=FALSE)
-con<-file(paste0("feedintakebyanimalactivity",format(Sys.time(), "%Y%m%d"),".csv"),open = "wt")
-writeLines(paste0("# Data Source: CAPREG - 20.10.2017"),con)
-writeLines(paste0("# Repository: https://svn1.agp.uni-bonn.de/svn/capri_out_after2016/results/capreg"),con)
-writeLines(paste0("# Download: 20171113"),con)
-writeLines(paste0("# Files used: res_12%MSALL%.gdx"),con)
-writeLines(paste0("# Parameter: DATA2"),con)
-writeLines(paste0("# Definition (livestock activities) of columns and rows (feed stuff) selected: see other files"),con)
-#write.csv(allfeed,paste0("feedintakebyanimalactivity",format(Sys.time(), "%Y%m%d"),".csv"))
-write.csv(allfeed,con,row.names=FALSE)
-
+con<-file(paste0("nitrogenlca_ghgcountry~",curdate,".csv"),open="wt")
+writeLines(commonheader,con)
+write.csv(ghgcountry,con)
+close(con)
+con<-file(paste0("nitrogenlca_ghgtotal~",curdate,".csv"),open="wt")
+writeLines(commonheader,con)
+write.csv(ghgtotal,con)
 close(con)
 
-
-
+con<-file(paste0("nitrogenlca_sets~",curdate,".csv"),open="wt")
+writeLines(commonheader,con)
+writeLines(ghgsets,con)
+writeLines("",con)
+write.csv(cropoexp,con)
+writeLines("",con)
+write.csv(allghgs,con)
+writeLines("",con)
+write.csv(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "RALL"),con)
+writeLines("",con)
+close(con)
