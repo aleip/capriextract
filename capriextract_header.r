@@ -38,8 +38,8 @@ setwd(workpath)
 #link with gams directory
 igdx(gamspath)
 
-setfile<-"x:\\adrian\\models\\capri\\dndc\\results\\20110722\\nitrogen\\nitrogenlca_sets.gdx"
 setfile<-paste0(getwd(),"/LAPMcapdis_END.gdx")
+setfile<-"x:\\adrian\\models\\capri\\dndc\\results\\20110722\\nitrogen\\nitrogenlca_sets.gdx"
 maactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MAACT")
 maact<-as.character(maactexp[,1])
 daactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "DAACT")
