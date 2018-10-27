@@ -1,3 +1,4 @@
+
 opendata<-function(scope,curcountry,curyear){
   if(scope%in%c("feed_marketbal","activities") | grepl("baseyear",scope)){
     datafile<-paste0("res_",curyear)
@@ -13,6 +14,15 @@ opendata<-function(scope,curcountry,curyear){
   if(grepl("nlca",scope)){
     datafile<-paste0("capmod/res_2_0830",curscen,".gdx")
     datafile<-paste0(datapath,datafile)
+  }
+  if(grepl("capdis",scope)){
+    datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear)
+    if(scope=="capdiscapreg") datafile<-paste0(datafile,baseyear)
+    if(scope=="capdistimes") datafile<-paste0(datafile,curyear)
+    datafile<-paste0(datapath,datafile,".gdx")
+    dataparm<-"xobs"
+    ydim<-""
+    datanames<-data3dim
   }
   if(file.exists(datafile)){
     cat("\n ",datafile)
@@ -182,84 +192,104 @@ getmultipleyears<-function(scope,cntr,curyears){
   return(list(capridat,caprimeta))
 }
   
-checkaggvsdet<-function(x, aggs, dets, listdetails=0){
+checkaggvsdet<-function(x, aggs, dets, listdetails="error"){
   
   # Compares N budget aggregates vs sum of detailed positions
   # x is a data frame or data table with two columns.
   #   column 1 should contain the element names and column 2 the values
+  
+  # ------- listdetails --------
+  # all = all output given
+  # error = only errors (missing elements and mismatch)
+  # mismatch = only mismatches
+  
   x<-as.data.table(x)
   names(x)<- c("x","y")
   miss<-""
+  fail0<-0
   fail<-0
   
-  if(sum(x$x%in%aggs)==0){
-    cat("\n There is no ",aggs," in the data set!")
-    fail<-1
+  if(sum(x$x%in%aggs)==0){    fail0<-1  }
+  if(sum(x$x%in%dets)==0){   
+    if(fail0 == 1) {  # There is no left nor right hand side ==> value==0     
+      sumaggs<-0
+      sumdets<-0
+      misaggs<-""
+      misdets<-""
+    } else { fail <- 1 }            # Detailed flows are missing
   }else{
-    if(sum(x$x%in%dets)==0){   
-      cat("\n There is none of ",dets," in the data set!")
-      fail<-1
-    }else{
+    if( fail0 == 1) {fail <- 2      # Aggregated flow is missing
+    }else{ # Both detailed and aggregated flows available
       misaggs<-paste(aggs[!which(aggs%in%x$x)], collapse="+")
       misdets<-paste(dets[!which(dets%in%x$x)], collapse="+")
       sumaggs<-round(sum(x$y[x$x%in%aggs]),5)
       sumdets<-round(sum(x$y[x$x%in%dets]),5)
-      if(sumaggs==sumdets){
-        fail=0
-      }else{
-        fail<-2
-      }
+      if(sumaggs!=sumdets){fail<-3}  # Mismach between aggregated flow and sum of detailed flows
     }
-  }
-  if(fail==0) {
-    cat("\n ", paste(aggs,collapse="+"), " = ",paste(dets,collapse="+") ," = ", sumdets)
-    if(misaggs!="") cat("\n Missing elements: ",misaggs)
-    if(misdets!="") cat("\n Missing elements: ",misdets)
   }
 
-  if(fail==1) cat("\n Cannot carry out check!", aggs, " = SUM(",paste(dets,collapse=", ") ,")")
-  if(fail==1) cat("\n Cannot carry out check!", aggs, " = SUM(",paste(dets,collapse=", ") ,")")
-  if(fail==2) {
-    cat("\n !! Mismach: \n ", 
-                  "\n ", paste(aggs,collapse="+") ," = ", sumaggs,
-                  "\n ", paste(dets,collapse="+") ," = ", sumdets,
-                  "\n Difference = ", sumaggs-sumdets)
-    if(sumaggs>sumdets){ #List values of aggs
-      for(z in aggs){cat("\n ", z, " = ", x$y[x$x==z])}
-    }else{
-      for(z in dets){cat("\n ", z, " = ", x$y[x$x==z])}
+  if(fail==0){
+    if(listdetails == "all") {
+    cat("\n ", crop, ": ", paste(aggs,collapse="+"), " = ",paste(dets,collapse="+") ," = ", sumdets)
+    if(misaggs!="") cat("\n Missing elements: ",misaggs)
+    if(misdets!="") cat("\n Missing elements: ",misdets)
+    }else if(listdetails != "mismatch"){
+      cat(" .. OK")
     }
   }
-  if(listdetails==1){
+  if(listdetails != "mismatch"){
+    if(fail == 1 ) cat("\n ", crop, ": There is no ",dets," in the data set!")
+    if(fail == 2 ) cat("\n ", crop, ": There is no ",aggs," in the data set!")
+    if(fail == 1 | fail== 2) cat("\n ", crop, ": Cannot carry out check!", aggs, " = SUM(",paste(dets,collapse=", ") ,")")
+  }
+  if(fail == 3) {
+    cat("\n ", crop, ": Mismach!! ", paste(aggs,collapse="+"), " = ",paste(dets,collapse="+"))
+    cat("\n ", paste(aggs,collapse="+") ," = ", sumaggs,
+        "; ", paste(dets,collapse="+") ," = ", sumdets,
+        ";  Difference = ", sumaggs-sumdets)
+    if(length(aggs)>1){cat("\n ");for(z in aggs){cat(z, " = ", x$y[x$x==z])}}
+    if(length(aggs)>1 & length(dets)>1){cat("; ")}
+    if(length(dets)>1){cat("\n");for(z in dets){cat("  ",z, " = ", x$y[x$x==z])}}
+    # if(sumaggs>sumdets){ #List values of aggs
+    #   for(z in aggs){cat("\n ", z, " = ", x$y[x$x==z])}
+    # }else{
+    #   for(z in dets){cat("\n ", z, " = ", x$y[x$x==z])}
+    # }
+  }
+  if(listdetails=="details"){
     for(z in c(aggs,dets)){cat("\n ", z, " = ", x$y[x$x==z])}
   }
 }
 
-checkCropNbudget<-function(x, crop){
+checkCropNbudget<-function(x, crop, output="error"){
   
-  cat("\n Check N-budget for ", crop)
-  emiscalc_crop<-selectrowscolsregi(reload=0, 
-                                    capridat=x, 
-                                    cols=crop,
-                                    rows=currows, 
-                                    curdim5 = "T1",
-                                    regi=curcountry, 
-                                    ydim = "2030")
+  if(output != "mismatch"){
+    cat("\n Check N-budget for ", crop)
+  }
+  nflows_crop<-selectrowscolsregi(reload=0, 
+                                  capridat=x, 
+                                  cols=crop,
+                                  rows=currows, 
+                                  curdim5 = NULL,
+                                  regi=curcountry, 
+                                  ydim = "2030"
+  )
+  
 
-  x<-emiscalc_swhe[,c("ROWS","VALUE")]
-  x$VALUE[grepl("N2O",x$ROWS) & !grepl("N2ON",x$ROWS)]<-28/44 * x$VALUE[grepl("N2O",x$ROWS) & !grepl("N2ON",x$ROWS)]
+  capridat<-nflows_crop[,c("ROWS","VALUE")]
+  #x$VALUE[grepl("N2O",x$ROWS) & !grepl("N2ON",x$ROWS)]<-28/44 * x$VALUE[grepl("N2O",x$ROWS) & !grepl("N2ON",x$ROWS)]
   
-  checkaggvsdet(x,"SURSOI",c("LEACHI", "DENITR"))
-  checkaggvsdet(x,"N2OOTH",c("N2ODEP", "N2OCRO", "N2OHIS"),0)
-  checkaggvsdet(x,c("SURTOT", "EXPPRD"),c("IMPORT", "N2OOTH"))
-  checkaggvsdet(x,"SURTOT",c("SURSOI", "N2OOTH",
+  checkaggvsdet(capridat, "SURSOI",c("LEACHI", "DENITR"), output)
+  checkaggvsdet(capridat, "N2ONOTH",c("N2ONDEP", "N2ONCRO", "N2ONHIS"), output)
+  checkaggvsdet(capridat, c("SURTOT", "EXPPRD"),c("IMPORT", "N2ONOTH"), output)
+  checkaggvsdet(capridat, "SURTOT",c("SURSOI", "N2ONOTH",
                              "GASMAN","GASAPP", "GASGRA", "GASMIN", 
-                             "RUNMAN","RUNAPP", "RUNGRA", "RUNMIN"))
-  checkaggvsdet(x, "IMPORT", c("ATMOSD", "CRESID", "BIOFIX", "MINSAT", "MINFER", "EXCRET"))
-  checkaggvsdet(x, "EXCRET", c("MANAPP", "MANGRA", "GASMAN", "RUNMAN"))
-  checkaggvsdet(x, "MANGRA", c("NMANGR", "GASGRA", "RUNGRA"))
-  checkaggvsdet(x, "MANAPP", c("NMANAP", "GASAPP", "RUNAPP"))
-  checkaggvsdet(x, "NMAN", c("NMANAP", "NMANGR"))
+                             "RUNMAN","RUNAPP", "RUNGRA", "RUNMIN"), output)
+  checkaggvsdet(capridat, "IMPORT", c("ATMOSD", "CRESID", "BIOFIX", "MINSAT", "MINFER", "EXCRET"), output)
+  checkaggvsdet(capridat, "EXCRET", c("MANAPP", "MANGRA", "GASMAN", "RUNMAN"), output)
+  checkaggvsdet(capridat, "MANGRA", c("NMANGR", "GASGRA", "RUNGRA"), output)
+  checkaggvsdet(capridat, "MANAPP", c("NMANAP", "GASAPP", "RUNAPP"), output)
+  checkaggvsdet(capridat, "NMAN", c("NMANAP", "NMANGR"), output)
   
 }
     

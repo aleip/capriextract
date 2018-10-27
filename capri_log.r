@@ -1,3 +1,60 @@
+if(format(Sys.time(), "%Y%m%d")=="20181026"){
+  source("capri_packages.r")
+  source("capri_dirs.r")
+  
+  scope<-"capdistseries"
+  baseyear<-12
+  curyears<-c(2012, 2010, 2005, 2000)
+  curcountries<-c("DK00", "IT20")
+  curcols<-c(mcact, "uaar")
+  currows<-"LEVL"
+  
+  source("capri_sets.r")
+  source("capriextract_functions.r")
+  
+  xobs<-openxobstimeseries(curcols, currows, curcountries, baseyear, curyears)
+  xobsnuts2<-xobs[[2]]
+  xobs<-xobs[[1]]
+  
+  swheoutlier<-filter(xobs, xobs$`12` > 2 & xobs$`2000` < 1)
+#  plotinitialized<-iniplot(figname='DK_scatter',nplots=4)
+  xobsscatter(xobs, mcact, curyears)
+  
+}
+if(format(Sys.time(), "%Y%m%d")=="20181014"){
+  source("capri_packages.r")
+  scope<-"nlca"
+  source("capri_dirs.r")
+  source("capri_sets.r")
+  source("capriextract_functions.r")
+  curcountry<-"AT310000"
+  curcols<-mpact
+  currows<-c(nemiscadd,nflowsr,
+             "N2ONAPP", "N2ONGRA", "N2ONSYN", "N2ONHIS", "N2ONCRO", "N2ONDEP",
+             "N2ONMAN", "N2ONOTH") #add leach, denit because forgotten now added
+  
+  
+` # Test N-budget for p_nflow`
+  scenario<-"0830epnf_epnf_scenarios_onlyemptyCUR"
+  curscen<-paste0("envind/nflows_gases",scenario,".gdx")
+  gdxfil<-paste0(ecampa3res,curscen)
+  nflows_all<-as.data.table(rgdx.param(gdxfil,"p_nflows"))
+  names(nflows_all)<-data4dim
+  x<-nflows_all
+  for(crop in mcact){checkCropNbudget(x = nflows_all, crop = crop, output="mismatch")}
+  
+  # Test N-budget for DATA
+  scenario<-"0830epnf_epnf_scenarios_onlyemptyCUR"
+  curscen<-paste0("capmod/res_2_",scenario,".gdx")
+  gdxfil<-paste0(ecampa3res,curscen)
+  nflows_all<-as.data.table(rgdx.param(gdxfil,"dataout"))
+  names(nflows_all)<-data5dim
+  nflows_all<-select(nflows_all[nflows_all$EMPTY==""],data4dim)
+  x<-nflows_all
+  for(crop in mcact){checkCropNbudget(x = nflows_all, crop = crop, output="mismatch")}
+  
+}
+
 if(format(Sys.time(), "%Y%m%d")=="20180924"){
 
   # Request 
@@ -43,10 +100,6 @@ if(format(Sys.time(), "%Y%m%d")=="20180924"){
   capridat<-alldatasets[[1]]
   caprimeta<-alldatasets[[2]]
   source("capri_writedata.r")
-  
-  
-  
-    
 }
 
 # September 2018 - Check N balance in the N-LCA

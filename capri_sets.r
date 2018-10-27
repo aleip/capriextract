@@ -1,6 +1,7 @@
 # Defines sets for extraction of CAPRI results
 
 datanames<-c("RALL","COLS","ROWS","Y","VALUE")
+data3dim<-c("RALL","COLS","ROWS","VALUE")
 data4dim<-c("RALL","COLS","ROWS","Y","VALUE")
 data5dim<-c("RALL","EMPTY","COLS","ROWS","Y","VALUE")
   
@@ -85,8 +86,8 @@ rall<-rgdx.set(setfile,ts = TRUE,te=TRUE,symName = "RALL")
 if(exists("setfilen")){
   soilbalpos_exp<-rgdx.set(setfilen,te=TRUE,ts = TRUE,symName = "SOILBALPOS_R")
   soilbalpos<-as.character(soilbalpos_exp[,1])
-  nemiscalc_exp<-rgdx.set(setfilen,te=TRUE,ts = TRUE,symName = "Nemiscalc")
-  nemiscalc<-as.character(nemiscalc_exp[,1])
+  nflowsr_exp<-rgdx.set(setfilen,te=TRUE,ts = TRUE,symName = "nflowsr")
+  nflowsr<-as.character(nflowsr_exp[,1])
   nemiscadd_exp<-rgdx.set(setfilen,te=TRUE,ts = TRUE,symName = "Nemiscadd")
   nemiscadd<-as.character(nemiscadd_exp[,1])
 }
