@@ -15,6 +15,7 @@ selecthsu<-function(reload=0, capridat=capridat, cols=curcols,
   return(capridat)
 }
 
+
 openxobstimeseries<-function(cols=curcols,
                              rows=currows, curcountries, 
                              baseyear, curyears){
@@ -44,32 +45,30 @@ openxobstimeseries<-function(cols=curcols,
   
 }
 
-xobsscatter<-function(xobs, mcact, curyears){
-  
-  crop<-"BARL"
-  crop<-"SWHE"
-  curc<-"IT20"
+xobsscatter<-function(xobs, curcact, curyears){
   
   graphics.off()
-  jpeg(filename=paste0(datapath, "plots/", curc, ".jpg"), 
+  jpeg(filename=paste0(datapath, "plots/", scope, curc, ".jpg"), 
        width=2000, height=2000, res=300)
        
        
   par(mfrow=c(4, 5), ann=FALSE, mar=c(1.5,1.8,2,0))
+  if(length(curcact)<10)par(mfrow=c(3, 4), ann=FALSE, mar=c(1.5,1.8,2,0))
+  if(length(curcact)<4)par(mfrow=c(2, 2), ann=FALSE, mar=c(1.5,1.8,2,0))
   j<-1; k<-1
-#  for(crop in c("SWHE", "BARL", "SUGB", "OFAR")){
-  while(j <= 20){
-    crop<-mcact[k]
-    x<-unlist(select(filter(xobs, NUTS2==curc, COLS==crop), as.character(baseyear)))
+  while(j <= min(20,length(curcact))){
+    crop<-curcact[k]
+    x<-unlist(select(filter(xobs, NUTS2==curc, COLS==crop), as.character(gsub("_","",curyears[1]))))
     if(length(x) > 0){
-      for(i in 1:length(curyears)){
-        y<-unlist(select(filter(xobs, NUTS2==curc, COLS==crop), as.character(curyears[i])))
+      for(i in 1:(length(curyears)-1)){
+        y<-unlist(select(filter(xobs, NUTS2==curc, COLS==crop), as.character(gsub("_","",curyears[1+i]))))
         #print(curyears[i])
         if(i==1){
           plot(x, y, col=blues9[4+i], type="p", pch=16, bg=blues9[4+i], cex=1)
           title(main=paste0(curc,": ",crop))
         }else{
           points(x, y, col=blues9[4+i], type="p", pch=16, bg=blues9[4+i], cex=1)
+          points(x, y, col=blues9[4+i], type="p", pch=16, bg=grey.colors(4,0.3,0.5)[i], cex=0.2)
         }
       }
       j<-j+1
@@ -77,6 +76,7 @@ xobsscatter<-function(xobs, mcact, curyears){
       cat("no ", crop)
     }
     k<-k+1
+    if(k==30)j<-20
     cat("\n",j, k, crop)
   }
   dev.off()
@@ -134,4 +134,45 @@ iniplot<-function(figname,nplots){
   if(runfocus=="compare") paromd<-c(0.05,1,0.15,yhea)
   par(omd=paromd)
   return(list(hastitle,haslegend,hasfootnote,pconv,paromd))
+}
+
+lapm2fssact<-function(capridat, sel, inv=0){
+  
+  #LGRAS	  .  	(GRAI,GRAE,FALLOSET)
+  #LMAIZ	  .  	(MAIZ,MAIF)
+  #LOCRO	  .  	(OCRONECR,OOIL)
+  #LOLIV	  .  	(OLIV,TABO)
+  #LRAPE	  .  	RAPEVSET
+  #LVINY	  .  	(TAGR,TWIN)
+  #OFRU	  .  	APPLOFRU
+  #OVEG	  .  	TOMAOVEG
+  
+  capridat$COLS <- as.character(capridat$COLS)
+  
+  newact<-list(c("LGRAS","GRAI"),
+            c("LGRAS","GRAE"),
+            c("LGRAS","FALLOSET"),
+            c("LMAIZ","MAIZ"),
+            c("LMAIZ","MAIF"),
+            c("LOCRO","OCRONECR"),
+            c("LOCRO","OOIL"),
+            c("LOLIV","OLIV"),
+            c("LOLIV","TABO"),
+            c("LRAPE","RAPEVSET"),
+            c("LVINY","TAGR"),
+            c("LVINY","TWIN"),
+            c("OFRU","APPLOFRU"),
+            c("OVEG","TOMAOVEG"))
+            
+  for(i in 1:length(newact)){
+    
+    from<-1; to<-2
+    if(inv==1){from<-2; to<-1}
+    #cat("\n", newact[[i]][from], " to ", newact[[i]][to])
+    capridat$COLS[sel & capridat$COLS==newact[[i]][from]] <- newact[[i]][to]
+    
+  }
+  
+  return(capridat)
+  
 }

@@ -15,6 +15,22 @@ opendata<-function(scope,curcountry,curyear){
     datafile<-paste0("capmod/res_2_0830",curscen,".gdx")
     datafile<-paste0(datapath,datafile)
   }
+  if(grepl("lapm", scope)){
+    datafile<-paste0(cgams, "../dat/capdishsu/fssdata/")
+    datafile<-paste0(datafile, "capdis_", curcountry, "_10GRID", curyear, ".gdx")
+    dataparm<-"p_capdis"
+    ydim<-""
+    datanames<-c("RALL", "ROWS", "COLS", "VALUE")
+    
+    if(curyear=="preds"){
+      print("preds")
+      datafile<-paste0(cgams, "../dat/capdishsu/lapm/")
+      datafile<-paste0(datafile, substr(curcountry, 1, 2), "_lapmpreds.gdx")
+      dataparm<-"lapmpreds"
+      ydim<-""
+      datanames<-c("RALL", "COLS", "VALUE")
+    }
+  }
   if(grepl("capdis",scope)){
     datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear)
     if(scope=="capdiscapreg") datafile<-paste0(datafile,baseyear)
@@ -29,7 +45,16 @@ opendata<-function(scope,curcountry,curyear){
     d<-list(datafile,dataparm,datanames,ydim)
     capridat<-rgdx.param(datafile,dataparm)
     names(capridat)<-datanames
+    if(grepl("lapm", scope)){
+      capridat$Y<-gsub("_","",curyear)
+      capridat$NUTS2<-curcountry
+      if(curyear=="preds"){
+        capridat$ROWS<-"LEVL"
+      }
+      capridat<-select(capridat, c("NUTS2", data4dim))
+    }
   }
+  
   return(capridat)
 }
 

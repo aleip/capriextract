@@ -10,6 +10,7 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   capridat<-"C:/adrian/models/capri/trunk20160810/dat/"
   datapath<-"x:/dev/capriresults_ecampa3/"
   datapath<-"x:/dev/leipadr/results/"
+  cgams<-"x:/dev/epnf/gams/"
 }else if(Sys.info()[4]=="D01RI1600881"){ #checks machine name
   serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/capri_out_after2016/results/"
   serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/capriresults_ecampa3/"

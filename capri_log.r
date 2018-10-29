@@ -1,3 +1,32 @@
+if(format(Sys.time(), "%Y%m%d")=="20181029"){
+  source("capri_packages.r")
+  source("capri_dirs.r")
+  
+  scope<-"lapmtests"
+  baseyear<-12
+  curyears<-c("preds", "_OFF", "_allone", "_scalestdevs", "_bygroups")
+  curyears<-c("preds", "_allone", "_scalestdevs", "_bygroups")
+  curyears<-c("_OFF", "_allone", "_scalestdevs", "_bygroups")
+  curcountries<-c("DK00")
+  currows<-"LEVL"
+  
+  source("capri_sets.r")
+  curcols<-c(mcact, "uaar")
+  source("capriextract_functions.r")
+  
+  capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
+    opendata(scope = "lapm",curcountry = curcountries[1], curyear = curyears[x]))
+    )
+  sel<-capridat$Y!="preds"
+  capridat<-lapm2fssact(capridat, sel, inv=1)
+  capridat<-capridat[capridat$COLS%in%lapmact,]
+  capridat<-capridat[grepl("^U",capridat$RALL),]
+  xobs<-dcast(capridat, NUTS2 + RALL + COLS ~ Y, value.var = "VALUE", sum, na.rm=TRUE)
+  
+  
+  xobsscatter(xobs=xobs, curcact = "LMAIZ", curyears)
+  
+}
 if(format(Sys.time(), "%Y%m%d")=="20181026"){
   source("capri_packages.r")
   source("capri_dirs.r")
