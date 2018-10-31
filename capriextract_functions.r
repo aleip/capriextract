@@ -1,3 +1,4 @@
+source("xobsfunctions.r")
 
 opendata<-function(scope,curcountry,curyear){
   if(scope%in%c("feed_marketbal","activities") | grepl("baseyear",scope)){
@@ -17,13 +18,13 @@ opendata<-function(scope,curcountry,curyear){
   }
   if(grepl("lapm", scope)){
     datafile<-paste0(cgams, "../dat/capdishsu/fssdata/")
+    if(curyear=="_") curyear<-""
     datafile<-paste0(datafile, "capdis_", curcountry, "_10GRID", curyear, ".gdx")
     dataparm<-"p_capdis"
     ydim<-""
     datanames<-c("RALL", "ROWS", "COLS", "VALUE")
     
     if(curyear=="preds"){
-      print("preds")
       datafile<-paste0(cgams, "../dat/capdishsu/lapm/")
       datafile<-paste0(datafile, substr(curcountry, 1, 2), "_lapmpreds.gdx")
       dataparm<-"lapmpreds"
@@ -47,6 +48,7 @@ opendata<-function(scope,curcountry,curyear){
     names(capridat)<-datanames
     if(grepl("lapm", scope)){
       capridat$Y<-gsub("_","",curyear)
+      if(curyear=="")capridat$Y<-"capdis"
       capridat$NUTS2<-curcountry
       if(curyear=="preds"){
         capridat$ROWS<-"LEVL"

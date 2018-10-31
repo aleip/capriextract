@@ -1,3 +1,78 @@
+if(format(Sys.time(), "%Y%m%d")=="20181031"){
+    
+    source("capri_packages.r")
+    source("capri_dirs.r")
+    scope<-"lapmtests"
+    source("capri_sets.r")
+    source("capriextract_functions.r")
+    
+    source("compareLPIS_vs_LAPMpreds_DK.r")
+    
+    dkt$HSU <- paste0("U", gsub(".*_.*_","",dkt$RALL))
+    
+    hsumatch<-"\\\\ies-ud01.jrc.it\\D5_agrienv\\Data\\lpis_and_other_agricultural_data_at_high_spatial_resolution\\uscie_hsu_fss10kmnuts2_3\\grid10km_nuts23_hsu_EU28.csv"
+    hsumatch<-fread(hsumatch,header=TRUE)
+    hsumatchdk<-filter(hsumatch,grepl("^DK",USCIE_GRID10_NUTS2_3_HSU2IDRUN))
+    hsumatchdk<-select(hsumatchdk, c(USCIE_GRID10_NUTS2_3_HSU2IDRUN, hsu_area_share))
+    hsumatchdk$HSU <- paste0("U", gsub(".*_.*_","",hsumatchdk$USCIE_GRID10_NUTS2_3_HSU2IDRUN))
+
+    curcountries<-"DK"
+    curyears<-c("_nolapm", "_lapmscale")
+    curyears<-c("_", "_nolapm", "_lapmscale")
+    capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
+        Reduce(rbind, lapply(1:length(curcountries), function(y)
+            #        Reduce(rbind, lapply(1:10, function(y)
+            opendata(scope = "lapm",curcountry = curcountries[y], curyear = curyears[x]))
+        )
+    )
+    )
+    capridat<-filter(capridat, ROWS=="LEVL")
+    capridat<-filter(capridat, ! COLS %in% c(maact, "AREA", "AREAcon", "FORE", "OANI", "UAAR"))
+    
+    setnames(capridat, old="RALL", new="HSU")
+    capridk<-merge(hsumatchdk, capridat, by="HSU", all = TRUE)
+    capridk$VALUE<-capridk$VALUE*capridk$hsu_area_share*1000
+    capridk<-renamecrops(capridk)
+    setnames(capridk, old="USCIE_GRID10_NUTS2_3_HSU2IDRUN", new="RALL")
+    capridk<-select(capridk,c("NUTS2",data4dim))
+    capridk<-dcast(capridk, NUTS2 + RALL + COLS + ROWS ~ Y, value.var="VALUE", sum, na.rm=TRUE)
+    capridk<-merge(dkt, capridk, by=c("NUTS2", "RALL", "COLS", "ROWS"), all = TRUE)
+    curyears<-gsub("_","",c(curyears, "LPIS2010", "LAPMp2010", "FSS2010"))
+    capridk[is.na(capridk)]<-0
+    capridk<-filter(capridk, COLS!="XXX")
+    #xobsscatter(xobs=capridk, curcact = unique(capridk$COLS)[1:length(unique(capridk$COLS))], c("FSS2010","nolapm", "lapmscale"), curcountries, add2name="")
+    xobsscatter(xobs=capridk, curcact = unique(capridk$COLS)[1:length(unique(capridk$COLS))], c("LPIS2010", "LAPMp2010", "lapmscale", "FSS2010", "nolapm", "capdis"), curcountries, add2name="")
+    
+}
+
+if(format(Sys.time(), "%Y%m%d")=="20181030a"){
+    source("capri_packages.r")
+    source("capri_dirs.r")
+    scope<-"lapmtests"
+    curyears<-c("preds","_")
+    source("capri_sets.r")
+    curcountries<-substr(nuts0,1,2)
+    curcountries<-curcountries[!curcountries=="TUR"]
+    curcountries<-curcountries[!curcountries%in%c("TUR","NO00","AL00","MK00", "CS00", "MO00", "BA00", "KO00", "HR00")]
+    curcountries<-curcountries[!curcountries%in%c("TUR","NO","AL","MK", "CS", "MO", "BA", "KO", "HR")]
+    curcountries<-c("BL", "DK")
+    source("capriextract_functions.r")
+    
+    capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
+        Reduce(rbind, lapply(1:length(curcountries), function(y)
+#        Reduce(rbind, lapply(1:10, function(y)
+            opendata(scope = "lapm",curcountry = curcountries[y], curyear = curyears[x]))
+        )
+    )
+    )
+    sel<-capridat$Y!="preds"
+    capridat<-lapm2fssact(capridat, sel, inv=1)
+    capridat<-capridat[capridat$COLS%in%lapmact,]
+    capridat<-capridat[grepl("^U",capridat$RALL),]
+    xobs<-dcast(capridat, NUTS2 + RALL + COLS ~ Y, value.var = "VALUE", sum, na.rm=TRUE)
+    xobsscatter(xobs=xobs, curcact = lapmact, curyears, curcountries[1:2])
+    
+}
 if(format(Sys.time(), "%Y%m%d")=="20181029"){
   source("capri_packages.r")
   source("capri_dirs.r")
