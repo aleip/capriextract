@@ -1,5 +1,13 @@
 source("xobsfunctions.r")
 
+#' Open a Capri data file
+#' @description This function opens a Capri gdx data file also called a xobs file. 
+#' Depending on the scope parameter, conditional statements change the bahaviour of the opendata function. 
+#' @param scope character variable used to adapt the behaviour of the function to different input file formats and locations.
+#' @param curcountry character iso2 country code
+#' @param curyear numeric year
+#' @return data frame
+#' @export
 opendata<-function(scope,curcountry,curyear){
   if(scope%in%c("feed_marketbal","activities") | grepl("baseyear",scope)){
     datafile<-paste0("res_",curyear)
