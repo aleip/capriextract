@@ -5,12 +5,7 @@ output:
     keep_md: yes
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "..")
 
-library(gdxrrw)
-```
 
 
 
@@ -22,8 +17,14 @@ Reading data on agricultural residues from the capri model, using the capriextra
 The `capri_dirs.r` script defines the path to the data depending on which machine is runing.
 It uses the system name to adapt path variables to each particular system. 
 We could use the following conditional switch:
-```{r}
+
+```r
 Sys.info()[4] == "d01ri1603346.ies.jrc.it" 
+```
+
+```
+## nodename 
+##     TRUE
 ```
 
 But for the moment we can also simply overwrite the `datapath` variable.
@@ -58,14 +59,23 @@ Warning in install.packages :
 It is available from support.gams.com
 [GDXRRW: Interfacing GAMS and R](https://support.gams.com/gdxrrw:interfacing_gams_and_r)
 
-```{r eval=FALSE, echo=TRUE}
+
+```r
 install.packages("~/downloads/gdxrrw_1.0.4.tar.gz", repos = NULL, type = "source")
 ```
 
 
 # Load `capriextract_functions.r`
-```{r}
+
+```r
 getwd()
+```
+
+```
+## [1] "/home/rougipa/R/capriextract"
+```
+
+```r
 source("capriextract_functions.r")
 ```
 
@@ -75,18 +85,46 @@ source("capriextract_functions.r")
 The opendata function has 3 arguments,
 but global variables are also needed to make the `opendata`  function work. 
 Pass the arguments the opendata function wants to have in the capdis context.
-```{r eval=TRUE}
+
+```r
 # Global variables needed by the opendata function in the "capdis" context
 datapath <- "/Bioeconomy/BIOMASS/capri/"
 baseyear <- 1212
 data3dim<-c("RALL","COLS","ROWS","VALUE")
 # Load the gdx library by specifying the GAMS directory as a parameter
 igdx(gamsSysDir = "/opt/gams/gams25.1_linux_x64_64_sfx/")
+```
+
+```
+## GDX API loaded from gamsSysDir=/opt/gams/gams25.1_linux_x64_64_sfx/
+## The GDX library has been loaded
+## GDX library load path: /opt/gams/gams25.1_linux_x64_64_sfx/
+```
+
+```r
 # use the function
 es <- opendata("capdis", "ES", "2010")
+```
 
+```
+## 
+##   /Bioeconomy/BIOMASS/capri/capdis/xobs_2_ES_1212.gdx
+```
+
+```r
 knitr::kable(head(es), format = "markdown")
 ```
+
+
+
+|RALL     |COLS    |ROWS     |       VALUE|
+|:--------|:-------|:--------|-----------:|
+|ES300000 |OTHER   |LEVL     | 336.0196126|
+|ES300000 |AREA    |LEVL     | 729.4231014|
+|ES300000 |AREAcon |LEVL     | 729.4231014|
+|ES300000 |SWHE    |RELIRRI  |   1.0552882|
+|ES300000 |SWHE    |YSCALING |   0.7772080|
+|ES300000 |SWHE    |N2OAPP   |   0.0009732|
 
 To fix the following error:
 > Error in opendata("capdis", "ES", "2010") : object 'data3dim' not found
@@ -100,7 +138,8 @@ capri_sets.r:4:data3dim<-c("RALL","COLS","ROWS","VALUE")
 
 ## Copy code from inside the `opendata` function 
 
-```{r eval=FALSE}
+
+```r
 # opendata function parameters
 scope <- "capdis"
 curcountry <- "ES"
@@ -145,7 +184,8 @@ See the package section above the function is defined in the `gdxrrw` package.
 
 # Installing the GAMS system to render the GDW libraries available
 Error loading the GDX API: use igdx() to diagnose and solve the problem
-```{r eval=FALSE}
+
+```r
 igdx() 
 # The GDX library has not been loaded
 ```
@@ -169,7 +209,15 @@ cd gams25.1_linux_x64_64_sfx/
 ```
 
 Now in R, the `igdx()` can load the gdx library by specifying the GAMS directory as a parameter: 
-```{r}
+
+```r
 igdx(gamsSysDir = "/opt/gams/gams25.1_linux_x64_64_sfx/")
+```
+
+```
+## Reloading GDX API
+## GDX API loaded from gamsSysDir=/opt/gams/gams25.1_linux_x64_64_sfx/
+## The GDX library has been loaded
+## GDX library load path: /opt/gams/gams25.1_linux_x64_64_sfx/
 ```
 
