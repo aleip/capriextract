@@ -1,13 +1,5 @@
 source("xobsfunctions.r")
 
-#' Open a Capri data file
-#' @description This function opens a Capri gdx data file also called a xobs file. 
-#' Depending on the scope parameter, conditional statements change the bahaviour of the opendata function. 
-#' @param scope character variable used to adapt the behaviour of the function to different input file formats and locations.
-#' @param curcountry character iso2 country code
-#' @param curyear numeric year
-#' @return data frame
-#' @export
 opendata<-function(scope,curcountry,curyear){
   if(scope%in%c("feed_marketbal","activities") | grepl("baseyear",scope)){
     datafile<-paste0("res_",curyear)
@@ -334,7 +326,9 @@ checkCropNbudget<-function(x, crop, output="error"){
 
 
 mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12", 
-                    curcountries = NULL, crop = NULL, n_cuts = 6, variab = NULL,
+                    curcountries = NULL, by_country = "No", 
+                    crop = NULL, n_cuts = 6, cuts = NULL,
+                    variab = NULL,
                     hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
                     n23_dir = "\\\\ies\\d5\\agrienv\\Data\\GIS_basedata\\GISCO_2010_NUTS2_3"){
   
@@ -362,7 +356,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   #--- reading NUTS3 and NUTS2 data
   
   #n23_dir <- "\\\\ies\\d5\\agrienv\\Data\\GIS_basedata\\GISCO_2010_NUTS2_3"
-  if(!exists("nuts23")) nuts23 <- readOGR(dsn = n23_dir, layer = "GISCO_NUTS2_3_2010_with_attr_laea")
+  if(!exists("nuts23")) nuts23 <<- readOGR(dsn = n23_dir, layer = "GISCO_NUTS2_3_2010_with_attr_laea")
   #ogrInfo(dsn = n23_dir)
   #summary(nuts23)
   #nuts23@proj4string
@@ -372,7 +366,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   #--- reading HSU shapefile
   
   #hsu_dir <- "\\\\ies\\d5\\agrienv\\Data\\HSU"
-  if(!exists("hsu")) hsu <- readOGR(dsn = hsu_dir, layer = "hsu_eu28_CH_NO_EXYUG")
+  if(!exists("hsu")) hsu <<- readOGR(dsn = hsu_dir, layer = "hsu_eu28_CH_NO_EXYUG")
   #hsu$CAPRI_HSU <- as.numeric(gsub("U", "", hsu$CAPRI_HSU))
   #head(hsu)
   #ogrInfo(dsn = hsu_dir)
@@ -386,8 +380,8 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   
   preds_hsu@data$EEZ_R <- as.character(preds_hsu@data$EEZ_R)
   #apply(preds_hsu@data, 2, function(x) sum(is.na(x)))
-  preds_hsu@data$nuts2 <- as.vector(substr(unique(preds_hsu$EEZ_R), 1, 4))
-  
+  preds_hsu@data$nuts2 <- as.vector(substr(preds_hsu$EEZ_R, 1, 4))
+
   regs <- as.vector(unique(preds_hsu@data$nuts2))
   n_regs <- length(regs)
   
@@ -421,8 +415,19 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
     return(a)
   }
   
-  categs2plot <- as.data.frame(as.data.frame(preds_hsu@data[, sel_cols_n3]) %>% group_by(nuts2) %>% summarise_all(funs(sum_nas)))
-  categs2plot <- sum(categs2plot[, -1])
+  
+  if (by_country %in% c("Y", "Yes")){       #plot the country by country
+    categs2plot <- length(unique(substr(preds_hsu$nuts2, 1, 2))) * length(crps)
+  }else if (by_country %in% c("No", "N")){       # plot all Europe (default)
+    categs2plot <- length(crps)
+  }else if (is.null(by_country)){      # plot NUTS2 by NUTS2
+    categs2plot <- as.data.frame(as.data.frame(preds_hsu@data[, sel_cols_n3]) %>% group_by(nuts2) %>% summarise_all(funs(sum_nas)))
+    categs2plot <- sum(categs2plot[, -1])
+  }else{
+    stop("You must define by_country: 'NULL', 'Yes', 'No' (default)")
+  }
+  
+
   
   if (length(crps_over_sd) != 0){ 
     n_legs <- 2
@@ -439,19 +444,41 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   pnls4leg <- floor(free_pnls / 2) * 2
   
   
-  if (length(crps_over_sd) != 0){
-    
-    cuts_1 <- stats::quantile(preds_hsu@data[crps_over_sd], probs = seq(0, 1, 1/n_cuts), na.rm = T)
-    lev_1 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps_over_sd])), cuts_1))
-    
-    crps_0 <- crps[!crps %in% crps_over_sd]
-    cuts <- stats::quantile(preds_hsu@data[crps_0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
-    lev_0 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps_0])), cuts))
+  if (is.null(cuts)){
+    if (length(crps_over_sd) != 0){
+      
+      cuts_1 <- stats::quantile(preds_hsu@data[crps_over_sd], probs = seq(0, 1, 1/n_cuts), na.rm = T)
+      lev_1 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps_over_sd])), cuts_1))
+      
+      crps_0 <- crps[!crps %in% crps_over_sd]
+      cuts <- stats::quantile(preds_hsu@data[crps_0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
+      lev_0 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps_0])), cuts))
+      
+    }else{
+      
+      
+      if(sum(preds_hsu@data[crps] < 0, na.rm = TRUE) > 0){
+        cuts_pos <- stats::quantile(preds_hsu@data[crps][preds_hsu@data[crps] > 0], probs = seq(0, 1, 1/ceiling(n_cuts/2)), na.rm = T)
+        cuts_neg <- stats::quantile(preds_hsu@data[crps][preds_hsu@data[crps] < 0], probs = seq(0, 1, 1/floor(n_cuts/2)), na.rm = T)
+        
+        
+      }else{
+        cuts <- stats::quantile(preds_hsu@data[crps], probs = seq(0, 1, 1/n_cuts), na.rm = T)
+        lev_0 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps])), cuts))
+      }
+      
+      
+      
+      
+      
+    }
     
   }else{
-    cuts <- stats::quantile(preds_hsu@data[crps], probs = seq(0, 1, 1/n_cuts), na.rm = T)
-    lev_0 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps])), cuts))
-    
+    cuts <- round(cuts, 2)
+    lev_0 <- c()
+    for (c in 1:(length(cuts) - 1)) {
+      lev_0 <- c(lev_0, paste0("(", cuts[c], ",", cuts[c + 1], "]" ))
+    }
   }
   
   
@@ -461,7 +488,10 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   if(!file.exists(paste0("capdis/plots"))) dir.create(paste0("capdis/plots"))
   
   #wdt <- hgt <- 21.12
-  if (rw < 4){
+  if (rw == 1){
+    wdt <- (21 - 2.1)
+    hgt <- (29.7 - 2.97) / 3
+  }else if (rw < 4){
     wdt <- (21 - 2.1)
     hgt <- (29.7 - 2.97) / 2
   }else{
@@ -474,7 +504,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   
   #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8)
   #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8, paper =  "a4")
-  jpeg(paste0(ecampa3res, "/capdis/plots/plot_check.jpg"), width = wdt, height = hgt, units = "cm", res = 150, quality = 100, pointsize = 8)
+  jpeg(paste0(getwd(), "/capdis/plots/plot_check.jpg"), width = wdt, height = hgt, units = "cm", res = 150, quality = 100, pointsize = 8)
   
   par(#mfrow = c(cl, rw), 
     mar = c(0.5, 1.1, 2.0, 1.1),
@@ -501,42 +531,88 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   
   lyt <- layout(lyt)
   
-  for(crp in crps){
+
+  
+  if (by_country %in% c("Y", "Yes")){       #plot the country by country
     
-    if (crp %in% crps_over_sd){
-      cuts1 <- cuts_1
-      rbPal <- colorRampPalette(c('pink','red'))
-      rbPal_1 <- rbPal
-    }else{
-      cuts1 <- cuts
-      rbPal <- colorRampPalette(c('skyblue','darkblue'))
+    for (ct in unique(substr(preds_hsu$nuts2, 1, 2))){
+      
+      
+      for(crp in crps){
+        
+        if (crp %in% crps_over_sd){
+          cuts1 <- cuts_1
+          rbPal <- colorRampPalette(c('pink','red'))
+          rbPal_1 <- rbPal
+        }else{
+          cuts1 <- cuts
+          rbPal <- colorRampPalette(c('skyblue','darkblue'))
+        }
+        
+        dt2plot <- preds_hsu
+        
+        dt2plot <- dt2plot[grepl(paste0("^", ct), dt2plot@data$nuts2), c(no_crps, crp)]
+        
+        dt2plot$Col <- rbPal(n_cuts)[as.numeric(cut(dt2plot[[crp]], cuts1))]
+        
+        # labels for the legend
+        #dt2plot$bin <- cut(dt2plot[[crp]], cuts1, include.lowest = TRUE, dig.lab = 4)
+        #lev01 = levels(dt2plot$bin)
+        
+        #plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(crp), cex.main = 0.6)
+        #plot(nuts23, lwd=0.5, col = "grey90", add=TRUE)
+        
+        plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(ct, ": ", crp), cex.main = cx)
+        plot(nuts23, add=TRUE, lwd=0.5)
+        #legend("right", fill = rbPal(6), legend = lev, cex = 1.1, title = paste0("LPIS - ", crop))
+        box(which = "figure")
+        
+      }
+      
+    } 
+    
+  }else{       # plot all Europe (default) or NUTS2 by NUTS2
+    for(crp in crps){
+      if (crp %in% crps_over_sd){
+        cuts1 <- cuts_1
+        rbPal <- colorRampPalette(c('pink','red'))
+        rbPal_1 <- rbPal
+      }else{
+        cuts1 <- cuts
+        rbPal <- colorRampPalette(c('skyblue','darkblue'))
+      }
+      
+      dt2plot <- preds_hsu
+      dt2plot@data <- dt2plot@data[, c(no_crps, crp)]
+      
+      dt2plot$Col <- rbPal(n_cuts)[as.numeric(cut(dt2plot[[crp]], cuts1))]
+      
+      # labels for the legend
+      #dt2plot$bin <- cut(dt2plot[[crp]], cuts1, include.lowest = TRUE, dig.lab = 4)
+      #lev01 = levels(dt2plot$bin)
+      
+      #plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(crp), cex.main = 0.6)
+      #plot(nuts23, lwd=0.5, col = "grey90", add=TRUE)
+      
+      plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(crp), cex.main = cx)
+      plot(nuts23, add=TRUE, lwd=0.5)
+      #legend("right", fill = rbPal(6), legend = lev, cex = 1.1, title = paste0("LPIS - ", crop))
+      box(which = "figure")
+      
     }
     
-    dt2plot <- preds_hsu
-    dt2plot@data <- dt2plot@data[, c(no_crps, crp)]
     
-    dt2plot$Col <- rbPal(n_cuts)[as.numeric(cut(dt2plot[[crp]], cuts1))]
-    
-    # labels for the legend
-    #dt2plot$bin <- cut(dt2plot[[crp]], cuts1, include.lowest = TRUE, dig.lab = 4)
-    #lev01 = levels(dt2plot$bin)
-    
-    #plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(crp), cex.main = 0.6)
-    #plot(nuts23, lwd=0.5, col = "grey90", add=TRUE)
-    plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(crp), cex.main = cx)
-    plot(nuts23, add=TRUE, lwd=0.5)
-    #legend("right", fill = rbPal(6), legend = lev, cex = 1.1, title = paste0("LPIS - ", crop))
-    box(which = "figure")
     
   }
+
   
   if (length(crps_over_sd) != 0){
     pos_leg1 <- "top" 
   }else{ 
     if (rw == 1){
-      pos_leg1 <- "bottom" 
-    }else{
       pos_leg1 <- "top" 
+    }else{
+      pos_leg1 <- "center" 
     }
   } 
   

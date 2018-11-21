@@ -12,3 +12,13 @@ library(gdxrrw)
 #library(xlsx)
 library(tidyr)
 
+library(sp)
+library(rgdal)
+library(raster)
+#library(graphics)
+library(rgeos)
+#library(ggplot2)
+library(GISTools) 
+library(maps)
+
+
