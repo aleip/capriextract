@@ -122,31 +122,18 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   if (is.null(cuts)){
     if (length(crps_over_sd) != 0){
       
-      cuts_1 <- stats::quantile(preds_hsu@data[crps_over_sd], probs = seq(0, 1, 1/n_cuts), na.rm = T)
+      cuts_1 <- stats::quantile(preds_hsu@data[crps_over_sd][preds_hsu@data[crps_over_sd] > 0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
       lev_1 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps_over_sd])), cuts_1))
       
       crps_0 <- crps[!crps %in% crps_over_sd]
-      cuts <- stats::quantile(preds_hsu@data[crps_0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
+      cuts <- stats::quantile(preds_hsu@data[crps_0][preds_hsu@data[crps_0] > 0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
       lev_0 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps_0])), cuts))
       
     }else{
       
-      
-      if(sum(preds_hsu@data[crps] < 0, na.rm = TRUE) > 0){
-        cuts_pos <- stats::quantile(preds_hsu@data[crps][preds_hsu@data[crps] > 0], probs = seq(0, 1, 1/ceiling(n_cuts/2)), na.rm = T)
-        cuts_neg <- stats::quantile(preds_hsu@data[crps][preds_hsu@data[crps] < 0], probs = seq(0, 1, 1/floor(n_cuts/2)), na.rm = T)
-        cuts <- c(as.vector(cuts_neg[-length(cuts_pos)]), 0, as.vector(cuts_pos[-1]))
-        lev_0 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps])), cuts))
-        
-      }else{
-        cuts <- stats::quantile(preds_hsu@data[crps], probs = seq(0, 1, 1/n_cuts), na.rm = T)
-        lev_0 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps])), cuts))
-      }
-      
-      
-      
-      
-      
+      #cuts <- stats::quantile(preds_hsu@data[crps], probs = seq(0, 1, 1/n_cuts), na.rm = T)
+      cuts <- stats::quantile(preds_hsu@data[crps][preds_hsu@data[crps] > 0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
+      lev_0 <- levels(cut(as.numeric(unlist(preds_hsu@data[crps])), cuts))
     }
     
   }else{
@@ -217,32 +204,24 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
       for(crp in crps){
         
         if (crp %in% crps_over_sd){
-          if(sum(preds_hsu@data[crps] < 0, na.rm = TRUE) > 0){
-            cuts1 <- cuts_1
-            rbPal <- colorRampPalette(c("green", "yellow", "pink", "red"))
-            rbPal_1 <- rbPal
-            
-          }else{
-            cuts1 <- cuts_1
-            rbPal <- colorRampPalette(c('pink','red'))
-            rbPal_1 <- rbPal
-            
-          }
+          cuts1 <- cuts_1
+          rbPal <- colorRampPalette(c('pink','red'))
+          rbPal_1 <- rbPal
+          col_neg <- "blue"
+          
         }else{
-          if(sum(preds_hsu@data[crps] < 0, na.rm = TRUE) > 0){
-            cuts1 <- cuts
-            rbPal <- colorRampPalette(c("green", "yellow", "skyblue", "darkblue"))
-            
-          }else{
-            cuts1 <- cuts
-            rbPal <- colorRampPalette(c('skyblue','darkblue'))
-            
-          }
+          cuts1 <- cuts
+          rbPal <- colorRampPalette(c('skyblue','darkblue'))
+          rbPal_2 <- rbPal
+          col_neg <- "red"
         }
         
         dt2plot <- preds_hsu
         
         dt2plot <- dt2plot[grepl(paste0("^", ct), dt2plot@data$nuts2), c(no_crps, crp)]
+        
+        dt2plot_negs <- dt2plot
+        dt2plot_negs <- dt2plot_negs[which(dt2plot_negs@data[, crp] < 0), ]
         
         dt2plot$Col <- rbPal(n_cuts)[as.numeric(cut(dt2plot[[crp]], cuts1))]
         
@@ -254,6 +233,11 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
         #plot(nuts23, lwd=0.5, col = "grey90", add=TRUE)
         
         plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(ct, ": ", crp), cex.main = cx)
+        if(nrow(dt2plot_negs@data) > 0){
+          exis_negs <- 1
+          plot(dt2plot_negs, col = col_neg, border = col_neg, add = TRUE, lwd = 3)
+          print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
+        } 
         plot(nuts23, add=TRUE, lwd=0.5)
         #legend("right", fill = rbPal(6), legend = lev, cex = 1.1, title = paste0("LPIS - ", crop))
         box(which = "figure")
@@ -268,13 +252,19 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
         cuts1 <- cuts_1
         rbPal <- colorRampPalette(c('pink','red'))
         rbPal_1 <- rbPal
+        col_neg <- "blue"
       }else{
         cuts1 <- cuts
         rbPal <- colorRampPalette(c('skyblue','darkblue'))
+        rbPal_2 <- rbPal
+        col_neg <- "red"
       }
       
       dt2plot <- preds_hsu
       dt2plot@data <- dt2plot@data[, c(no_crps, crp)]
+      
+      dt2plot_negs <- dt2plot
+      dt2plot_negs <- dt2plot_negs[which(dt2plot_negs@data[, crp] < 0), ]
       
       dt2plot$Col <- rbPal(n_cuts)[as.numeric(cut(dt2plot[[crp]], cuts1))]
       
@@ -286,6 +276,11 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
       #plot(nuts23, lwd=0.5, col = "grey90", add=TRUE)
       
       plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(crp), cex.main = cx)
+      if(nrow(dt2plot_negs@data) > 0){
+        exis_negs <- 1
+        plot(dt2plot_negs, col = col_neg, border = col_neg, add = TRUE, lwd = 3)
+        print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
+      } 
       plot(nuts23, add=TRUE, lwd=0.5)
       #legend("right", fill = rbPal(6), legend = lev, cex = 1.1, title = paste0("LPIS - ", crop))
       box(which = "figure")
@@ -320,8 +315,14 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
     sc_b_y <- mean(dt2plot@bbox[2, ])
   }
   scalebar(sc_value, type = 'bar', divs = 4, cex = (cx - 0.1), below = "meters", xy = c(sc_b_x, sc_b_y))
-  legend(pos_leg1, fill = rbPal(n_cuts), legend = lev_0, cex = cx, title = paste0("Legend 1"))
-  if(length(crps_over_sd) != 0) legend("bottom", fill = rbPal_1(n_cuts), legend = lev_1, cex = cx, title = paste0("Legend 2"))
+  if(exis_negs > 0){
+    legend(pos_leg1, fill = c(rbPal_2(n_cuts), "red"), legend = c(lev_0, "values < 0"), cex = cx, title = paste0("Legend 3"))
+    if(length(crps_over_sd) != 0) legend("bottom", fill = c(rbPal_1(n_cuts), "blue"), legend = c(lev_1, "values < 0"), cex = cx, title = paste0("Legend 4"))
+    
+  }else{
+    legend(pos_leg1, fill = rbPal_2(n_cuts), legend = lev_0, cex = cx, title = paste0("Legend 1"))
+    if(length(crps_over_sd) != 0) legend("bottom", fill = rbPal_1(n_cuts), legend = lev_1, cex = cx, title = paste0("Legend 2"))
+  }
   box(which = "figure")
   
   mtext(text = paste0("Header of Plot, etc, etc.  ", paste0("Regions: ", paste(curcountries, collapse = ", "))), 
@@ -331,6 +332,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   mtext(text = paste0("Footer of Plot: here all the information we want to include  ", format(Sys.time(), "%d-%b-%Y")), 
         side = 1, adj = 1, outer = TRUE, line = 2, cex = (cx - 0.5))     #footer
   
+  rm(exis_negs)
   
   
   dev.off()
