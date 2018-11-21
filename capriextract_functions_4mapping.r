@@ -170,7 +170,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   jpeg(paste0(getwd(), "/capdis/plots/plot_check.jpg"), width = wdt, height = hgt, units = "cm", res = 150, quality = 100, pointsize = 8)
   
   par(#mfrow = c(cl, rw), 
-    mar = c(0.5, 1.1, 2.0, 1.1),
+    mar = c(0.5, 1.1, 2.8, 1.1),
     #mar = c(5.1, 4.1, 4.1, 2.1),
     #oma = c(2.5, 0.5, 4, 0.5)
     oma = c(4.5, 0.5, 9, 0.5)
@@ -236,7 +236,10 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
         if(nrow(dt2plot_negs@data) > 0){
           exis_negs <- 1
           plot(dt2plot_negs, col = col_neg, border = col_neg, add = TRUE, lwd = 3)
-          print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
+          #print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
+          mtext(text = paste0("number of negative values = ", nrow(dt2plot_negs@data)), 
+                side = 3, cex = (cx - 1.0))     
+          
         } 
         plot(nuts23, add=TRUE, lwd=0.5)
         #legend("right", fill = rbPal(6), legend = lev, cex = 1.1, title = paste0("LPIS - ", crop))
@@ -279,7 +282,10 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
       if(nrow(dt2plot_negs@data) > 0){
         exis_negs <- 1
         plot(dt2plot_negs, col = col_neg, border = col_neg, add = TRUE, lwd = 3)
-        print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
+        #print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
+        mtext(text = paste0("number of negative values = ", nrow(dt2plot_negs@data)), 
+              side = 3, cex = (cx - 1.0))     
+        
       } 
       plot(nuts23, add=TRUE, lwd=0.5)
       #legend("right", fill = rbPal(6), legend = lev, cex = 1.1, title = paste0("LPIS - ", crop))
