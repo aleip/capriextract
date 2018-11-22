@@ -1,6 +1,8 @@
 
 
-mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12", 
+mapping <- function(scope = "capdiscapreg", 
+                    dt_set = NULL,
+                    curyears = "12", baseyear = "12", 
                     curcountries = NULL, by_country = "No", 
                     curcrops = NULL, n_cuts = 6, cuts = NULL,
                     variab = NULL,
@@ -10,25 +12,33 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   
   #--- reading CAPRI data for plotting
   
-  capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
-    Reduce(rbind, lapply(1:length(curcountries), function(y)
-      opendata(scope = scope,curcountry = curcountries[y], curyear = curyears[x]))
-    )
-  )
-  )
-  cat("\n ")
+#  capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
+#    Reduce(rbind, lapply(1:length(curcountries), function(y)
+#      opendata(scope = scope,curcountry = curcountries[y], curyear = curyears[x]))
+#    )
+#  )
+#  )
+#  cat("\n ")
+ 
+  head(dt_set)
+  capridat <- as.data.table(dt_set)
+  rm(dt_set) ; gc()
   
-  capridat <- capridat[grepl("^U", capridat$RALL), ]
+  capridat <- capridat[capridat$COLS %in% curcrops, ]
   capridat <- capridat[capridat$ROWS %in% variab, ]
+  capridat <- capridat[capridat$Y %in% curyears, ]
+
+  capridat <- capridat[grepl("^U", capridat$RALL), ]
   head(capridat)
+  nrow(capridat)
   
-  capri4map <- capridat[capridat$ROWS %in% variab , ]
+  capri4map <- capridat
   capri4map$VALUE <- capri4map$VALUE + 1e-9
   
   # Here select only one variable
   capri4map <- dcast(capri4map, RALL + ROWS + Y ~ COLS, drop = TRUE, value.var = "VALUE", sum, na.rm=TRUE)
   capri4map[capri4map==0]<-NA
-  if (length(unique(capri4map$ROWS)) == 1) capridat <- capridat[, !names(capridat) %in% "ROWS"]
+  #if (length(unique(capri4map$ROWS)) == 1) capridat <- capridat[, !names(capridat) %in% "ROWS"]
   head(capri4map)
   
   #
@@ -47,22 +57,34 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   
   #hsu_dir <- "\\\\ies\\d5\\agrienv\\Data\\HSU"
   if(!exists("hsu")) hsu <<- readOGR(dsn = hsu_dir, layer = "hsu_eu28_CH_NO_EXYUG")
+  hsu <- hsu[, names(hsu@data) %in% c("OBJECTID", "codes", "EEZ_R", "CNTR_ENGL", "CAPRI_HSU")]
+  head(hsu@data)
   #hsu$CAPRI_HSU <- as.numeric(gsub("U", "", hsu$CAPRI_HSU))
   #head(hsu)
   #ogrInfo(dsn = hsu_dir)
   #hsu@proj4string
   
+  #capri4map <- capri4map[capri4map$Y == "2000", ]
   
   # merging predictions to HSU shapefile
-  if (length(curyears) == 1){
+  #if (length(curyears) == 1){
+  if (length(unique(capri4map$Y)) == 1){
     preds_hsu <- merge(hsu, capri4map, by.x = "CAPRI_HSU", by.y = "RALL", all.x = FALSE)
   }else{
     preds_hsu <- hsu
-    preds_hsu@data <- merge(preds_hsu@data, capri4map, by.x = "CAPRI_HSU", by.y = "RALL", all.y = TRUE)
+    
+    stop("Only works for one year!!")
+    
+    preds_hsu_1 <- merge(preds_hsu@data, capri4map, by.x = "CAPRI_HSU", by.y = "RALL", all.y = FALSE, sort = FALSE)
+    
   }
   #summary(preds_hsu)
   head(preds_hsu@data)
+  nrow(preds_hsu@data)
+  unique(preds_hsu@data$CNTR_ENGL)
   
+  preds_hsu <- preds_hsu[substr(preds_hsu@data$EEZ_R, 1, 2) %in% curcountries, ]
+
   preds_hsu@data$EEZ_R <- as.character(preds_hsu@data$EEZ_R)
   #apply(preds_hsu@data, 2, function(x) sum(is.na(x)))
   preds_hsu@data$nuts2 <- as.vector(substr(preds_hsu$EEZ_R, 1, 4))
@@ -71,18 +93,18 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   n_regs <- length(regs)
   
   #sel_cols <- !names(preds_hsu) %in% c("CAPRI_HSU", "OBJECTID", "codes", "x", "y", "EEZ_R", "CNTR_ENGL", "AREA", "AREAcon", "UAAR", "nuts2", 
-  sel_cols <- !names(preds_hsu) %in% c("CAPRI_HSU", "OBJECTID", "codes", "x", "y", "EEZ_R", "CNTR_ENGL", "AREA", "AREAcon", "UAAR", "nuts2")
+  sel_cols <- !names(preds_hsu) %in% c("CAPRI_HSU", "OBJECTID", "codes", "EEZ_R", "CNTR_ENGL", "AREA", "AREAcon", "UAAR", "nuts2", "Y", "ROWS")
   
   crps <- names(preds_hsu)[sel_cols]
   no_crps <- names(preds_hsu)[!sel_cols]
   
-  if (!is.null(curcrops)){
-    crps <- crps[crps %in% curcrops]
-    preds_hsu@data <- preds_hsu@data[, c(no_crps, crps)]
-  }
+#  if (!is.null(curcrops)){
+#    crps <- crps[crps %in% curcrops]
+#    preds_hsu@data <- preds_hsu@data[, c(no_crps, crps)]
+#  }
   
   length(crps)
-  sel_cols_n3 <- !names(preds_hsu) %in% c("CAPRI_HSU", "OBJECTID", "codes", "x", "y", "EEZ_R", "CNTR_ENGL", "AREA", "AREAcon", "UAAR")
+  sel_cols_n3 <- !names(preds_hsu) %in% c("CAPRI_HSU", "OBJECTID", "codes", "EEZ_R", "CNTR_ENGL", "AREA", "AREAcon", "UAAR", "Y", "ROWS")
   
   
   # Find which categories should be plotted in a different scale because values are to big
@@ -102,13 +124,14 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   }
   
   
-  if (by_country %in% c("Y", "Yes")){       #plot the country by country
-    categs2plot <- length(unique(substr(preds_hsu$nuts2, 1, 2))) * length(crps)
+  if (by_country %in% c("Y", "Yes")){       #plot country by country
+    categs2plot <- length(unique(substr(preds_hsu$nuts2, 1, 2))) * length(crps) * length(unique(preds_hsu$Y))
+    #categs2plot <- length(curcountries) * length(crps) * length(curyears) 
   }else if (by_country %in% c("No", "N")){       # plot all Europe (default)
-    categs2plot <- length(crps)
+    categs2plot <- length(crps) * length(unique(preds_hsu$Y))
   }else if (is.null(by_country)){      # plot NUTS2 by NUTS2
     categs2plot <- as.data.frame(as.data.frame(preds_hsu@data[, sel_cols_n3]) %>% group_by(nuts2) %>% summarise_all(funs(sum_nas)))
-    categs2plot <- sum(categs2plot[, -1])
+    categs2plot <- sum(categs2plot[, -1])  * length(unique(preds_hsu$Y))
   }else{
     stop("You must define by_country: 'NULL', 'Yes', 'No' (default)")
   }
@@ -178,7 +201,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   
   #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8)
   #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8, paper =  "a4")
-  jpeg(paste0(getwd(), "/capdis/plots/plot_check.jpg"), width = wdt, height = hgt, units = "cm", res = 200, quality = 100, pointsize = 8)
+  jpeg(paste0(getwd(), "/capdis/plots/plot_check_years.jpg"), width = wdt, height = hgt, units = "cm", res = 200, quality = 100, pointsize = 8)
   
   par(#mfrow = c(cl, rw), 
     mar = c(0.5, 1.1, 2.8, 1.1),
@@ -211,15 +234,67 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
     
     for (ct in unique(substr(preds_hsu$nuts2, 1, 2))){
       
+      for (yr in unique(preds_hsu$Y)){
+        
+        for(crp in crps){
+          
+          if (crp %in% crps_over_sd){
+            cuts1 <- cuts_1
+            rbPal <- colorRampPalette(c('pink','red'))
+            rbPal_1 <- rbPal
+            col_neg <- "blue"
+            
+          }else{
+            cuts1 <- cuts
+            rbPal <- colorRampPalette(c('skyblue','darkblue'))
+            rbPal_2 <- rbPal
+            col_neg <- "red"
+          }
+          
+          dt2plot <- preds_hsu
+          
+          dt2plot <- dt2plot[grepl(paste0("^", ct), dt2plot@data$nuts2), c(no_crps, crp)]
+          dt2plot <- dt2plot[dt2plot@data$Y %in% yr, ]
+          
+          dt2plot_negs <- dt2plot
+          dt2plot_negs <- dt2plot_negs[which(dt2plot_negs@data[, crp] < 0), ]
+          
+          dt2plot$Col <- rbPal(n_cuts)[as.numeric(cut(dt2plot[[crp]], cuts1))]
+          
+          # labels for the legend
+          #dt2plot$bin <- cut(dt2plot[[crp]], cuts1, include.lowest = TRUE, dig.lab = 4)
+          #lev01 = levels(dt2plot$bin)
+          
+          #plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(crp), cex.main = 0.6)
+          #plot(nuts23, lwd=0.5, col = "grey90", add=TRUE)
+          
+          plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(ct, " / ", yr, ": ", crp), cex.main = cx)
+          if(nrow(dt2plot_negs@data) > 0){
+            exis_negs <- 1
+            plot(dt2plot_negs, col = col_neg, border = col_neg, add = TRUE, lwd = 3)
+            #print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
+            mtext(text = paste0("number of negative values = ", nrow(dt2plot_negs@data)), 
+                  side = 3, cex = (cx - 1.0))     
+            
+          } 
+          plot(nuts23, add=TRUE, lwd=0.5)
+          #legend("right", fill = rbPal(6), legend = lev, cex = 1.1, title = paste0("LPIS - ", crop))
+          box(which = "figure")
+          
+        }
+      }
+    } 
+    
+  }else{       # plot all Europe (default) or NUTS2 by NUTS2
+    
+    for (yr in unique(preds_hsu$Y)){
       
       for(crp in crps){
-        
         if (crp %in% crps_over_sd){
           cuts1 <- cuts_1
           rbPal <- colorRampPalette(c('pink','red'))
           rbPal_1 <- rbPal
           col_neg <- "blue"
-          
         }else{
           cuts1 <- cuts
           rbPal <- colorRampPalette(c('skyblue','darkblue'))
@@ -228,8 +303,8 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
         }
         
         dt2plot <- preds_hsu
-        
-        dt2plot <- dt2plot[grepl(paste0("^", ct), dt2plot@data$nuts2), c(no_crps, crp)]
+        dt2plot <- dt2plot[, c(no_crps, crp)]
+        dt2plot <- dt2plot[dt2plot@data$Y %in% yr, ]
         
         dt2plot_negs <- dt2plot
         dt2plot_negs <- dt2plot_negs[which(dt2plot_negs@data[, crp] < 0), ]
@@ -243,7 +318,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
         #plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(crp), cex.main = 0.6)
         #plot(nuts23, lwd=0.5, col = "grey90", add=TRUE)
         
-        plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(ct, ": ", crp), cex.main = cx)
+        plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(yr, " / ", crp), cex.main = cx)
         if(nrow(dt2plot_negs@data) > 0){
           exis_negs <- 1
           plot(dt2plot_negs, col = col_neg, border = col_neg, add = TRUE, lwd = 3)
@@ -257,55 +332,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
         box(which = "figure")
         
       }
-      
-    } 
-    
-  }else{       # plot all Europe (default) or NUTS2 by NUTS2
-    for(crp in crps){
-      if (crp %in% crps_over_sd){
-        cuts1 <- cuts_1
-        rbPal <- colorRampPalette(c('pink','red'))
-        rbPal_1 <- rbPal
-        col_neg <- "blue"
-      }else{
-        cuts1 <- cuts
-        rbPal <- colorRampPalette(c('skyblue','darkblue'))
-        rbPal_2 <- rbPal
-        col_neg <- "red"
-      }
-      
-      dt2plot <- preds_hsu
-      dt2plot@data <- dt2plot@data[, c(no_crps, crp)]
-      
-      dt2plot_negs <- dt2plot
-      dt2plot_negs <- dt2plot_negs[which(dt2plot_negs@data[, crp] < 0), ]
-      
-      dt2plot$Col <- rbPal(n_cuts)[as.numeric(cut(dt2plot[[crp]], cuts1))]
-      
-      # labels for the legend
-      #dt2plot$bin <- cut(dt2plot[[crp]], cuts1, include.lowest = TRUE, dig.lab = 4)
-      #lev01 = levels(dt2plot$bin)
-      
-      #plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(crp), cex.main = 0.6)
-      #plot(nuts23, lwd=0.5, col = "grey90", add=TRUE)
-      
-      plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(crp), cex.main = cx)
-      if(nrow(dt2plot_negs@data) > 0){
-        exis_negs <- 1
-        plot(dt2plot_negs, col = col_neg, border = col_neg, add = TRUE, lwd = 3)
-        #print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
-        mtext(text = paste0("number of negative values = ", nrow(dt2plot_negs@data)), 
-              side = 3, cex = (cx - 1.0))     
-        
-      } 
-      plot(nuts23, add=TRUE, lwd=0.5)
-      #legend("right", fill = rbPal(6), legend = lev, cex = 1.1, title = paste0("LPIS - ", crop))
-      box(which = "figure")
-      
     }
-    
-    
-    
   }
   
   
