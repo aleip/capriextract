@@ -2,7 +2,7 @@
 
 mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12", 
                     curcountries = NULL, by_country = "No", 
-                    crop = NULL, n_cuts = 6, cuts = NULL,
+                    curcrops = NULL, n_cuts = 6, cuts = NULL,
                     variab = NULL,
                     hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
                     n23_dir = "\\\\ies\\d5\\agrienv\\Data\\GIS_basedata\\GISCO_2010_NUTS2_3"){
@@ -16,18 +16,17 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
     )
   )
   )
-  print(" ")
+  cat("\n ")
   
   capridat <- capridat[grepl("^U", capridat$RALL), ]
   capridat <- capridat[capridat$ROWS %in% variab, ]
   head(capridat)
   
-  
-  capri4map <- capridat[capridat$ROWS=="SURSOI",]
+  capri4map <- capridat[capridat$ROWS %in% variab , ]
   capri4map$VALUE <- capri4map$VALUE + 1e-9
   
   # Here select only one variable
-  capri4map <- dcast(capri4map, RALL + ROWS ~ COLS, drop = TRUE, value.var = "VALUE", sum, na.rm=TRUE)
+  capri4map <- dcast(capri4map, RALL + ROWS + Y ~ COLS, drop = TRUE, value.var = "VALUE", sum, na.rm=TRUE)
   capri4map[capri4map==0]<-NA
   if (length(unique(capri4map$ROWS)) == 1) capridat <- capridat[, !names(capridat) %in% "ROWS"]
   head(capri4map)
@@ -55,9 +54,14 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   
   
   # merging predictions to HSU shapefile
-  preds_hsu <- merge(hsu, capri4map, by.x = "CAPRI_HSU", by.y = "RALL", all.x = FALSE)
+  if (length(curyears) == 1){
+    preds_hsu <- merge(hsu, capri4map, by.x = "CAPRI_HSU", by.y = "RALL", all.x = FALSE)
+  }else{
+    preds_hsu <- hsu
+    preds_hsu@data <- merge(preds_hsu@data, capri4map, by.x = "CAPRI_HSU", by.y = "RALL", all.y = TRUE)
+  }
   #summary(preds_hsu)
-  
+  head(preds_hsu@data)
   
   preds_hsu@data$EEZ_R <- as.character(preds_hsu@data$EEZ_R)
   #apply(preds_hsu@data, 2, function(x) sum(is.na(x)))
@@ -66,7 +70,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   regs <- as.vector(unique(preds_hsu@data$nuts2))
   n_regs <- length(regs)
   
-  sel_cols <- !names(preds_hsu) %in% c("CAPRI_HSU", "OBJECTID", "codes", "x", "y", "EEZ_R", "CNTR_ENGL", "AREA", "AREAcon", "UAAR", "nuts2", 
+  #sel_cols <- !names(preds_hsu) %in% c("CAPRI_HSU", "OBJECTID", "codes", "x", "y", "EEZ_R", "CNTR_ENGL", "AREA", "AREAcon", "UAAR", "nuts2", 
   sel_cols <- !names(preds_hsu) %in% c("CAPRI_HSU", "OBJECTID", "codes", "x", "y", "EEZ_R", "CNTR_ENGL", "AREA", "AREAcon", "UAAR", "nuts2")
   
   crps <- names(preds_hsu)[sel_cols]
@@ -174,7 +178,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   
   #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8)
   #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8, paper =  "a4")
-  jpeg(paste0(getwd(), "/capdis/plots/plot_check.jpg"), width = wdt, height = hgt, units = "cm", res = 150, quality = 100, pointsize = 8)
+  jpeg(paste0(getwd(), "/capdis/plots/plot_check.jpg"), width = wdt, height = hgt, units = "cm", res = 200, quality = 100, pointsize = 8)
   
   par(#mfrow = c(cl, rw), 
     mar = c(0.5, 1.1, 2.8, 1.1),
@@ -329,12 +333,12 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   }
   scalebar(sc_value, type = 'bar', divs = 4, cex = (cx - 0.1), below = "meters", xy = c(sc_b_x, sc_b_y))
   if(exis_negs > 0){
-    legend(pos_leg1, fill = c(rbPal_2(n_cuts), "red"), legend = c(lev_0, "values < 0"), cex = cx, title = paste0("Legend 3"))
-    if(length(crps_over_sd) != 0) legend("bottom", fill = c(rbPal_1(n_cuts), "blue"), legend = c(lev_1, "values < 0"), cex = cx, title = paste0("Legend 4"))
+    legend(pos_leg1, fill = c(rbPal_2(n_cuts), "red"), legend = c(lev_0, "values < 0"), cex = cx, title = paste0("Legend 1"), ncol = 2)
+    if(length(crps_over_sd) != 0) legend("bottom", fill = c(rbPal_1(n_cuts), "blue"), legend = c(lev_1, "values < 0"), cex = cx, title = paste0("Legend 2"), ncol = 2)
     
   }else{
-    legend(pos_leg1, fill = rbPal_2(n_cuts), legend = lev_0, cex = cx, title = paste0("Legend 1"))
-    if(length(crps_over_sd) != 0) legend("bottom", fill = rbPal_1(n_cuts), legend = lev_1, cex = cx, title = paste0("Legend 2"))
+    legend(pos_leg1, fill = rbPal_2(n_cuts), legend = lev_0, cex = cx, title = paste0("Legend 1"), ncol = 2)
+    if(length(crps_over_sd) != 0) legend("bottom", fill = rbPal_1(n_cuts), legend = lev_1, cex = cx, title = paste0("Legend 2"), ncol = 2)
   }
   box(which = "figure")
   
