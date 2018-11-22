@@ -1,6 +1,30 @@
 source("xobsfunctions.r")
 
-opendata<-function(scope,curcountry,curyear){
+opendata<-function(scope,
+                   curcountry,
+                   curyear, 
+                   baseyear='12'     # Required for scope capdistime
+                   ){
+#' Open a Capri data file
+#' @description This function opens a Capri gdx data file also called a xobs file. 
+#' Depending on the scope parameter, conditional statements change the bahaviour of the opendata function. 
+#' @param scope character variable used to adapt the behaviour of the function to different input file formats and locations.
+#' The following 'scope's are currently defined:
+#' - feed_marketbal
+#' - activities
+#' - nbalance
+#' - tseries
+#' - nlca
+#' - lapm
+#' - capdisreg
+#' - capdistime: Timeseries for disaggregated data. 
+#'               curyear needs to be full year (e.g. 2012)
+#'               Requires 'baseyear' as additional parameter defined in the global environment (e.g. 12)
+#' 
+#' @param curcountry character iso2 country code
+#' @param curyear numeric year
+#' @return data frame
+#' @export
   if(scope%in%c("feed_marketbal","activities") | grepl("baseyear",scope)){
     datafile<-paste0("res_",curyear)
     datafile<-paste0(datafile,curcountry,".gdx")
@@ -33,7 +57,7 @@ opendata<-function(scope,curcountry,curyear){
     }
   }
   if(grepl("capdis",scope)){
-    datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear)
+    datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear)
     if(scope=="capdiscapreg") datafile<-paste0(datafile,baseyear)
     if(scope=="capdistimes") datafile<-paste0(datafile,curyear)
     datafile<-paste0(datapath,datafile,".gdx")
@@ -46,6 +70,10 @@ opendata<-function(scope,curcountry,curyear){
     d<-list(datafile,dataparm,datanames,ydim)
     capridat<-rgdx.param(datafile,dataparm)
     names(capridat)<-datanames
+    if(scope=="capdistimes") {
+        capridat$Y <- curyear
+        capridat<-capridat[,data4dim]
+    }
     if(grepl("lapm", scope)){
       capridat$Y<-gsub("_","",curyear)
       if(curyear=="")capridat$Y<-"capdis"
@@ -55,19 +83,22 @@ opendata<-function(scope,curcountry,curyear){
       }
       capridat<-select(capridat, c("NUTS2", data4dim))
     }
+  }else{
+      cat(datafile, " does not exist\n")
+      capridat<-datafile
   }
   
   return(capridat)
 }
 
-selectrowscolsregi<-function(reload=0, capridat=capridat, cols=curcols, 
+selectrowscolsregi<-function(scope, reload=0, capridat=capridat, cols=curcols, 
                              rows=currows, ydim="Y", curdim5=NULL,regi, 
                              curcountry, curyear="08"){
   
   if(reload==1){
     capridat<-opendata(scope,curcountry,curyear)
   }
-  
+
   #COLS (activities, variables for products)
   if(!is.null(cols)) capridat<-capridat[capridat$COLS%in%cols,]
   
@@ -75,13 +106,24 @@ selectrowscolsregi<-function(reload=0, capridat=capridat, cols=curcols,
   if(!is.null(rows)) capridat<-capridat[capridat$ROWS%in%rows,]
   
   #Filter regional level 
-  capridat<-capridat[capridat$RALL%in%regi,]
+  if(!is.null(regi)){
+      if(regi=="HSU"){
+        capridat<-capridat[grepl("U[1-9]",capridat$RALL),]   
+      }else{
+        capridat<-capridat[capridat$RALL%in%regi,]
+      }
+  }
   
-  #Filter time dimension
-  capridat<-capridat[capridat$Y%in%as.character(ydim),]
-  if(curyear!=""){
-    if(!grepl("^20",curyear)){curyear<-paste0("20",curyear)}
-    capridat$Y<-curyear
+  #Filter time dimension only if 
+  
+  if(scope!="capdistimes"){
+      if(ncol(capridat)>4){
+          if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
+          if(curyear!=""){
+              if(!grepl("^20",curyear)){curyear<-paste0("20",curyear)}
+              capridat$Y<-curyear
+          }
+      }
   }
   #capridat<-capridat[,setdiff(names(capridat),c("Y"))]
   if(!is.null(curdim5)){

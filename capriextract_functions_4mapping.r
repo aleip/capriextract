@@ -22,9 +22,15 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   capridat <- capridat[capridat$ROWS %in% variab, ]
   head(capridat)
   
-  capridat <- dcast(capridat, RALL + ROWS ~ COLS, drop = TRUE, value.var = "VALUE")
-  if (length(unique(capridat$ROWS)) == 1) capridat <- capridat[, !names(capridat) %in% "ROWS"]
-  head(capridat)
+  
+  capri4map <- capridat[capridat$ROWS=="SURSOI",]
+  capri4map$VALUE <- capri4map$VALUE + 1e-9
+  
+  # Here select only one variable
+  capri4map <- dcast(capri4map, RALL + ROWS ~ COLS, drop = TRUE, value.var = "VALUE", sum, na.rm=TRUE)
+  capri4map[capri4map==0]<-NA
+  if (length(unique(capri4map$ROWS)) == 1) capridat <- capridat[, !names(capridat) %in% "ROWS"]
+  head(capri4map)
   
   #
   
@@ -49,7 +55,7 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   
   
   # merging predictions to HSU shapefile
-  preds_hsu <- merge(hsu, capridat, by.x = "CAPRI_HSU", by.y = "RALL", all.x = FALSE)
+  preds_hsu <- merge(hsu, capri4map, by.x = "CAPRI_HSU", by.y = "RALL", all.x = FALSE)
   #summary(preds_hsu)
   
   
@@ -60,13 +66,14 @@ mapping <- function(scope = "capdiscapreg", curyears = "12", baseyear = "12",
   regs <- as.vector(unique(preds_hsu@data$nuts2))
   n_regs <- length(regs)
   
+  sel_cols <- !names(preds_hsu) %in% c("CAPRI_HSU", "OBJECTID", "codes", "x", "y", "EEZ_R", "CNTR_ENGL", "AREA", "AREAcon", "UAAR", "nuts2", 
   sel_cols <- !names(preds_hsu) %in% c("CAPRI_HSU", "OBJECTID", "codes", "x", "y", "EEZ_R", "CNTR_ENGL", "AREA", "AREAcon", "UAAR", "nuts2")
   
   crps <- names(preds_hsu)[sel_cols]
   no_crps <- names(preds_hsu)[!sel_cols]
   
-  if (!is.null(crop)){
-    crps <- crps[crps %in% crop]
+  if (!is.null(curcrops)){
+    crps <- crps[crps %in% curcrops]
     preds_hsu@data <- preds_hsu@data[, c(no_crps, crps)]
   }
   

@@ -15,6 +15,7 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/"
   localpath<-"x:/adrian/models/capri/"
   curdir<-serverpath
+
   gamspath<-"X:/dev/GAMS/win64/24.4"
   gamspath<-"C:/Program Files/GAMS/win64/24.8"
   workpath<-"x:/adrian/tools/rprojects/"

@@ -1,5 +1,5 @@
 #Used Packages
-rm(list=objects())
+rm(list=objects()[!objects()=="scope"])
 library(data.table)
 library(plyr)
 #library(devtools)
@@ -12,13 +12,14 @@ library(gdxrrw)
 #library(xlsx)
 library(tidyr)
 
-library(sp)
-library(rgdal)
-library(raster)
-#library(graphics)
-library(rgeos)
-#library(ggplot2)
-library(GISTools) 
-library(maps)
-
+if(grepl("map",scope)){
+    library(sp)
+    library(rgdal)
+    library(raster)
+    #library(graphics)
+    library(rgeos)
+    #library(ggplot2)
+    library(GISTools) 
+    library(maps)
+}
 

@@ -46,10 +46,6 @@ if(scope%in%c("nlca")){
   setfilen<-paste0(ecampa3res,"sets/sets_nitrogen.gdx")
 }   
 
-
-
-
-
 rows<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ROWS")
 # set FROWS / set.fco,comi,comf,beef,pork,sgmi,sgmf,sgmt,eggs,poum,oani/;
 # set cropo / set.fco,set.ico/;
