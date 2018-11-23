@@ -1,4 +1,5 @@
 source("xobsfunctions.r")
+source("capriextract_functions_4mapping.r")
 
 opendata<-function(scope,
                    curcountry,
@@ -95,9 +96,10 @@ selectrowscolsregi<-function(scope, reload=0, capridat=capridat, cols=curcols,
                              rows=currows, ydim="Y", curdim5=NULL,regi, 
                              curcountry, curyear="08"){
   
-  if(reload==1){
-    capridat<-opendata(scope,curcountry,curyear)
-  }
+    if(reload==1){
+        capridat<-opendata(scope,curcountry,curyear)
+    }
+    capridat<-as.data.table(capridat)
 
   #COLS (activities, variables for products)
   if(!is.null(cols)) capridat<-capridat[capridat$COLS%in%cols,]

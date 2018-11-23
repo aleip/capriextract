@@ -45,6 +45,15 @@ openxobstimeseries<-function(cols=curcols,
     
 }
 
+orderhsu<-function(x){
+    x<-as.data.table(x)
+    hsu<-gsub("U","",x$RALL)
+    hsu<-as.numeric(hsu)
+    hsuorder<-order(hsu)
+    x <- x[hsuorder]
+    return(x)
+}
+
 xobsscatter<-function(xobs, curcact, curyears, curcountries, add2name=""){
     for(i in 1:(length(curyears)-1)){if(curyears[1+i]=="_") curyears[1+i]<-"capdis"}
         

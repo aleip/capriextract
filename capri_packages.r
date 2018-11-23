@@ -1,5 +1,6 @@
 #Used Packages
-rm(list=objects()[!objects()=="scope"])
+rm(list=objects()[!objects()%in%c("scope", "xobshsu", "hsu", "nuts23", 
+                                  "curcols", "curyears", "curcountries", "curregi", "currows")])
 library(data.table)
 library(plyr)
 #library(devtools)
@@ -12,7 +13,7 @@ library(gdxrrw)
 #library(xlsx)
 library(tidyr)
 
-if(grepl("map",scope)){
+#if(grepl("map",scope)){
     library(sp)
     library(rgdal)
     library(raster)
@@ -21,5 +22,5 @@ if(grepl("map",scope)){
     #library(ggplot2)
     library(GISTools) 
     library(maps)
-}
+#}
 

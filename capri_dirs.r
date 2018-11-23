@@ -13,6 +13,7 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   cgams<-"x:/dev/epnf/gams/"
 }else if(Sys.info()[4]=="D01RI1600881"){ #checks machine name
   serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/"
+  d5space<-"\\\\ies-ud01.jrc.it/D5_agrienv/Data/"
   localpath<-"x:/adrian/models/capri/"
   curdir<-serverpath
 
@@ -22,6 +23,18 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   capridat<-paste0(curdir, "capriresults_ecampa3/")
   datapath<-paste0(curdir, "users/leipadr/results/")
   cgams<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/epnf/gams/"
+
+}else if(Sys.info()[4]=="S-JRCIPRAP246P"){ #checks machine name
+  serverpath<-"D:/dev/CAPRImodel/"
+  localpath<-"x:/adrian/models/capri/"
+  curdir<-serverpath
+
+  gamspath<-"c:/Apps/GAMS//win64/25.1"
+  workpath<-"\\\\tsclient/x/adrian/tools/rprojects/"
+  capridat<-paste0(curdir, "capriresults_ecampa3/")
+  datapath<-paste0(curdir, "users/leipadr/results/")
+  cgams<-"D:/dev/CAPRImodel/epnf/gams/"
+  
 }else if(Sys.info()[4]=="D01RI1701864"){ #checks machine name
   serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/"
   localpath<-"E:/"
