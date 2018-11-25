@@ -146,7 +146,21 @@ mapping <- function(scope = "capdiscapreg",
          capridat$Y    == plotmatrix[curpanels[ipanel],4])
     }
     
-    capripage<-capridat[sel, ]    
+    capripage<-capridat[sel, ]
+    colsinpage<-paste(unique(capripage$COLS), collapse = "-")
+    rowsinpage<-paste(unique(capripage$ROWS), collapse = "-")
+    yearinpage<-paste(range(unique(capripage$Y)), collapse = "-")
+    rallinpage<-paste(rallinuse, collapse = "-")
+    pagename<-paste(c(rallinpage, colsinpage, rowsinpage, yearinpage), collapse = "_")
+    pagename<-paste0("xobs12_", pagename, "_", page, ".jpg")
+    
+    #if(!file.exists(paste0("capdis/plots"))) dir.create(paste0("capdis/plots"))
+    #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8)
+    #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8, paper =  "a4")
+    #jpeg(paste0(getwd(), "/capdis/plots/xobs12_", variab, "_", paste(rallinuse, collapse = "-"), "_", paste(range(curyears), collapse = "-"), "_", page, ".jpg"), 
+    #jpeg(paste0("xobs12_", variab, "_", paste(rallinuse, collapse = "-"), "_", paste(range(curyears), collapse = "-"), "_", page, ".jpg"), 
+         
+    
     
     # Now make legend determination & layout of page
     # Loop over each panel and do
@@ -232,7 +246,6 @@ mapping <- function(scope = "capdiscapreg",
     }
     
     
-    if(!file.exists(paste0("capdis/plots"))) dir.create(paste0("capdis/plots"))
     
     #wdt <- hgt <- 21.12
     if (rw == 1){
@@ -246,13 +259,10 @@ mapping <- function(scope = "capdiscapreg",
       hgt <- 29.7 - 2.97
     }
     
+    jpeg(pagename, width = wdt, height = hgt, units = "cm", res = 300, quality = 100, pointsize = 8)
+    
     cx <- 1.5 # for all
     
-    
-    #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8)
-    #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8, paper =  "a4")
-    jpeg(paste0(getwd(), "/capdis/plots/xobs12_", variab, "_", paste(rallinuse, collapse = "-"), "_", paste(range(curyears), collapse = "-"), "_", page, ".jpg"), 
-         width = wdt, height = hgt, units = "cm", res = 200, quality = 100, pointsize = 8)
     
     par(#mfrow = c(cl, rw), 
       mar = c(0.5, 1.1, 2.8, 1.1),
@@ -351,7 +361,7 @@ mapping <- function(scope = "capdiscapreg",
         names(preds_hsu)[1] <- "RALL"
         
         for(crp in crps){
-          cat("\n plotting panel: ",yr,"-",crp)
+          cat("\n plotting panel: ",yr,"-",crp, format(Sys.time(), "%Y%M%d %H:%M"))
           if (crp %in% crps_over_sd){
             cuts1 <- cuts_1
             rbPal <- colorRampPalette(c('pink','red'))
@@ -405,7 +415,7 @@ mapping <- function(scope = "capdiscapreg",
       }
     }
     
-    cat("\n plotting legends")
+    cat("\n plotting legends", format(Sys.time(), "%Y%M%d %H:%M"))
     if (length(crps_over_sd) != 0){
       pos_leg1 <- "top" 
     }else{ 

@@ -1,0 +1,32 @@
+# Defines default parameters for CAPRI plots
+# Most items self-explained
+# arr - type of arrangement; this determines which dimension is used on the x-axis, y-axis, or as parameter for multiple plots
+#       rcw = RALL on x-axis, COLS as series in each plot, ROWS as parameter for multiple plots
+#             Exmple: Plot of crop area(s) in each plot, stacking by crops for countries (croplevlbyrall)
+#       rwc = RALL on x-axis, ROWS as series in each plot, COLS as parameter for multiple plots
+#             Exmple: Plot of market balance item(s) stacking crops for countries (mbalbycountry)
+#       crw = COLS on x-axis, RALL as series in each plot, ROWS as parameter for multiple plots
+#             Exmple:
+#       cwr = COLS on x-axis, ROWS as series in each plot, RALL as parameter for multiple plots
+#             Exmple:
+#       wcr = ROWS on x-axis, COLS as series in each plot, RALL as parameter for multiple plots
+#             Exmple:
+#       wrc = ROWS on x-axis, RALL as series in each plot, COLS as parameter for multiple plots
+#             Exmple:
+#
+# cols/rows/rall: For sets indicate the set name
+#                 For individual elements list with comma without spaces. For single elements add comma
+#                 ATTENTION: case sensitive. If it does not work clarify capitalization
+######################################################################################################################################################
+Plotname         arr   hwratio   nrow  ncol  title                rall        cols                  rows               t2plot
+######################################################################################################################################################
+#
+# mbalbycountry        plots marketbalance elements for all EU countries and all crops on one page
+mbal             rwc   0.6       NA    2     'Crop quantities'    nuts0       mbal                  mcact              bar
+#
+croplevl         rcw   0.6       NA    1     'Crop areas'         nuts0       mcact                 LEVL,              bar
+gwpt             rcw   0.6       NA    1     'GHG emissions'      nuts0       mpact                 GWPT,              bar
+nbil             rcw   0.6       NA    1     'N flows'            nuts0       nbil                  Impact,              bar
+#
+cropyild         crw   0.6       NA    1     'Crop Yields'        nuts0eu15   mcactnohighyild       mcactnohighyild    box
+scropyild        crw   0.6       NA    1     'Crop Yields'        nuts0eu15   mcactnohighyild       SWHE,              box

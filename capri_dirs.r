@@ -1,17 +1,22 @@
-#Set working directory and load of general (used to update all) datasets.
+# Set working directory and load of general (used to update all) datasets.
 # These databases have been updated by Renate Koeble and delivered in the folder capri/hsu2_database_update_2016_02
 curfolder<-"capriextract"
 serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/capriresults_ecampa3/"
 
 if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
+  
+  # Laptop 
   gamspath<-"C:/GAMS/win64/24.8"
   curdir<-"x:/dev/"
   workpath<-"x:/adrian/tools/rprojects/"
   capridat<-"C:/adrian/models/capri/trunk20160810/dat/"
-  datapath<-"x:/dev/capriresults_ecampa3/"
   datapath<-"x:/dev/leipadr/results/"
+  datapath<-"x:/dev/capriresults_ecampa3/"
   cgams<-"x:/dev/epnf/gams/"
+
 }else if(Sys.info()[4]=="D01RI1600881"){ #checks machine name
+
+  # PC in office 27b  
   serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/"
   d5space<-"\\\\ies-ud01.jrc.it/D5_agrienv/Data/"
   localpath<-"x:/adrian/models/capri/"
@@ -22,9 +27,12 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   workpath<-"x:/adrian/tools/rprojects/"
   capridat<-paste0(curdir, "capriresults_ecampa3/")
   datapath<-paste0(curdir, "users/leipadr/results/")
+  datapath<-paste0(curdir, "capriresults_ecampa3/")
   cgams<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/epnf/gams/"
 
 }else if(Sys.info()[4]=="S-JRCIPRAP246P"){ #checks machine name
+  
+  # CAPRI server (new 2018)
   serverpath<-"D:/dev/CAPRImodel/"
   localpath<-"x:/adrian/models/capri/"
   curdir<-serverpath

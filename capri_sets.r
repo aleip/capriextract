@@ -58,6 +58,9 @@ names(mpactexp)<-c("Acronym","Description")
 mcactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "mcact")
 mcact<-as.character(mcactexp[,1])
 names(mcactexp)<-c("Acronym","Description")
+mcactnohighyild<-setdiff(mcact, c("NURS", "FLOW", "TOMA"))
+
+
 maactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MAACT")
 maact<-as.character(maactexp[,1])
 daactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "DAACT")
@@ -81,12 +84,17 @@ nbil<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL"))
 # Countries and regions
 nuts0_exp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0")
 nuts0<-as.character(nuts0_exp[,1])
+nuts0eu15<-as.character(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0_EU15")[,1])
+nuts0eu10<-as.character(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0_EU10")[,1])
 cntr<-substr(nuts0,1,2)
 srnuts2<-as.character(rgdx.set(setfile,ts = TRUE,symName = "SRNUTS2")[,1])
 nuts2<-substr(srnuts2,1,4)
 rall<-rgdx.set(setfile,ts = TRUE,te=TRUE,symName = "RALL")
 uaar<-as.data.frame(t(as.matrix(c("UAAR","Total agricultural activities"))))
 names(uaar)<-c("Acronym","Description")
+
+nbil_exp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL_COLS_MAIN")
+nbil<-as.character(nbil_exp[,1])
 
 # Nitrogen and GHG relevant sets
 if(exists("setfilen")){
@@ -97,6 +105,7 @@ if(exists("setfilen")){
   nemiscadd_exp<-rgdx.set(setfilen,te=TRUE,ts = TRUE,symName = "Nemiscadd")
   nemiscadd<-as.character(nemiscadd_exp[,1])
 }
+mbal<-c("GROF", "HCOM", "FEDM", "IMPT", "EXPT")
 
 meta2keep<-c("DATE OF VERSION","NAME OF PROCESSOR ORGANISATION","User","Regional breakdown")
 

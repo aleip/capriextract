@@ -4,7 +4,8 @@ source("capriextract_functions_4mapping.r")
 opendata<-function(scope,
                    curcountry,
                    curyear, 
-                   baseyear='12'     # Required for scope capdistime
+                   baseyear='12',  # Required for scope capdistime and capmod
+                   curscen=''      # Required for capmod
                    ){
 #' Open a Capri data file
 #' @description This function opens a Capri gdx data file also called a xobs file. 
@@ -41,6 +42,13 @@ opendata<-function(scope,
     datafile<-paste0("capmod/res_2_0830",curscen,".gdx")
     datafile<-paste0(datapath,datafile)
   }
+  if(grepl("capmod",scope)){
+    datafile<-paste0("capmod/res_2_", basyear, curyear,curscen,".gdx")
+    datafile<-paste0(datapath,datafile)
+    dataparm<-"dataout"
+    datanames<-data5dim
+    
+  }
   if(grepl("lapm", scope)){
     datafile<-paste0(cgams, "../dat/capdishsu/fssdata/")
     if(curyear=="_") curyear<-""
@@ -68,7 +76,7 @@ opendata<-function(scope,
   }
   if(file.exists(datafile)){
     cat("\n ",datafile)
-    d<-list(datafile,dataparm,datanames,ydim)
+    #d<-list(datafile,dataparm,datanames,ydim)
     capridat<-rgdx.param(datafile,dataparm)
     names(capridat)<-datanames
     if(scope=="capdistimes") {
@@ -92,12 +100,12 @@ opendata<-function(scope,
   return(capridat)
 }
 
-selectrowscolsregi<-function(scope, reload=0, capridat=capridat, cols=curcols, 
+filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols, 
                              rows=currows, ydim="Y", curdim5=NULL,regi, 
-                             curcountry, curyear="08"){
+                             curcountry, curyear="08", baseyear='08', curscen='', curscenshort=''){
   
     if(reload==1){
-        capridat<-opendata(scope,curcountry,curyear)
+        capridat<-opendata(scope,curcountry,curyear,baseyear, curscen)
     }
     capridat<-as.data.table(capridat)
 
@@ -118,7 +126,7 @@ selectrowscolsregi<-function(scope, reload=0, capridat=capridat, cols=curcols,
   
   #Filter time dimension only if 
   
-  if(scope!="capdistimes"){
+  if(!scope%in%c("capdistimes","capmod")){
       if(ncol(capridat)>4){
           if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
           if(curyear!=""){
@@ -132,10 +140,43 @@ selectrowscolsregi<-function(scope, reload=0, capridat=capridat, cols=curcols,
     print("select curdim5")
     capridat<-capridat[capridat$EMPTY%in%curdim5,]
   }
+  if(grepl("capmod", scope)){
+    capridat$SCEN<-curscenshort
+  }
   
   return(capridat)
 }
 
+filtermultiple<-function(scope, 
+                         cols=curcols, rows=currows, ydim="Y", curdim5=NULL, regi, 
+                         curcountries, curyears="08", baseyear='08', curscens='', curscensshort=''){
+  cat("\n", length(curcountries), curcountries)
+  capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
+    Reduce(rbind, lapply(1:length(curcountries), function(y)
+      Reduce(rbind, lapply(1:length(curscens), function(z)
+        filteropen(scope, 
+                   reload=1, 
+                   # Filtering options
+                   cols=cols, 
+                   rows=rows,
+                   ydim=ydim, 
+                   curdim5=curdim5,
+                   regi=regi,
+                   # Opening options
+                   curcountry = curcountries[y], 
+                   curyear = curyears[x],
+                   baseyear = baseyear,
+                   curscen = curscens[z],
+                   curscenshort = curscensshort[z]
+        )
+      ))
+    ))
+  ))
+  
+  
+  return(capridat)
+  
+}
 
 getfedm<-function(curcountry){
     

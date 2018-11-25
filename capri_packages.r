@@ -12,6 +12,8 @@ library(stats)
 library(gdxrrw)
 #library(xlsx)
 library(tidyr)
+library(ggplot2)
+library(ggpubr)
 
 #if(grepl("map",scope)){
     library(sp)
@@ -23,4 +25,5 @@ library(tidyr)
     library(GISTools) 
     library(maps)
 #}
+
 
