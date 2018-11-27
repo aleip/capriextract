@@ -467,7 +467,7 @@ mapping <- function(scope = "capdiscapreg",
     if(exists("exis_negs")){
       legend(pos_leg1, fill = c(rbPal_2(n_cuts), "red"), legend = c(lev_0, "values < 0"), cex = cxl, title = lgd, ncol = 2)
       if(length(crps_over_sd) != 0) legend("bottom", fill = c(rbPal_1(n_cuts), "blue"), legend = c(lev_1, "values < 0"), cex = cx, title = lgd, ncol = 2)
-      
+      rm(exis_negs)
     }else{
       legend(pos_leg1, fill = rbPal_2(n_cuts), legend = lev_0, cex = cxl, title = lgd, ncol = 2)
       if(length(crps_over_sd) != 0) legend("bottom", fill = rbPal_1(n_cuts), legend = lev_1, cex = cx, title = lgd, ncol = 2)
@@ -486,7 +486,7 @@ mapping <- function(scope = "capdiscapreg",
     mtext(text = paste0("CAPRI Time series disaggregated 20181121"), 
           side = 1, adj = 0, outer = TRUE, line = 3, cex = (cx - 0.9))     #footer
     
-    rm(exis_negs)
+    
     
     
     dev.off()
