@@ -74,9 +74,7 @@ mapping <- function(scope = "capdiscapreg",
   capridat <- capridat[capridat$Y %in% curyears, ]
 
   capridat <- capridat[grepl("^U", capridat$RALL), ]
-  head(capridat)
-  nrow(capridat)
-  
+
   capri4map <- capridat
   capri4map$VALUE <- capri4map$VALUE + 1e-9
   
@@ -89,8 +87,8 @@ mapping <- function(scope = "capdiscapreg",
   rallshape$nuts2 <- substr(rallshape$EEZ_R, 1, 4)
   
   if (by_country %in% c("Y", "Yes")){       #plot country by country
-    rallinuse <- unique(substr(rallshape$nuts2, 1, 2))
-    nrall <- length(unique(substr(rallshape$nuts2, 1, 2)))
+    rallinuse <- curcountries
+    nrall <- length(rallinuse)
   }else if (by_country %in% c("No", "N")){       # plot all Europe (default)
     rallinuse<-"Europe"
     nrall <- 1
@@ -134,7 +132,7 @@ mapping <- function(scope = "capdiscapreg",
       }
     }
   }
-  
+  pagename_old <- "1"
   for(page in 1:npages){
     cat("\n plotting page: ",page)
     sel<-vector(length = nrow(capridat))
@@ -149,10 +147,19 @@ mapping <- function(scope = "capdiscapreg",
     capripage<-capridat[sel, ]
     colsinpage<-paste(unique(capripage$COLS), collapse = "-")
     rowsinpage<-paste(unique(capripage$ROWS), collapse = "-")
-    yearinpage<-paste(range(unique(capripage$Y)), collapse = "-")
+    yearinpage<-range(unique(capripage$Y))
+    if(yearinpage[1] == yearinpage[2]) yearinpage <- yearinpage[1]
+    yearinpage<-paste(yearinpage, collapse = "-")
     rallinpage<-paste(rallinuse, collapse = "-")
     pagename<-paste(c(rallinpage, colsinpage, rowsinpage, yearinpage), collapse = "_")
-    pagename<-paste0("xobs12_", pagename, "_", page, ".jpg")
+    if (pagename_old != pagename){
+      pg <- 1
+    }else{
+      pg <- pg + 1
+    }
+    pagename_old <- pagename
+    
+    pagename1<-paste0("xobs12_", pagename, "_", pg, ".jpg")
     
     #if(!file.exists(paste0("capdis/plots"))) dir.create(paste0("capdis/plots"))
     #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8)
@@ -173,7 +180,6 @@ mapping <- function(scope = "capdiscapreg",
     capri4map[capri4map==0]<-NA
     #if (length(unique(capri4map$ROWS)) == 1) capridat <- capridat[, !names(capridat) %in% "ROWS"]
     head(capri4map)
-    
     
     sel_cols <- !names(capri4map) %in% c("RALL", "ROWS", "Y")
     
@@ -259,7 +265,7 @@ mapping <- function(scope = "capdiscapreg",
       hgt <- 29.7 - 2.97
     }
     
-    jpeg(pagename, width = wdt, height = hgt, units = "cm", res = 300, quality = 100, pointsize = 8)
+    jpeg(pagename1, width = wdt, height = hgt, units = "cm", res = 300, quality = 100, pointsize = 8)
     
     cx <- 1.5 # for all
     
@@ -403,7 +409,6 @@ mapping <- function(scope = "capdiscapreg",
             #print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
             mtext(text = paste0("number of negative values = ", nrow(dt2plot_negs@data)), 
                   side = 3, cex = (cx - 1.0))     
-            
           } 
           #plot(nuts23, add=TRUE, lwd = 0.1, border = "grey")
           #plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(yr, " / ", crp), cex.main = cx, add = T)
@@ -459,7 +464,7 @@ mapping <- function(scope = "capdiscapreg",
     }
     scalebar(sc_value, type = 'bar', divs = 4, cex = (cxl - 0.1), below = "meters", xy = c(sc_b_x, sc_b_y))
     
-    if(exis_negs > 0){
+    if(exists("exis_negs")){
       legend(pos_leg1, fill = c(rbPal_2(n_cuts), "red"), legend = c(lev_0, "values < 0"), cex = cxl, title = lgd, ncol = 2)
       if(length(crps_over_sd) != 0) legend("bottom", fill = c(rbPal_1(n_cuts), "blue"), legend = c(lev_1, "values < 0"), cex = cx, title = lgd, ncol = 2)
       
