@@ -38,12 +38,19 @@ opendata<-function(scope,
     datafile<-paste0(curcountry,"_12.gdx")
     datafile<-paste0(datapath,datafile)
   }
+  if(grepl("tseriesGHG", scope)){
+    datafile<-paste0("Capreg_tseries/GHGperCountry/")
+    datafile<-paste0(datafile, "res_time_series_GHG_", curcountry, ".gdx")
+    datafile<-paste0(datapath, datafile)
+    dataparm <- 'DATA2'
+    datanames <- data4dim
+  }
   if(grepl("nlca",scope)){
     datafile<-paste0("capmod/res_2_0830",curscen,".gdx")
     datafile<-paste0(datapath,datafile)
   }
   if(grepl("capmod",scope)){
-    datafile<-paste0("capmod/res_2_", basyear, curyear,curscen,".gdx")
+    datafile<-paste0("capmod/res_2_", baseyear, curyear,curscen,".gdx")
     datafile<-paste0(datapath,datafile)
     dataparm<-"dataout"
     datanames<-data5dim
@@ -66,9 +73,9 @@ opendata<-function(scope,
     }
   }
   if(grepl("capdis",scope)){
-    datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear)
-    if(scope=="capdiscapreg") datafile<-paste0(datafile,baseyear)
-    if(scope=="capdistimes") datafile<-paste0(datafile,curyear)
+    if(scope=="capdis") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
+    if(scope=="capdiscapreg") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
+    if(scope=="capdistimes") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear,curyear)
     datafile<-paste0(datapath,datafile,".gdx")
     dataparm<-"xobs"
     ydim<-""
@@ -117,16 +124,17 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
   
   #Filter regional level 
   if(!is.null(regi)){
+    if(length(regi)==1){  
       if(regi=="HSU"){
         capridat<-capridat[grepl("U[1-9]",capridat$RALL),]   
-      }else{
-        capridat<-capridat[capridat$RALL%in%regi,]
       }
+    }else{
+      capridat<-capridat[capridat$RALL%in%regi,]
+    }
   }
   
   #Filter time dimension only if 
-  
-  if(!scope%in%c("capdistimes","capmod")){
+  if(!scope%in%c("capdistimes","capmod", "tseriesGHG")){
       if(ncol(capridat)>4){
           if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
           if(curyear!=""){
@@ -134,6 +142,9 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
               capridat$Y<-curyear
           }
       }
+  }
+  if(scope%in%c("tseriesGHG")){
+    capridat<-capridat[capridat$Y%in%as.character(curyear)]
   }
   #capridat<-capridat[,setdiff(names(capridat),c("Y"))]
   if(!is.null(curdim5)){
@@ -178,6 +189,33 @@ filtermultiple<-function(scope,
   
 }
 
+convertarguments2values<-function(...){
+    # Function that helps debugging - converts all arguments into values
+    #          in the global environment so that the function can
+    #          be checked directly line by line
+    
+    l<-as.list(match.call())
+    for (i in 2:length(l)){
+        #cat("\n", i, "Assigning ", l[[i]], " to ", paste(names(l)[i],collapse="") , "...")
+            cat("\nstart",i,":", names(l)[i])
+        n<-names(l[[i]])
+        if(! exists(n)){
+            cat("\nNo argument name given for ", l[[i]],". Tentatively set to ",l[[i]])
+            n<-l[[i]]
+        }
+        g<-eval(l[[i]])
+            cat("\n", n, " is character", l[[i]], " - ", g)
+        #if(is.character(g) & length(g)==1){
+        #    assign(names(l)[i], l[[i]], envir=.GlobalEnv)
+        #}else{
+            assign(n, g, envir=.GlobalEnv)
+            cat("\n", n, " is character", l[[i]], " - ", g)
+        #}
+    }
+    #print(as.list(match.call()))
+    return(l)
+}
+
 getfedm<-function(curcountry){
     
     #20170708 - Extraction of feed data to send to Olga Gavrilova [oggavrilova@gmail.com]
@@ -200,6 +238,7 @@ getfedm<-function(curcountry){
         cat("\nFile ",datafile," does not exist!")
     }
 }
+
 
 getmeta<-function(curcountry,curyear){
   if(scope%in%c("feed_marketbal","activities") | grepl("baseyear",scope)){
