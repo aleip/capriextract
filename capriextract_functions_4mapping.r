@@ -40,7 +40,7 @@ mapping <- function(scope = "capdiscapreg",
                     curyears = "12", 
                     curcrops = NULL, 
                     n_cuts = 6, 
-                    cuts = NULL,
+                    cuts_hard = NULL,
                     maxpanelsonpage=7,
                     variab = NULL,
                     flagoutliers = c(NA, NA), # c(lowthreshold, highthreshold)
@@ -258,7 +258,7 @@ mapping <- function(scope = "capdiscapreg",
     pnls4leg <- floor(free_pnls / 2) * 2
     
     
-    if (is.null(cuts)){
+    if (is.null(cuts_hard)){
       if (length(crps_over_sd) != 0){
         
         cuts_1 <- stats::quantile(capri4map[crps_over_sd][capri4map[crps_over_sd] > 0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
@@ -276,7 +276,7 @@ mapping <- function(scope = "capdiscapreg",
       }
       
     }else{
-      cuts <- round(cuts, 2)
+      cuts <- round(cuts_hard, 2)
       lev_0 <- c()
       for (c in 1:(length(cuts) - 1)) {
         lev_0 <- c(lev_0, paste0("(", cuts[c], ",", cuts[c + 1], "]" ))
