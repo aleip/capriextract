@@ -1,5 +1,6 @@
 source("xobsfunctions.r")
 source("capriextract_functions_4mapping.r")
+source("capriplots.r")
 
 opendata<-function(scope,
                    curcountry,
@@ -43,7 +44,7 @@ opendata<-function(scope,
     datafile<-paste0(datapath,datafile)
   }
   if(grepl("capmod",scope)){
-    datafile<-paste0("capmod/res_2_", basyear, curyear,curscen,".gdx")
+    datafile<-paste0("capmod/res_2_", baseyear, curyear,curscen,".gdx")
     datafile<-paste0(datapath,datafile)
     dataparm<-"dataout"
     datanames<-data5dim
@@ -92,23 +93,37 @@ opendata<-function(scope,
       }
       capridat<-select(capridat, c("NUTS2", data4dim))
     }
+    #setattr(capridat,paste0(datafile,n),datafile)
+    fattr<-data.frame(nrow=1)
+    f<-gsub(".*/","", datafile)
+    fattr$filename[1]<-f
+    fattr$filepath[1]<-gsub(f, "", datafile)
+    fattr$filemtime[1]<-as.character(file.mtime(datafile))
   }else{
       cat(datafile, " does not exist\n")
       capridat<-datafile
   }
   
-  return(capridat)
+  return(list(capridat,fattr))
 }
 
 filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols, 
-                             rows=currows, ydim="Y", curdim5=NULL,regi, 
-                             curcountry, curyear="08", baseyear='08', curscen='', curscenshort=''){
+                     rows=currows, ydim="Y", curdim5=NULL,regi, 
+                     curcountry, curyear="08", baseyear='08', 
+                     curscen='', curscenshort=''){
   
     if(reload==1){
         capridat<-opendata(scope,curcountry,curyear,baseyear, curscen)
+        fattr<-capridat[[2]]
+        capridat<-capridat[[1]]
     }
     capridat<-as.data.table(capridat)
 
+    fattr$filterCOLS<-cols
+    fattr$filterROWS<-rows
+    fattr$filterCountry<-curcountry
+    fattr$filterRegi<-regi
+    
   #COLS (activities, variables for products)
   if(!is.null(cols)) capridat<-capridat[capridat$COLS%in%cols,]
   
@@ -143,39 +158,82 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
   if(grepl("capmod", scope)){
     capridat$SCEN<-curscenshort
   }
-  
-  return(capridat)
+  #print(attributes(capridat))
+    cat("-->")
+        print(fattr)
+    return(list(capridat, fattr))
 }
 
 filtermultiple<-function(scope, 
                          cols=curcols, rows=currows, ydim="Y", curdim5=NULL, regi, 
                          curcountries, curyears="08", baseyear='08', curscens='', curscensshort=''){
   cat("\n", length(curcountries), curcountries)
-  capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
-    Reduce(rbind, lapply(1:length(curcountries), function(y)
-      Reduce(rbind, lapply(1:length(curscens), function(z)
-        filteropen(scope, 
-                   reload=1, 
-                   # Filtering options
-                   cols=cols, 
-                   rows=rows,
-                   ydim=ydim, 
-                   curdim5=curdim5,
-                   regi=regi,
-                   # Opening options
-                   curcountry = curcountries[y], 
-                   curyear = curyears[x],
-                   baseyear = baseyear,
-                   curscen = curscens[z],
-                   curscenshort = curscensshort[z]
+  nfiles<-length(curcountries)*length(curscens)*length(curyears)
+  cdat<-list()
+  fdat<-data.frame(nrow=1)
+  n<-0
+  for(x in 1:length(curyears)){
+    for(y in 1:length(curcountries)){
+      for(z in 1:length(curscens)){
+        n<-n+1
+        capridat<- filteropen(scope, 
+                               reload=1, 
+                               # Filtering options
+                               cols=cols, 
+                               rows=rows,
+                               ydim=ydim, 
+                               curdim5=curdim5,
+                               regi=regi,
+                               # Opening options
+                               curcountry = curcountries[y], 
+                               curyear = curyears[x],
+                               baseyear = baseyear,
+                               curscen = curscens[z],
+                               curscenshort = curscensshort[z]
         )
-      ))
-    ))
-  ))
+        cdat[[n]]<-capridat[[1]]
+        #print(str(capridat[[1]]))
+        cat("print from filter")
+        print(capridat[[2]])
+        if(n==1){
+          fdat<-capridat[[2]]
+        }else{
+          fdat<-rbind(fdat, capridat[[2]])
+        }
+      }
+    }
+  }
   
+  capridat<-Reduce(rbind, cdat)
+  #print(capridat)
   
-  return(capridat)
-  
+  return(list(capridat, fdat))
+  # capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
+  #   Reduce(rbind, lapply(1:length(curcountries), function(y)
+  #     Reduce(rbind, lapply(1:length(curscens), function(z)
+  #       filteropen(scope, 
+  #                  reload=1, 
+  #                  # Filtering options
+  #                  cols=cols, 
+  #                  rows=rows,
+  #                  ydim=ydim, 
+  #                  curdim5=curdim5,
+  #                  regi=regi,
+  #                  # Opening options
+  #                  curcountry = curcountries[y], 
+  #                  curyear = curyears[x],
+  #                  baseyear = baseyear,
+  #                  curscen = curscens[z],
+  #                  curscenshort = curscensshort[z],
+  #                  nfiles = nfiles
+  #       )
+  #     ))
+  #   ))
+  # ))
+  # 
+  # 
+  # return(capridat)
+  # 
 }
 
 getfedm<-function(curcountry){

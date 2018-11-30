@@ -26,7 +26,7 @@ mbal             rwc   0.6       NA    2     'Crop quantities'    nuts0       mb
 #
 croplevl         rcw   0.6       NA    1     'Crop areas'         nuts0       mcact                 LEVL,              bar
 gwpt             rcw   0.6       NA    1     'GHG emissions'      nuts0       mpact                 GWPT,              bar
-nbil             rcw   0.6       NA    1     'N flows'            nuts0       nbil                  Impact,              bar
+nbil             rwc   0.6       NA    1     'N flows'            nuts0       nbil                  Impact,              bar
 #
 cropyild         crw   0.6       NA    1     'Crop Yields'        nuts0eu15   mcactnohighyild       mcactnohighyild    box
 scropyild        crw   0.6       NA    1     'Crop Yields'        nuts0eu15   mcactnohighyild       SWHE,              box
