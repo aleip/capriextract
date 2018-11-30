@@ -74,9 +74,7 @@ mapping <- function(scope = "capdiscapreg",
   capridat <- capridat[capridat$Y %in% curyears, ]
 
   capridat <- capridat[grepl("^U", capridat$RALL), ]
-  head(capridat)
-  nrow(capridat)
-  
+
   capri4map <- capridat
   capri4map$VALUE <- capri4map$VALUE + 1e-9
   
@@ -89,8 +87,8 @@ mapping <- function(scope = "capdiscapreg",
   rallshape$nuts2 <- substr(rallshape$EEZ_R, 1, 4)
   
   if (by_country %in% c("Y", "Yes")){       #plot country by country
-    rallinuse <- unique(substr(rallshape$nuts2, 1, 2))
-    nrall <- length(unique(substr(rallshape$nuts2, 1, 2)))
+    rallinuse <- curcountries
+    nrall <- length(rallinuse)
   }else if (by_country %in% c("No", "N")){       # plot all Europe (default)
     rallinuse<-"Europe"
     nrall <- 1
@@ -118,6 +116,7 @@ mapping <- function(scope = "capdiscapreg",
   
   cat("\n Determine number of pages")
   npages<-ceiling(categs2plot/maxpanelsonpage)
+  if (by_country %in% c("Y", "Yes")) panperpage <- ceiling(categs2plot / npages)
   ipanel<-0
   plotmatrix<-matrix(nrow = categs2plot, ncol = 4)
   # Extract data table with all data that are to be plotted
@@ -134,11 +133,33 @@ mapping <- function(scope = "capdiscapreg",
       }
     }
   }
-  
+  pagename_old <- "1"
+  #curpanels02 <- c()
   for(page in 1:npages){
+#    curpanels01 <- c()
+#    cat("\n plotting page: ",page)
+#    sel<-vector(length = nrow(capridat))
+#    if (by_country %in% c("Y", "Yes") & (length(yearsinuse) %% maxpanelsonpage) != 0){
+#     curpanels <- which(plotmatrix[, 1] %in% unique(plotmatrix[, 1])[page])[1:maxpanelsonpage]
+#      curpanels1 <- which(plotmatrix[, 1] %in% unique(plotmatrix[, 1])[page])[(maxpanelsonpage + 1):length(which(plotmatrix[, 1] %in% unique(plotmatrix[, 1])[page]))]
+#      if (!all(is.na(curpanels1))){
+#        curpanels01 <- c(curpanels01, curpanels1)
+#        curpanels02 <- c(curpanels02, curpanels01)
+#      }else{
+#        curpanels <- curpanels02
+#      }
+#      
+#    }else{
+#      curpanels<-(maxpanelsonpage * (page-1) +1): min(categs2plot, maxpanelsonpage * page)
+#    }
     cat("\n plotting page: ",page)
     sel<-vector(length = nrow(capridat))
-    curpanels<-(maxpanelsonpage * (page-1) +1): min(categs2plot, maxpanelsonpage * page)
+    if (by_country %in% c("Y", "Yes")) {
+      curpanels <- (panperpage * (page-1) +1): (panperpage * page)
+    }else{
+      curpanels<-(maxpanelsonpage * (page-1) +1): min(categs2plot, maxpanelsonpage * page)
+    }
+    
     for(ipanel in 1:length(curpanels)){
       sel <- sel |
         (capridat$COLS == plotmatrix[curpanels[ipanel],2] &
@@ -149,10 +170,19 @@ mapping <- function(scope = "capdiscapreg",
     capripage<-capridat[sel, ]
     colsinpage<-paste(unique(capripage$COLS), collapse = "-")
     rowsinpage<-paste(unique(capripage$ROWS), collapse = "-")
-    yearinpage<-paste(range(unique(capripage$Y)), collapse = "-")
-    rallinpage<-paste(rallinuse, collapse = "-")
+    yearinpage<-range(unique(capripage$Y))
+    if(yearinpage[1] == yearinpage[2]) yearinpage <- yearinpage[1]
+    yearinpage<-paste(yearinpage, collapse = "-")
+    rallinpage<-paste(unique(plotmatrix[curpanels, 1]), collapse = "-")
     pagename<-paste(c(rallinpage, colsinpage, rowsinpage, yearinpage), collapse = "_")
-    pagename<-paste0("xobs12_", pagename, "_", page, ".jpg")
+    if (pagename_old != pagename){
+      pg <- 1
+    }else{
+      pg <- pg + 1
+    }
+    pagename_old <- pagename
+    
+    pagename1<-paste0("xobs12_", pagename, "_", pg, ".jpg")
     
     #if(!file.exists(paste0("capdis/plots"))) dir.create(paste0("capdis/plots"))
     #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8)
@@ -172,10 +202,10 @@ mapping <- function(scope = "capdiscapreg",
     capri4map <- dcast(capripage, RALL + ROWS + Y ~ COLS, drop = TRUE, value.var = "VALUE", sum, na.rm=TRUE)
     capri4map[capri4map==0]<-NA
     #if (length(unique(capri4map$ROWS)) == 1) capridat <- capridat[, !names(capridat) %in% "ROWS"]
-    head(capri4map)
-    
-    
-    sel_cols <- !names(capri4map) %in% c("RALL", "ROWS", "Y")
+
+    capri4map <- merge(capri4map, hsu@data[, names(hsu@data) %in% c("CAPRI_HSU", "EEZ_R")], by.x = "RALL", by.y = "CAPRI_HSU", all.x = TRUE)
+
+    sel_cols <- !names(capri4map) %in% c("RALL", "ROWS", "Y", "EEZ_R")
     
     crps <- names(capri4map)[sel_cols]
     no_crps <- names(capri4map)[!sel_cols]
@@ -186,7 +216,7 @@ mapping <- function(scope = "capdiscapreg",
     #  }
     
     length(crps)
-    sel_cols_n3 <- !names(capri4map) %in% c("RALL", "ROWS", "Y")
+    sel_cols_n3 <- !names(capri4map) %in% c("RALL", "ROWS", "Y", "EEZ_R")
     
     
     # Find which categories should be plotted in a different scale because values are to big
@@ -227,7 +257,7 @@ mapping <- function(scope = "capdiscapreg",
         lev_1 <- levels(cut(as.numeric(unlist(capri4map[crps_over_sd])), cuts_1))
         
         crps_0 <- crps[!crps %in% crps_over_sd]
-        cuts <- stats::quantile(capri4map[crps_0][preds_hsu@data[crps_0] > 0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
+        cuts <- stats::quantile(capri4map[crps_0][capri4map[crps_0] > 0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
         lev_0 <- levels(cut(as.numeric(unlist(capri4map[crps_0])), cuts))
         
       }else{
@@ -259,9 +289,10 @@ mapping <- function(scope = "capdiscapreg",
       hgt <- 29.7 - 2.97
     }
     
-    jpeg(pagename, width = wdt, height = hgt, units = "cm", res = 300, quality = 100, pointsize = 8)
+    jpeg(pagename1, width = wdt, height = hgt, units = "cm", res = 300, quality = 100, pointsize = 8)
     
     cx <- 1.5 # for all
+    #if(by_country %in% c("Y", "Yes")) cx <- 1.3
     
     
     par(#mfrow = c(cl, rw), 
@@ -283,7 +314,7 @@ mapping <- function(scope = "capdiscapreg",
       lyt <- c(lyt[!lyt %in% lyt[which(duplicated(lyt))]], lyt[lyt %in% lyt[which(duplicated(lyt))]])
       lyt <- matrix(lyt, nrow = rw, ncol = cl, byrow = FALSE)
     }else{
-      lyt <- matrix(lyt, nrow = rw, ncol = cl, byrow = TRUE)
+      lyt <- matrix(lyt, nrow = rw, ncol = cl, byrow = FALSE)
     }
     
     lyt <- layout(lyt)
@@ -291,29 +322,40 @@ mapping <- function(scope = "capdiscapreg",
     
     if (by_country %in% c("Y", "Yes")){       #plot the country by country
       
-      for (ct in unique(substr(preds_hsu$nuts2, 1, 2))){
+      for (ct in unique(plotmatrix[curpanels, 1])){
         
-        for (yr in unique(preds_hsu$Y)){
-          
-          for(crp in crps){
+        capri4map_ct <- capri4map[substr(capri4map$EEZ_R, 1, 2) %in% ct, ]
+        
+        for(crp in crps){
+          if (crp %in% crps_over_sd){
+            cuts1 <- cuts_1
+            rbPal <- colorRampPalette(c('pink','red'))
+            rbPal_1 <- rbPal
+            col_neg <- "blue"
             
-            if (crp %in% crps_over_sd){
-              cuts1 <- cuts_1
-              rbPal <- colorRampPalette(c('pink','red'))
-              rbPal_1 <- rbPal
-              col_neg <- "blue"
-              
-            }else{
-              cuts1 <- cuts
-              rbPal <- colorRampPalette(c('skyblue','darkblue'))
-              rbPal_2 <- rbPal
-              col_neg <- "red"
-            }
+          }else{
+            cuts1 <- cuts
+            rbPal <- colorRampPalette(c('skyblue','darkblue'))
+            rbPal_2 <- rbPal
+            col_neg <- "red"
+          }
+          
+        
+          for (yr in unique(plotmatrix[curpanels, 4])){
+            
+            if (!paste(c(ct, crp, yr), collapse = "") %in% apply(plotmatrix[curpanels, -3], 1, paste, collapse = "")) next
+            
+            cat("\n plotting panel: ", ct, "-", yr,"-", crp, format(Sys.time(), "%Y%M%d %H:%M"))
+            
+            capri4map_yr <- capri4map_ct[capri4map_ct$Y %in% yr, ]
+            
+            preds_hsu <- merge(hsu, capri4map_yr[, !names(capri4map_yr) %in% c("EEZ_R") ], by.x = "CAPRI_HSU", by.y = "RALL", all.x = FALSE)
+            names(preds_hsu)[1] <- "RALL"
+            
+            
             
             dt2plot <- preds_hsu
-            
-            dt2plot <- dt2plot[grepl(paste0("^", ct), dt2plot@data$nuts2), c(no_crps, crp)]
-            dt2plot <- dt2plot[dt2plot@data$Y %in% yr, ]
+            dt2plot <- dt2plot[, c(no_crps, crp)]
             
             dt2plot_negs <- dt2plot
             dt2plot_negs <- dt2plot_negs[which(dt2plot_negs@data[, crp] < 0), ]
@@ -330,9 +372,9 @@ mapping <- function(scope = "capdiscapreg",
             nuts23_inuse <- nuts23
             nuts23_inuse <- nuts23_inuse[nuts23_inuse@data$NUTS3_ID10 %in% preds_hsu@data$EEZ_R, ]
             
-            plot(nuts23_inuse, lwd=0.5, col = "white", border = "white")
+            plot(nuts23_inuse, lwd=0.5, col = "white", border = "white", main = paste0(ct, " / ", yr, ": ", crp), cex.main = cx)
             plot(nuts23, add = TRUE, lwd = 0.5)
-            plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(ct, " / ", yr, ": ", crp), cex.main = cx, add = TRUE)
+            plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, cex.main = cx, add = TRUE)
             if(nrow(dt2plot_negs@data) > 0){
               exis_negs <- 1
               plot(dt2plot_negs, col = col_neg, border = col_neg, add = TRUE, lwd = 3)
@@ -403,7 +445,6 @@ mapping <- function(scope = "capdiscapreg",
             #print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
             mtext(text = paste0("number of negative values = ", nrow(dt2plot_negs@data)), 
                   side = 3, cex = (cx - 1.0))     
-            
           } 
           #plot(nuts23, add=TRUE, lwd = 0.1, border = "grey")
           #plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(yr, " / ", crp), cex.main = cx, add = T)
@@ -441,8 +482,8 @@ mapping <- function(scope = "capdiscapreg",
       ttl <- "SOIL NITROGEN SURPLUS BELOW ROOT ZONE"
       lgd <- expression(paste("SURSOI [kg N ", "ha"^"-1", " yr"^"-1", "]"))
 
-      if(rallinuse != "Europe"){
-        ttl <- paste0(ttl, paste0(". Regions: ", paste(rallinuse, collapse = ", ")))
+      if(!any(rallinuse %in% "Europe")){
+        ttl <- paste0(ttl)
       }
     }else{
       ttl <- "title here"
@@ -459,10 +500,10 @@ mapping <- function(scope = "capdiscapreg",
     }
     scalebar(sc_value, type = 'bar', divs = 4, cex = (cxl - 0.1), below = "meters", xy = c(sc_b_x, sc_b_y))
     
-    if(exis_negs > 0){
+    if(exists("exis_negs")){
       legend(pos_leg1, fill = c(rbPal_2(n_cuts), "red"), legend = c(lev_0, "values < 0"), cex = cxl, title = lgd, ncol = 2)
       if(length(crps_over_sd) != 0) legend("bottom", fill = c(rbPal_1(n_cuts), "blue"), legend = c(lev_1, "values < 0"), cex = cx, title = lgd, ncol = 2)
-      
+      rm(exis_negs)
     }else{
       legend(pos_leg1, fill = rbPal_2(n_cuts), legend = lev_0, cex = cxl, title = lgd, ncol = 2)
       if(length(crps_over_sd) != 0) legend("bottom", fill = rbPal_1(n_cuts), legend = lev_1, cex = cx, title = lgd, ncol = 2)
@@ -481,7 +522,7 @@ mapping <- function(scope = "capdiscapreg",
     mtext(text = paste0("CAPRI Time series disaggregated 20181121"), 
           side = 1, adj = 0, outer = TRUE, line = 3, cex = (cx - 0.9))     #footer
     
-    rm(exis_negs)
+    
     
     
     dev.off()
