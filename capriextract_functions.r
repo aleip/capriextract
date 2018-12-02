@@ -62,14 +62,14 @@ opendata<-function(scope,
     if(curyear=="_") curyear<-""
     datafile<-paste0(datafile, "capdis_", curcountry, "_10GRID", curyear, ".gdx")
     dataparm<-"p_capdis"
-    ydim<-""
+    ydim<-NULL
     datanames<-c("RALL", "ROWS", "COLS", "VALUE")
     
     if(curyear=="preds"){
       datafile<-paste0(cgams, "../dat/capdishsu/lapm/")
       datafile<-paste0(datafile, substr(curcountry, 1, 2), "_lapmpreds.gdx")
       dataparm<-"lapmpreds"
-      ydim<-""
+      ydim<-NULL
       datanames<-c("RALL", "COLS", "VALUE")
     }
   }
@@ -93,12 +93,12 @@ opendata<-function(scope,
     }
     if(grepl("lapm", scope)){
       capridat$Y<-gsub("_","",curyear)
-      if(curyear=="")capridat$Y<-"capdis"
-      capridat$NUTS2<-curcountry
+      if(curyear=="")capridat$Y<-"2010"
+      #capridat$NUTS2<-curcountry
       if(curyear=="preds"){
         capridat$ROWS<-"LEVL"
       }
-      capridat<-select(capridat, c("NUTS2", data4dim))
+      #capridat<-capridat[, c("NUTS2", data4dim)]
     }
     #setattr(capridat,paste0(datafile,n),datafile)
     fattr<-data.frame(nrow=1)
@@ -126,10 +126,10 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
     }
     capridat<-as.data.table(capridat)
 
-    fattr$filterCOLS<-cols
-    fattr$filterROWS<-rows
-    fattr$filterCountry<-curcountry
-    fattr$filterRegi<-regi
+    fattr$filterCOLS<-paste(cols, collapse="-")
+    fattr$filterROWS<-paste(rows, collapse='-')
+    fattr$filterCountry<-paste(curcountry, collapse="-")
+    fattr$filterRegi<-paste(regi, collapse="-")
     
   #COLS (activities, variables for products)
   if(!is.null(cols)) capridat<-capridat[capridat$COLS%in%cols,]
@@ -142,6 +142,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
     if(length(regi)==1){  
       if(regi=="HSU"){
         capridat<-capridat[grepl("U[1-9]",capridat$RALL),]   
+        capridat<-capridat[! grepl("HU[1-9]",capridat$RALL),]   
       }
     }else{
       capridat<-capridat[capridat$RALL%in%regi,]
@@ -149,7 +150,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
   }
   
   #Filter time dimension only if 
-  if(!scope%in%c("capdistimes","capmod", "tseriesGHG")){
+  if(!scope%in%c("capdistimes","capmod", "tseriesGHG", "lapm")){
       if(ncol(capridat)>4){
           if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
           if(curyear!=""){
@@ -166,12 +167,12 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
     print("select curdim5")
     capridat<-capridat[capridat$EMPTY%in%curdim5,]
   }
-  if(grepl("capmod", scope)){
-    capridat$SCEN<-curscenshort
-  }
-  #print(attributes(capridat))
-    cat("-->")
-        print(fattr)
+    if(grepl("capmod", scope)){
+      capridat$SCEN<-curscenshort
+    }
+    #print(attributes(capridat))
+    #cat("-->")
+    #print(fattr)
     return(list(capridat, fattr))
 }
 
@@ -204,8 +205,8 @@ filtermultiple<-function(scope,
         )
         cdat[[n]]<-capridat[[1]]
         #print(str(capridat[[1]]))
-        cat("print from filter")
-        print(capridat[[2]])
+        #cat("print from filter")
+        #print(capridat[[2]])
         if(n==1){
           fdat<-capridat[[2]]
         }else{
@@ -274,6 +275,15 @@ convertarguments2values<-function(...){
     return(l)
 }
 
+getcapriversion<-function(){
+  capriversion <- as.data.frame(matrix(nrow=1, ncol=6))
+  colnames(capriversion) = c("CAPRI_task", "Date", "Revision", "FilesOutput","Branch", "Note")
+  capriversion[1,] <- c("CAPREG-timeseriesGHG", "20180711", "7247", "res_%BAS%%MS%.gdx", "ecampa3", "BAS=Base year, MS=Member State") 
+  capriversion[2,] <- c("CAPREG-12", "20181106", "7503", "res_time_series_GHG_%MS%.gdx'", "epnf", "MS=Member State") 
+  capriversion[3,] <- c("CAPDIS-1212", "20181107", "7503", "xobs_2_%MS%_%BAS%%BAS%", "epnf", "BAS=Base year, MS=Member State") 
+  capriversion[4,] <- c("CAPDIS-12-2xxx", "20181121", "7538", "xobs_2_%MS%_%BAS%%Y%", "epnf", "BAS=Base year 2 digits, Y=Simulation year 4 digits") 
+  return(capriversion)
+}
 getfedm<-function(curcountry){
     
     #20170708 - Extraction of feed data to send to Olga Gavrilova [oggavrilova@gmail.com]
