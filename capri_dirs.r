@@ -26,8 +26,8 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   gamspath<-"C:/Program Files/GAMS/win64/24.8"
   workpath<-"x:/adrian/tools/rprojects/"
   capridat<-paste0(curdir, "capriresults_ecampa3/")
-  datapath<-paste0(curdir, "users/leipadr/results/")
   datapath<-paste0(curdir, "capriresults_ecampa3/")
+  datapath<-paste0(curdir, "users/leipadr/results/")
   cgams<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/epnf/gams/"
 
 }else if(Sys.info()[4]=="S-JRCIPRAP246P"){ #checks machine name

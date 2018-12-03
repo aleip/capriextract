@@ -1,5 +1,6 @@
 source("xobsfunctions.r")
 source("capriextract_functions_4mapping.r")
+source("capriplots.r")
 
 opendata<-function(scope,
                    curcountry,
@@ -38,12 +39,19 @@ opendata<-function(scope,
     datafile<-paste0(curcountry,"_12.gdx")
     datafile<-paste0(datapath,datafile)
   }
+  if(grepl("tseriesGHG", scope)){
+    datafile<-paste0("Capreg_tseries/GHGperCountry/")
+    datafile<-paste0(datafile, "res_time_series_GHG_", curcountry, ".gdx")
+    datafile<-paste0(datapath, datafile)
+    dataparm <- 'DATA2'
+    datanames <- data4dim
+  }
   if(grepl("nlca",scope)){
     datafile<-paste0("capmod/res_2_0830",curscen,".gdx")
     datafile<-paste0(datapath,datafile)
   }
   if(grepl("capmod",scope)){
-    datafile<-paste0("capmod/res_2_", basyear, curyear,curscen,".gdx")
+    datafile<-paste0("capmod/res_2_", baseyear, curyear,curscen,".gdx")
     datafile<-paste0(datapath,datafile)
     dataparm<-"dataout"
     datanames<-data5dim
@@ -54,21 +62,21 @@ opendata<-function(scope,
     if(curyear=="_") curyear<-""
     datafile<-paste0(datafile, "capdis_", curcountry, "_10GRID", curyear, ".gdx")
     dataparm<-"p_capdis"
-    ydim<-""
+    ydim<-NULL
     datanames<-c("RALL", "ROWS", "COLS", "VALUE")
     
     if(curyear=="preds"){
       datafile<-paste0(cgams, "../dat/capdishsu/lapm/")
       datafile<-paste0(datafile, substr(curcountry, 1, 2), "_lapmpreds.gdx")
       dataparm<-"lapmpreds"
-      ydim<-""
+      ydim<-NULL
       datanames<-c("RALL", "COLS", "VALUE")
     }
   }
   if(grepl("capdis",scope)){
-    datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear)
-    if(scope=="capdiscapreg") datafile<-paste0(datafile,baseyear)
-    if(scope=="capdistimes") datafile<-paste0(datafile,curyear)
+    if(scope=="capdis") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
+    if(scope=="capdiscapreg") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
+    if(scope=="capdistimes") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear,curyear)
     datafile<-paste0(datapath,datafile,".gdx")
     dataparm<-"xobs"
     ydim<-""
@@ -85,30 +93,44 @@ opendata<-function(scope,
     }
     if(grepl("lapm", scope)){
       capridat$Y<-gsub("_","",curyear)
-      if(curyear=="")capridat$Y<-"capdis"
-      capridat$NUTS2<-curcountry
+      if(curyear=="")capridat$Y<-"2010"
+      #capridat$NUTS2<-curcountry
       if(curyear=="preds"){
         capridat$ROWS<-"LEVL"
       }
-      capridat<-select(capridat, c("NUTS2", data4dim))
+      #capridat<-capridat[, c("NUTS2", data4dim)]
     }
+    #setattr(capridat,paste0(datafile,n),datafile)
+    fattr<-data.frame(nrow=1)
+    f<-gsub(".*/","", datafile)
+    fattr$filename[1]<-f
+    fattr$filepath[1]<-gsub(f, "", datafile)
+    fattr$filemtime[1]<-as.character(file.mtime(datafile))
   }else{
       cat(datafile, " does not exist\n")
       capridat<-datafile
   }
   
-  return(capridat)
+  return(list(capridat,fattr))
 }
 
 filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols, 
-                             rows=currows, ydim="Y", curdim5=NULL,regi, 
-                             curcountry, curyear="08", baseyear='08', curscen='', curscenshort=''){
+                     rows=currows, ydim="Y", curdim5=NULL,regi, 
+                     curcountry, curyear="08", baseyear='08', 
+                     curscen='', curscenshort=''){
   
     if(reload==1){
         capridat<-opendata(scope,curcountry,curyear,baseyear, curscen)
+        fattr<-capridat[[2]]
+        capridat<-capridat[[1]]
     }
     capridat<-as.data.table(capridat)
 
+    fattr$filterCOLS<-paste(cols, collapse="-")
+    fattr$filterROWS<-paste(rows, collapse='-')
+    fattr$filterCountry<-paste(curcountry, collapse="-")
+    fattr$filterRegi<-paste(regi, collapse="-")
+    
   #COLS (activities, variables for products)
   if(!is.null(cols)) capridat<-capridat[capridat$COLS%in%cols,]
   
@@ -117,16 +139,18 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
   
   #Filter regional level 
   if(!is.null(regi)){
+    if(length(regi)==1){  
       if(regi=="HSU"){
         capridat<-capridat[grepl("U[1-9]",capridat$RALL),]   
-      }else{
-        capridat<-capridat[capridat$RALL%in%regi,]
+        capridat<-capridat[! grepl("HU[1-9]",capridat$RALL),]   
       }
+    }else{
+      capridat<-capridat[capridat$RALL%in%regi,]
+    }
   }
   
   #Filter time dimension only if 
-  
-  if(!scope%in%c("capdistimes","capmod")){
+  if(!scope%in%c("capdistimes","capmod", "tseriesGHG", "lapm")){
       if(ncol(capridat)>4){
           if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
           if(curyear!=""){
@@ -135,49 +159,131 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
           }
       }
   }
+  if(scope%in%c("tseriesGHG")){
+    capridat<-capridat[capridat$Y%in%as.character(curyear)]
+  }
   #capridat<-capridat[,setdiff(names(capridat),c("Y"))]
   if(!is.null(curdim5)){
     print("select curdim5")
     capridat<-capridat[capridat$EMPTY%in%curdim5,]
   }
-  if(grepl("capmod", scope)){
-    capridat$SCEN<-curscenshort
-  }
-  
-  return(capridat)
+    if(grepl("capmod", scope)){
+      capridat$SCEN<-curscenshort
+    }
+    #print(attributes(capridat))
+    #cat("-->")
+    #print(fattr)
+    return(list(capridat, fattr))
 }
 
 filtermultiple<-function(scope, 
                          cols=curcols, rows=currows, ydim="Y", curdim5=NULL, regi, 
                          curcountries, curyears="08", baseyear='08', curscens='', curscensshort=''){
   cat("\n", length(curcountries), curcountries)
-  capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
-    Reduce(rbind, lapply(1:length(curcountries), function(y)
-      Reduce(rbind, lapply(1:length(curscens), function(z)
-        filteropen(scope, 
-                   reload=1, 
-                   # Filtering options
-                   cols=cols, 
-                   rows=rows,
-                   ydim=ydim, 
-                   curdim5=curdim5,
-                   regi=regi,
-                   # Opening options
-                   curcountry = curcountries[y], 
-                   curyear = curyears[x],
-                   baseyear = baseyear,
-                   curscen = curscens[z],
-                   curscenshort = curscensshort[z]
+  nfiles<-length(curcountries)*length(curscens)*length(curyears)
+  cdat<-list()
+  fdat<-data.frame(nrow=1)
+  n<-0
+  for(x in 1:length(curyears)){
+    for(y in 1:length(curcountries)){
+      for(z in 1:length(curscens)){
+        n<-n+1
+        capridat<- filteropen(scope, 
+                               reload=1, 
+                               # Filtering options
+                               cols=cols, 
+                               rows=rows,
+                               ydim=ydim, 
+                               curdim5=curdim5,
+                               regi=regi,
+                               # Opening options
+                               curcountry = curcountries[y], 
+                               curyear = curyears[x],
+                               baseyear = baseyear,
+                               curscen = curscens[z],
+                               curscenshort = curscensshort[z]
         )
-      ))
-    ))
-  ))
+        cdat[[n]]<-capridat[[1]]
+        #print(str(capridat[[1]]))
+        #cat("print from filter")
+        #print(capridat[[2]])
+        if(n==1){
+          fdat<-capridat[[2]]
+        }else{
+          fdat<-rbind(fdat, capridat[[2]])
+        }
+      }
+    }
+  }
   
+  capridat<-Reduce(rbind, cdat)
+  #print(capridat)
   
-  return(capridat)
-  
+  return(list(capridat, fdat))
+  # capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
+  #   Reduce(rbind, lapply(1:length(curcountries), function(y)
+  #     Reduce(rbind, lapply(1:length(curscens), function(z)
+  #       filteropen(scope, 
+  #                  reload=1, 
+  #                  # Filtering options
+  #                  cols=cols, 
+  #                  rows=rows,
+  #                  ydim=ydim, 
+  #                  curdim5=curdim5,
+  #                  regi=regi,
+  #                  # Opening options
+  #                  curcountry = curcountries[y], 
+  #                  curyear = curyears[x],
+  #                  baseyear = baseyear,
+  #                  curscen = curscens[z],
+  #                  curscenshort = curscensshort[z],
+  #                  nfiles = nfiles
+  #       )
+  #     ))
+  #   ))
+  # ))
+  # 
+  # 
+  # return(capridat)
+  # 
 }
 
+convertarguments2values<-function(...){
+    # Function that helps debugging - converts all arguments into values
+    #          in the global environment so that the function can
+    #          be checked directly line by line
+    
+    l<-as.list(match.call())
+    for (i in 2:length(l)){
+        #cat("\n", i, "Assigning ", l[[i]], " to ", paste(names(l)[i],collapse="") , "...")
+            cat("\nstart",i,":", names(l)[i])
+        n<-names(l[[i]])
+        if(! exists(n)){
+            cat("\nNo argument name given for ", l[[i]],". Tentatively set to ",l[[i]])
+            n<-l[[i]]
+        }
+        g<-eval(l[[i]])
+            cat("\n", n, " is character", l[[i]], " - ", g)
+        #if(is.character(g) & length(g)==1){
+        #    assign(names(l)[i], l[[i]], envir=.GlobalEnv)
+        #}else{
+            assign(n, g, envir=.GlobalEnv)
+            cat("\n", n, " is character", l[[i]], " - ", g)
+        #}
+    }
+    #print(as.list(match.call()))
+    return(l)
+}
+
+getcapriversion<-function(){
+  capriversion <- as.data.frame(matrix(nrow=1, ncol=6))
+  colnames(capriversion) = c("CAPRI_task", "Date", "Revision", "FilesOutput","Branch", "Note")
+  capriversion[1,] <- c("CAPREG-timeseriesGHG", "20180711", "7247", "res_%BAS%%MS%.gdx", "ecampa3", "BAS=Base year, MS=Member State") 
+  capriversion[2,] <- c("CAPREG-12", "20181106", "7503", "res_time_series_GHG_%MS%.gdx'", "epnf", "MS=Member State") 
+  capriversion[3,] <- c("CAPDIS-1212", "20181107", "7503", "xobs_2_%MS%_%BAS%%BAS%", "epnf", "BAS=Base year, MS=Member State") 
+  capriversion[4,] <- c("CAPDIS-12-2xxx", "20181121", "7538", "xobs_2_%MS%_%BAS%%Y%", "epnf", "BAS=Base year 2 digits, Y=Simulation year 4 digits") 
+  return(capriversion)
+}
 getfedm<-function(curcountry){
     
     #20170708 - Extraction of feed data to send to Olga Gavrilova [oggavrilova@gmail.com]
@@ -200,6 +306,7 @@ getfedm<-function(curcountry){
         cat("\nFile ",datafile," does not exist!")
     }
 }
+
 
 getmeta<-function(curcountry,curyear){
   if(scope%in%c("feed_marketbal","activities") | grepl("baseyear",scope)){

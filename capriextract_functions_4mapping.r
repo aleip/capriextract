@@ -40,10 +40,9 @@ mapping <- function(scope = "capdiscapreg",
                     curyears = "12", 
                     curcrops = NULL, 
                     n_cuts = 6, 
-                    cuts_hard = NULL,
+                    cuts = NULL,
                     maxpanelsonpage=7,
                     variab = NULL,
-                    flagoutliers = c(NA, NA), # c(lowthreshold, highthreshold)
                     hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
                     n23_dir = "\\\\ies\\d5\\agrienv\\Data\\GIS_basedata\\GISCO_2010_NUTS2_3"){
   
@@ -76,8 +75,9 @@ mapping <- function(scope = "capdiscapreg",
 
   capridat <- capridat[grepl("^U", capridat$RALL), ]
 
-  capridat$VALUE <- capridat$VALUE + 1e-9
   capri4map <- capridat
+  capri4map$VALUE <- capri4map$VALUE + 1e-9
+  
 
   cat("\n Calculating number of panels to plot\n")
   cat(" 1. Regions ")                                                      
@@ -86,11 +86,6 @@ mapping <- function(scope = "capdiscapreg",
   rallshape <- merge(hsu, rallinuse, by.x = "CAPRI_HSU", by.y = "RALL", all.x = FALSE)
   rallshape$nuts2 <- substr(rallshape$EEZ_R, 1, 4)
   
-  #capridat <- merge(capridat, hsu@data[, c("CAPRI_HSU", "EEZ_R")], by.x = "RALL", by.y = "CAPRI_HSU", all.x = TRUE)
-  #capridat$nuts0 <- substr(capridat$EEZ_R, 1, 2)
-  #capridat <- as.data.table(capridat)
-  #head(capridat)
-  
   if (by_country %in% c("Y", "Yes")){       #plot country by country
     rallinuse <- curcountries
     nrall <- length(rallinuse)
@@ -98,7 +93,6 @@ mapping <- function(scope = "capdiscapreg",
     rallinuse<-"Europe"
     nrall <- 1
   }else if (is.null(by_country)){      # plot NUTS2 by NUTS2
-    stop("mapping is not implemented yet to plot data at NUTS2 level")
     rallinuse <- as.data.frame(as.data.frame(rallshape@data[, sel_cols_n3]) %>% group_by(nuts2) %>% summarise_all(funs(sum_nas)))
     nrall <- sum(rallinuse[, -1])
   }else{
@@ -160,14 +154,13 @@ mapping <- function(scope = "capdiscapreg",
 #    }
     cat("\n plotting page: ",page)
     sel<-vector(length = nrow(capridat))
-    #if(page == 24) stop()
     if (by_country %in% c("Y", "Yes")) {
       curpanels <- (panperpage * (page-1) +1): (panperpage * page)
     }else{
       curpanels<-(maxpanelsonpage * (page-1) +1): min(categs2plot, maxpanelsonpage * page)
     }
-
-    for(ipanel in 1:sum(curpanels <= categs2plot)){
+    
+    for(ipanel in 1:length(curpanels)){
       sel <- sel |
         (capridat$COLS == plotmatrix[curpanels[ipanel],2] &
          capridat$ROWS == plotmatrix[curpanels[ipanel],3] &
@@ -180,7 +173,7 @@ mapping <- function(scope = "capdiscapreg",
     yearinpage<-range(unique(capripage$Y))
     if(yearinpage[1] == yearinpage[2]) yearinpage <- yearinpage[1]
     yearinpage<-paste(yearinpage, collapse = "-")
-    rallinpage<-paste(unique(plotmatrix[curpanels[curpanels <= categs2plot], 1]), collapse = "-")
+    rallinpage<-paste(unique(plotmatrix[curpanels, 1]), collapse = "-")
     pagename<-paste(c(rallinpage, colsinpage, rowsinpage, yearinpage), collapse = "_")
     if (pagename_old != pagename){
       pg <- 1
@@ -190,7 +183,6 @@ mapping <- function(scope = "capdiscapreg",
     pagename_old <- pagename
     
     pagename1<-paste0("xobs12_", pagename, "_", pg, ".jpg")
-    #if(page < 24) next
     
     #if(!file.exists(paste0("capdis/plots"))) dir.create(paste0("capdis/plots"))
     #pdf(paste0(ecampa3res, "/capdis/plots/plot_check.pdf"), width = wdt, height = hgt, pointsize = 8)
@@ -258,7 +250,7 @@ mapping <- function(scope = "capdiscapreg",
     pnls4leg <- floor(free_pnls / 2) * 2
     
     
-    if (is.null(cuts_hard)){
+    if (is.null(cuts)){
       if (length(crps_over_sd) != 0){
         
         cuts_1 <- stats::quantile(capri4map[crps_over_sd][capri4map[crps_over_sd] > 0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
@@ -276,7 +268,7 @@ mapping <- function(scope = "capdiscapreg",
       }
       
     }else{
-      cuts <- round(cuts_hard, 2)
+      cuts <- round(cuts, 2)
       lev_0 <- c()
       for (c in 1:(length(cuts) - 1)) {
         lev_0 <- c(lev_0, paste0("(", cuts[c], ",", cuts[c + 1], "]" ))
@@ -289,17 +281,13 @@ mapping <- function(scope = "capdiscapreg",
     if (rw == 1){
       wdt <- (21 - 2.1)
       hgt <- (29.7 - 2.97) / 3
-    }else if (rw == 2){
+    }else if (rw < 4){
       wdt <- (21 - 2.1)
       hgt <- (29.7 - 2.97) / 2
-    }else if (rw == 3){
-      wdt <- (21 - 2.1)
-      hgt <- (29.7 - 2.97) * 3 / 4
     }else{
       wdt <- 21 - 2.1
       hgt <- 29.7 - 2.97
     }
-    
     
     jpeg(pagename1, width = wdt, height = hgt, units = "cm", res = 300, quality = 100, pointsize = 8)
     
@@ -308,8 +296,7 @@ mapping <- function(scope = "capdiscapreg",
     
     
     par(#mfrow = c(cl, rw), 
-      #mar = c(0.5, 1.1, 2.8, 1.1),
-      mar = c(0.5, 1.1, 3.8, 1.1),
+      mar = c(0.5, 1.1, 2.8, 1.1),
       #mar = c(5.1, 4.1, 4.1, 2.1),
       #oma = c(2.5, 0.5, 4, 0.5)
       oma = c(4.5, 0.5, 9, 0.5)
@@ -335,7 +322,7 @@ mapping <- function(scope = "capdiscapreg",
     
     if (by_country %in% c("Y", "Yes")){       #plot the country by country
       
-      for (ct in sort(unique(plotmatrix[curpanels[curpanels <= categs2plot], 1]))){
+      for (ct in unique(plotmatrix[curpanels, 1])){
         
         capri4map_ct <- capri4map[substr(capri4map$EEZ_R, 1, 2) %in% ct, ]
         
@@ -345,21 +332,18 @@ mapping <- function(scope = "capdiscapreg",
             rbPal <- colorRampPalette(c('pink','red'))
             rbPal_1 <- rbPal
             col_neg <- "blue"
-            col_outl <- "goldenrod2"
             
           }else{
             cuts1 <- cuts
             rbPal <- colorRampPalette(c('skyblue','darkblue'))
             rbPal_2 <- rbPal
             col_neg <- "red"
-            col_outl <- "goldenrod2"
-            
           }
           
         
-          for (yr in sort(unique(plotmatrix[curpanels[curpanels <= categs2plot], 4]))){
+          for (yr in unique(plotmatrix[curpanels, 4])){
             
-            if (!paste(c(ct, crp, yr), collapse = "") %in% apply(plotmatrix[curpanels[curpanels <= categs2plot], -3], 1, paste, collapse = "")) next
+            if (!paste(c(ct, crp, yr), collapse = "") %in% apply(plotmatrix[curpanels, -3], 1, paste, collapse = "")) next
             
             cat("\n plotting panel: ", ct, "-", yr,"-", crp, format(Sys.time(), "%Y%M%d %H:%M"))
             
@@ -373,16 +357,10 @@ mapping <- function(scope = "capdiscapreg",
             dt2plot <- preds_hsu
             dt2plot <- dt2plot[, c(no_crps, crp)]
             
-            if (!is.na(flagoutliers[1])){
-              dt2plot_negs <- dt2plot
-              dt2plot_negs <- dt2plot_negs[which(dt2plot_negs@data[, crp] < flagoutliers[1]), ]
-            }
-            if (!is.na(flagoutliers[2])){
-              dt2plot_outl <- dt2plot
-              dt2plot_outl <- dt2plot_outl[which(dt2plot_outl@data[, crp] > flagoutliers[2]), ]
-            }
-            dt2plot$Col <- rbPal(n_cuts)[as.numeric(cut(dt2plot[[crp]], cuts1))]
+            dt2plot_negs <- dt2plot
+            dt2plot_negs <- dt2plot_negs[which(dt2plot_negs@data[, crp] < 0), ]
             
+            dt2plot$Col <- rbPal(n_cuts)[as.numeric(cut(dt2plot[[crp]], cuts1))]
             
             # labels for the legend
             #dt2plot$bin <- cut(dt2plot[[crp]], cuts1, include.lowest = TRUE, dig.lab = 4)
@@ -394,24 +372,16 @@ mapping <- function(scope = "capdiscapreg",
             nuts23_inuse <- nuts23
             nuts23_inuse <- nuts23_inuse[nuts23_inuse@data$NUTS3_ID10 %in% preds_hsu@data$EEZ_R, ]
             
-            plot(nuts23_inuse, lwd=0.5, col = "white", border = "white", main = "", cex.main = cx)
+            plot(nuts23_inuse, lwd=0.5, col = "white", border = "white", main = paste0(ct, " / ", yr, ": ", crp), cex.main = cx)
             plot(nuts23, add = TRUE, lwd = 0.5)
             plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, cex.main = cx, add = TRUE)
-            title(paste0(ct, " / ", yr, ": ", crp), adj = 0.5, line = 2)
-            if(exists("dt2plot_negs") && nrow(dt2plot_negs@data) > 0){
+            if(nrow(dt2plot_negs@data) > 0){
               exis_negs <- 1
               plot(dt2plot_negs, col = col_neg, border = col_neg, add = TRUE, lwd = 3)
               #print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
-              mtext(text = paste0("number of outliers smaller than threshold (", flagoutliers[1], ") = ", nrow(dt2plot_negs@data)), 
-                    side = 3, cex = (cx - 1.0))  
-            } 
-            
-            if(exists("dt2plot_outl") && nrow(dt2plot_outl@data) > 0){
-              exis_outl <- 1
-              plot(dt2plot_outl, col = col_outl, border = col_outl, add = TRUE, lwd = 3)
-              #print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
-              mtext(text = paste0("number of outliers bigger than threshold (", flagoutliers[2], ") = ", nrow(dt2plot_outl@data)), 
-                    side = 3, line = 0.8, cex = (cx - 1.0))     
+              mtext(text = paste0("number of negative values = ", nrow(dt2plot_negs@data)), 
+                    side = 3, cex = (cx - 1.0))     
+              
             } 
             #plot(nuts23, add=TRUE, lwd=0.5)
             #legend("right", fill = rbPal(6), legend = lev, cex = 1.1, title = paste0("LPIS - ", crop))
@@ -425,7 +395,7 @@ mapping <- function(scope = "capdiscapreg",
       
 
       
-      for (yr in sort(unique(capri4map$Y))){
+      for (yr in unique(capri4map$Y)){
         
         capri4map_yr <- capri4map[capri4map$Y %in% yr, ]
         
@@ -439,27 +409,19 @@ mapping <- function(scope = "capdiscapreg",
             rbPal <- colorRampPalette(c('pink','red'))
             rbPal_1 <- rbPal
             col_neg <- "blue"
-            col_outl <- "goldenrod2"
-            
           }else{
             cuts1 <- cuts
             rbPal <- colorRampPalette(c('skyblue','darkblue'))
             rbPal_2 <- rbPal
             col_neg <- "red"
-            col_outl <- "goldenrod2"
           }
           
           dt2plot <- preds_hsu
           dt2plot <- dt2plot[, c(no_crps, crp)]
           #dt2plot <- dt2plot[dt2plot@data$Y %in% yr, ]
-          if (!is.na(flagoutliers[1])){
-            dt2plot_negs <- dt2plot
-            dt2plot_negs <- dt2plot_negs[which(dt2plot_negs@data[, crp] < 0), ]
-          }
-          if (!is.na(flagoutliers[2])){
-            dt2plot_outl <- dt2plot
-            dt2plot_outl <- dt2plot_outl[which(dt2plot_outl@data[, crp] > flagoutliers[2]), ]
-          }
+          
+          dt2plot_negs <- dt2plot
+          dt2plot_negs <- dt2plot_negs[which(dt2plot_negs@data[, crp] < 0), ]
           
           dt2plot$Col <- rbPal(n_cuts)[as.numeric(cut(dt2plot[[crp]], cuts1))]
           
@@ -473,26 +435,16 @@ mapping <- function(scope = "capdiscapreg",
           nuts23_inuse <- nuts23
           nuts23_inuse <- nuts23_inuse[nuts23_inuse@data$NUTS3_ID10 %in% preds_hsu@data$EEZ_R, ]
           
-          plot(nuts23_inuse, col = "white", border = "white", main = "", cex.main = cx)
+          plot(nuts23_inuse, col = "white", border = "white", main = paste0(yr, " / ", crp), cex.main = cx)
           plot(nuts23, add = TRUE, lwd = 0.3, border = "grey")
-          plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, add = TRUE)
-          title(paste0(yr, " / ", crp), adj = 0.5, line = 2)
           
-          if(exists("dt2plot_negs") && nrow(dt2plot_negs@data) > 0){
+          plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, add = TRUE)
+          if(nrow(dt2plot_negs@data) > 0){
             exis_negs <- 1
             plot(dt2plot_negs, col = col_neg, border = col_neg, add = TRUE, lwd = 3)
             #print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
-            mtext(text = paste0("number of outliers smaller than threshold (", flagoutliers[1], ") = ", nrow(dt2plot_negs@data)), 
-                  side = 3, cex = (cx - 1.0))  
-          } 
-          
-          if(exists("dt2plot_outl") && nrow(dt2plot_outl@data) > 0){
-            exis_outl <- 1
-            plot(dt2plot_outl, col = col_outl, border = col_outl, add = TRUE, lwd = 3)
-            #print(paste0(ct, " / ", crp, " : number of negative values = ", nrow(dt2plot_negs@data)))
-            mtext(text = paste0("number of outliers bigger than threshold (", flagoutliers[2], ") = ", nrow(dt2plot_outl@data)), 
-                  side = 3, line = 0.8, cex = (cx - 1.0))     
-            
+            mtext(text = paste0("number of negative values = ", nrow(dt2plot_negs@data)), 
+                  side = 3, cex = (cx - 1.0))     
           } 
           #plot(nuts23, add=TRUE, lwd = 0.1, border = "grey")
           #plot(dt2plot, col = dt2plot$Col, border=dt2plot$Col, main = paste0(yr, " / ", crp), cex.main = cx, add = T)
@@ -548,27 +500,10 @@ mapping <- function(scope = "capdiscapreg",
     }
     scalebar(sc_value, type = 'bar', divs = 4, cex = (cxl - 0.1), below = "meters", xy = c(sc_b_x, sc_b_y))
     
-    if(exists("exis_negs") | exists("exis_outl")){
-      cols_other <- c()
-      cols_other1 <- c()
-      cols_other2 <- c()
-      tt <- c()
-      tt1 <- c()
-      tt2 <- c()
-      for (i in c("exis_negs", "exis_outl")){
-        if (exists(i) && i == "exis_negs"){ cols_other1 <- c("red"); tt1 <- paste0("values < ", flagoutliers[1])}
-        if (exists(i) && i == "exis_outl"){ cols_other2 <- col_outl; tt2 <- paste0("values > ", flagoutliers[2])}
-      }
-      cols_other <- c(cols_other1, cols_other2)
-      tt <- c(tt1, tt2)
-      
-      legend(pos_leg1, fill = c(rbPal_2(n_cuts), cols_other), legend = c(lev_0, tt), cex = cxl, title = lgd, ncol = 2)
-      if(length(crps_over_sd) != 0) {
-        cols_other <- gsub("red", "blue", cols_other)
-        legend("bottom", fill = c(rbPal_1(n_cuts), cols_other), legend = c(lev_1, tt), cex = cx, title = lgd, ncol = 2)
-      }
-      if(exists("exis_negs")) rm(exis_negs)
-      if(exists("exis_outl")) rm(exis_outl)
+    if(exists("exis_negs")){
+      legend(pos_leg1, fill = c(rbPal_2(n_cuts), "red"), legend = c(lev_0, "values < 0"), cex = cxl, title = lgd, ncol = 2)
+      if(length(crps_over_sd) != 0) legend("bottom", fill = c(rbPal_1(n_cuts), "blue"), legend = c(lev_1, "values < 0"), cex = cx, title = lgd, ncol = 2)
+      rm(exis_negs)
     }else{
       legend(pos_leg1, fill = rbPal_2(n_cuts), legend = lev_0, cex = cxl, title = lgd, ncol = 2)
       if(length(crps_over_sd) != 0) legend("bottom", fill = rbPal_1(n_cuts), legend = lev_1, cex = cx, title = lgd, ncol = 2)

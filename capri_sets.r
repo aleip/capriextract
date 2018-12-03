@@ -87,6 +87,8 @@ nuts0<-as.character(nuts0_exp[,1])
 nuts0eu15<-as.character(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0_EU15")[,1])
 nuts0eu10<-as.character(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0_EU10")[,1])
 cntr<-substr(nuts0,1,2)
+
+srnuts2names<-as.data.table(rgdx.set(setfile,te = TRUE, ts = TRUE,symName = "SRNUTS2"))
 srnuts2<-as.character(rgdx.set(setfile,ts = TRUE,symName = "SRNUTS2")[,1])
 nuts2<-substr(srnuts2,1,4)
 rall<-rgdx.set(setfile,ts = TRUE,te=TRUE,symName = "RALL")
@@ -109,10 +111,14 @@ mbal<-c("GROF", "HCOM", "FEDM", "IMPT", "EXPT")
 
 meta2keep<-c("DATE OF VERSION","NAME OF PROCESSOR ORGANISATION","User","Regional breakdown")
 
-
-
 if(scope%in%c("feed_marketbal","tseries_marketbal","activities")){
   regi<-c(nuts0,srnuts2)
 }else if(grepl("nbalance",scope) || scope %in% c("nlca")){
   regi<-srnuts2
-}    
+}
+
+gethsumap<-function(){
+  mhsu<-as.data.table(rgdx.set(setfile,te=FALSE,ts = TRUE,symName = "m_srnuts2_hsu"))
+  names(mhsu) <- c("RALL", "HSU")
+  return(mhsu)
+}
