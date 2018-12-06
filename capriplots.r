@@ -24,7 +24,7 @@
 #' @return data frame
 #' @export
 
-plotbars <- function(x = capri, emb = 'unique'
+plotbars <- function(x = capri, emb = 'unique', plotdef=plotdef
 ){
   
   info<-checkinfo(x)
@@ -43,12 +43,13 @@ plotbars <- function(x = capri, emb = 'unique'
     ylab(info[[2]])
   if(emb=='unique') a <- a + xlab("Countries") + ggtitle(info[[3]])
   if(emb!='unique') a <- a + xlab("")
-  filltheme(a)
-  fillscale(a, emb)
+  a <- a + scale_y_continuous(limits = c(0,plotdef[ , 'ymax']))
+  a <- a + filltheme(a, plotdef)
+  a <- a + fillscale(a, emb, plotdef)
   return(a)
 }
 
-filltheme <- function(a){
+filltheme <- function(a, plotdef){
   t <- theme(axis.text.x = element_text(face="bold", color="#993333", 
                                         size=9, angle=90, 
                                         vjust = 0.5, hjust=0),
@@ -58,9 +59,10 @@ filltheme <- function(a){
              axis.title = element_text(size=10),
              legend.text = element_text(size=9)
   )
+  return(t)
 }
 
-fillscale <- function(a, emb){
+fillscale <- function(a, emb, plotdef){
   if(emb!='unique'){legcols<-2}else{legcols<-NULL}
   t <- discrete_scale(aesthetics='fill', 
                       scale_name='',
@@ -153,11 +155,12 @@ setuppage <- function(x, plotname=''){
   ### Check arrangement of plots
   ### The third character in 'arr' determines the variable that changes with the plots
   loopover<-substr(plotdef[,'arr'],3,3)
-  if(plotname=='cropyild') loopover<-"x" #No loop
+  if(plotname%in%c('cropyild')) loopover<-"x" #No loop
   v2plot<-"x"
   if(loopover=='c') v2plot<-plotdefcols
   if(loopover=='w') v2plot<-plotdefrows
   if(loopover=='r') v2plot<-plotdefrall
+  nplots<-length(v2plot)
   
   ### Check if multiple scenarios are stored - in this case loop over the scenarios
   if("SCEN" %in% names(x)){
@@ -177,6 +180,16 @@ setuppage <- function(x, plotname=''){
   )
   save(x, file='test.rdata')
   cat(scendesc)
+  if (numscen > 1){
+    # Adjust scales
+    ymax <- vector()
+    print(v2plot)
+    for (i in 1:nplots){
+      if(loopover=='c') ymax[i]<-max(x[COLS==v2plot[i], 'VALUE'])
+      if(loopover=='w') ymax[i]<-max(x[ROWS==v2plot[i], 'VALUE'])
+      if(loopover=='r') ymax[i]<-max(x[COLS==v2plot[i], 'VALUE'])
+    }
+  }
   for(scens in 1:numscen){
     plottit<-paste0(plotdef[,'title'])
     if(scendesc[scens]!='')plottit<-paste0(plottit,": ",scendesc[scens], "\n")
@@ -187,19 +200,20 @@ setuppage <- function(x, plotname=''){
     if(length(v2plot)==0) cat("\n No plots to do: ", v2plot)
     cat("\n Plots to do: ", v2plot)
     
-    nplots<-length(v2plot)
     j<-1
     for (i in 1:nplots){
       
       # Select data
       y<-xscen
+      plotdef$ymax <- ymax[i]
+      
       if(loopover=='c') y<-xscen[COLS==v2plot[i]]
       if(loopover=='w') y<-xscen[ROWS==v2plot[i]]
       if(loopover=='r') y<-xscen[COLS==v2plot[i]]
       if(nrow(y)>0){
         cat("\nPreparing plot ", i)
-        if(plotdef[,'t2plot']=='bar') {p[[j]]<-plotbars(y, emb='multiple')}
-        if(plotdef[,'t2plot']=='box') {p[[j]]<-plotboxes(y, emb='multiple', plotname)}
+        if(plotdef[,'t2plot']=='bar') {p[[j]]<-plotbars(y, emb='multiple', plotdef)}
+        if(plotdef[,'t2plot']=='box') {p[[j]]<-plotboxes(y, emb='multiple', plotdef)}
         if(plotdef[,'t2plot']=='box') {p[[j+1]]<-calcstats(y); j<-j+1}
       }
       j <- j +1
@@ -212,7 +226,7 @@ setuppage <- function(x, plotname=''){
     cat("\n j=",j," ncol=",ncol," nrow=",nrow)
     
     fig<-ggarrange(plotlist=p, 
-                   common.legend=FALSE, 
+                   common.legend=TRUE, 
                    legend='right',
                    #labels = "AUTO",
                    nrow = nrow, ncol = ncol, align = 'v'
@@ -259,7 +273,8 @@ checkinfo<-function(x){
   numrows<-length(currows)
   
   curequal<-sum(x$ROWS==x$COLS)
-  
+  print(currows)
+  print(curcols)
   curlab<-"not yet defined in fuction checkinfo()"
   if(numrows==1 & numcols>1){
     perspective<-'act'
@@ -270,6 +285,16 @@ checkinfo<-function(x){
         curtit<-"Total agricultural area by crop"
         legtit<-"CROPS"
       }
+    }
+    if(currows%in%c("N_CAL", "N_FAT", "N_PRO")){
+      print("nutrients")
+      if(currows=="N_CAL") balterm<-"Calorie intake\n[kcal cap-1 day-1]"
+      if(currows=="N_FAT") balterm<-"Fat intake\n[g fat cap-1 day-1]"
+      if(currows=="N_PRO") balterm<-"Protein intake\n[g proteins cap-1 day-1]"
+      #cat("\n",perspective, balterm)
+      curlab<-balterm
+      curtit<-"Nutrient intake"
+      legtit<-"Food primary commodities"
     }
     
   }else if(numrows>1 & numcols==1){
@@ -287,6 +312,16 @@ checkinfo<-function(x){
         curtit<-"Total quantity by crop"
         legtit<-"CROPS"
       }  
+    }
+    if(curcols%in%c("N_CAL", "N_FAT", "N_PRO")){
+      print("nutrients")
+      if(curcols=="N_CAL") balterm<-"Calorie intake\n[Mcal yr-1]"
+      if(curcols=="N_FAT") balterm<-"Fat intake\n[kg fat yr-1]"
+      if(curcols=="N_PRO") balterm<-"Protein intake\n[kg proteins yr-1]"
+      #cat("\n",perspective, balterm)
+      curlab<-balterm
+      curtit<-"Nutrient intake"
+      legtit<-"Food primary commodities"
     }
   }else if(curequal>0){
     #This happens only for yield
