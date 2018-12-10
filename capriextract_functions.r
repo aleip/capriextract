@@ -1,5 +1,7 @@
 source("xobsfunctions.r")
 source("capriextract_functions_4mapping.r")
+source("capriplotcolors.r")
+source("capriplottexts.r")
 source("capriplots.r")
 
 opendata<-function(scope,

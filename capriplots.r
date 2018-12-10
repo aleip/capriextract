@@ -24,30 +24,70 @@
 #' @return data frame
 #' @export
 
-plotbars <- function(x = capri, emb = 'unique', plotdef=plotdef
-){
+plotbars <- function(x = capri, emb = 'unique', 
+                     plotdef = plotdef,
+                     colbar = NULL   # If a vector with colors with the correct number of colors has been pre-defined
+                     ){
   
-  info<-checkinfo(x)
-  if(info[[1]]=='act'){
-    onx<-'RALL'
-    ony<-'COLS'
-  }else if(info[[1]]=='com'){
-    onx<-'RALL'
-    ony<-'ROWS'
-  }
-  numoflevles<-nrow(unique(x[,.SD, .SDcols=ony]))
+  print(plotdef$arr)
+  uniquex <- unique(x[ , .SD, .SDcols=plotdef$onx])
+  uniquez <- unique(x[ , .SD, .SDcols=plotdef$onz])
+  cat("\n uniquex\n", uniquex)
+  cat("\n uniquez\n", uniquez)
+  if( length(uniquez) == 1 ) { 
+    plotdef[ ,'curpanel'] <- uniquez}else{
+      plotdef[ ,'curpanel'] <- uniquex  }
+  cat("\nthe current con\n", paste(plotdef$curpanel, collapse=""), "\n")
+  print(plotdef)
   
-  a<-ggplot(x, aes_string(x=onx, y="VALUE", fill=ony)) 
+  plotdef<-checkinfo(x, plotdef)
+  
+  #cat("\n onx and ony", onx, ony, plotdef$curtit)
+  
+  numoflevles<-nrow(unique(x[,.SD, .SDcols=plotdef$ony]))
+  save(x, plotdef, file="x.rdata")
+  a<-ggplot(x, aes_string(x=plotdef$onx, y="VALUE", fill=plotdef$ony)) 
   
   a<- a + geom_bar(position = 'stack', stat='identity', width = 0.8) +
-    ylab(info[[2]])
-  if(emb=='unique') a <- a + xlab("Countries") + ggtitle(info[[3]])
+    ylab(plotdef$curlab)
+  if(emb=='unique') a <- a + xlab("Countries") + ggtitle(plotdef$curtit)
   if(emb!='unique') a <- a + xlab("")
   a <- a + scale_y_continuous(limits = c(0,plotdef[ , 'ymax']))
   a <- a + filltheme(a, plotdef)
-  a <- a + fillscale(a, emb, plotdef)
+
+  if(is.null(colbar)) {
+    colbar <- colorRampPalette(c('skyblue','darkblue','pink','yellow','darkred'))
+  }else{
+    if(is.function(colbar)) colbar <- colbar(33)
+  }
+  a <- a + fillscale(a, emb, plotdef, colbar)
+  #a <- a + scale_fill_manual(values = colbar(33))
   return(a)
 }
+
+plotboxes <- function(x = capri, emb = 'unique', plotdef=plotdef){
+  
+  #x<-capri[COLS%in%curcols & ROWS%in%mcact & RALL %in% nuts0eu15]
+  uniquex <- unique(x[ , .SD, .SDcols=plotdef$onx])
+  uniquey <- unique(x[ , .SD, .SDcols=plotdef$ony])
+  uniquez <- unique(x[ , .SD, .SDcols=plotdef$onz])
+  cat("\n uniquex", plotdef$onx, "\n"); print(uniquex)
+  cat("\n uniquey", plotdef$ony, "\n"); print(uniquey)
+  cat("\n uniquez", plotdef$onz, "\n"); print(uniquez)
+  if( length(uniquez) == 1 ) { 
+    plotdef[ ,'curpanel'] <- uniquez}else{
+      plotdef[ ,'curpanel'] <- uniquex  }
+  plotdef<-checkinfo(x, plotdef)
+  a<-ggplot(x, aes_string(x="COLS", y="VALUE")) 
+  a<- a + geom_boxplot(aes_string(fill="COLS"))
+  a<- a + filltheme(a)
+  if(plotdef$Plotname%in%c("cropyild")){
+    a<-a+guides(fill=FALSE)
+  }else{
+    a<- a + fillscale(a, emb)
+  }
+}
+
 
 filltheme <- function(a, plotdef){
   t <- theme(axis.text.x = element_text(face="bold", color="#993333", 
@@ -55,45 +95,38 @@ filltheme <- function(a, plotdef){
                                         vjust = 0.5, hjust=0),
              axis.text.y = element_text(face="bold", color="#993333", 
                                         size=9, angle=0, 
-                                        vjust = 0.5, hjust=1),
+                                        vjust = 0.5, hjust=1
+                                        #margin = c(0, r=10, 0, 0, unit='pt')
+             ),
              axis.title = element_text(size=10),
              legend.text = element_text(size=9)
   )
   return(t)
 }
 
-fillscale <- function(a, emb, plotdef){
+fillscale <- function(a, emb, plotdef, colbar=NULL){
   if(emb!='unique'){legcols<-2}else{legcols<-NULL}
+  cat(plotdef$curleg)
+  if(is.null(colbar)) 
+    colbar<-colorRampPalette(c('skyblue','darkblue','pink','yellow','darkred'))
+    colbar<-colorRampPalette(c('black','darkblue','pink','yellow','darkred'))
   t <- discrete_scale(aesthetics='fill', 
                       scale_name='',
-                      palette = colorRampPalette(c('skyblue','darkblue','pink','yellow','darkred')),
-                      name = info[[4]],
+                      palette = colbar,
+                      name = plotdef$curleg,
                       guide=guide_legend(ncol=legcols,
                                          override.aes = list(size = 1)))
-  if(plotname=='box'){
+  if(plotdef$Plotname=='box'){
     t <- discrete_scale(aesthetics='fill', 
                         scale_name='',
-                        palette = colorRampPalette(c('skyblue','darkblue','pink','yellow','darkred')),
-                        name = info[[4]],
+                        #palette = colorRampPalette(c('skyblue','darkblue','pink','yellow','darkred')),
+                        name = plotdef$curleg,
                         guide=guide_legend(row=1,
                                            override.aes = list(size = 1)))
     
   }
 }
 
-plotboxes <- function(x = capri, emb = 'unique', plotname){
-  
-  #x<-capri[COLS%in%curcols & ROWS%in%mcact & RALL %in% nuts0eu15]
-  info<-checkinfo(x)
-  a<-ggplot(x, aes_string(x="COLS", y="VALUE")) 
-  a<- a + geom_boxplot(aes_string(fill="COLS"))
-  a<- a + filltheme(a)
-  if(plotname%in%c("cropyild")){
-    a<-a+guides(fill=FALSE)
-  }else{
-    a<- a + fillscale(a, emb)
-  }
-}
 
 calcstats<-function(x = capri, plotname){
   
@@ -109,11 +142,21 @@ calcstats<-function(x = capri, plotname){
   
 }
 
-setuppage <- function(x, plotname=''){
+setuppage <- function(x, plotname='', info=info){
   
   # Read plot characteristics
   plotdef<-read.table("capriplotdefaults.txt", header = TRUE)
   plotdef<-plotdef[plotdef$Plotname==plotname,]
+  print(names(attributes(x)))
+  if(substr(plotdef$arr,1,1)=='r') plotdef$onx <- 'RALL'
+  if(substr(plotdef$arr,1,1)=='c') plotdef$onx <- 'COLS'
+  if(substr(plotdef$arr,1,1)=='w') plotdef$onx <- 'ROWS'
+  if(substr(plotdef$arr,2,2)=='r') plotdef$ony <- 'RALL'
+  if(substr(plotdef$arr,2,2)=='c') plotdef$ony <- 'COLS'
+  if(substr(plotdef$arr,2,2)=='w') plotdef$ony <- 'ROWS'
+  if(substr(plotdef$arr,3,3)=='r') plotdef$onz <- 'RALL'
+  if(substr(plotdef$arr,3,3)=='c') plotdef$onz <- 'COLS'
+  if(substr(plotdef$arr,3,3)=='w') plotdef$onz <- 'ROWS'
   
   ### Filter data - the sets are given under 'rall' (RALL), 'acts' (COLS), and 'prod' (ROWS) 
   plotdefrall<-plotdef[,'rall']
@@ -173,23 +216,28 @@ setuppage <- function(x, plotname=''){
   }
   w<-11.7
   #nplots<-5;ncol<-1
-  pdf(file = paste0(plotname,"_",paste(scendesc, collapse="-"),".pdf"), 
+  print(gsub(".gdx","",info$filename))
+  pdf(file = paste0(gsub(".gdx","",info$filename), 
+                    plotname,"_",paste(scendesc, collapse="-"),".pdf"), 
       onefile = TRUE,
       width = w, 
       height = w *plotdef[,'hwratio']
   )
   save(x, file='test.rdata')
-  cat(scendesc)
-  if (numscen > 1){
+  cat(numscen, scendesc)
+  if (numscen > 0){
     # Adjust scales
     ymax <- vector()
     print(v2plot)
     for (i in 1:nplots){
-      if(loopover=='c') ymax[i]<-max(x[COLS==v2plot[i], 'VALUE'])
-      if(loopover=='w') ymax[i]<-max(x[ROWS==v2plot[i], 'VALUE'])
-      if(loopover=='r') ymax[i]<-max(x[COLS==v2plot[i], 'VALUE'])
+      if(loopover=='c') ymax[i]<-max(x[COLS==v2plot[i], lapply(.SD, sum, na.rm=TRUE), .SDcols='VALUE', by=c(eval(plotdef$onx), "SCEN")]$VALUE)
+      if(loopover=='w') ymax[i]<-max(x[ROWS==v2plot[i], lapply(.SD, sum, na.rm=TRUE), .SDcols='VALUE', by=c(eval(plotdef$onx), "SCEN")]$VALUE)
+      if(loopover=='r') ymax[i]<-max(x[RALL==v2plot[i], lapply(.SD, sum, na.rm=TRUE), .SDcols='VALUE', by=c(eval(plotdef$onx), "SCEN")]$VALUE)
     }
   }
+  
+  colbar<-setcolors(x, plotdef$ony)
+  
   for(scens in 1:numscen){
     plottit<-paste0(plotdef[,'title'])
     if(scendesc[scens]!='')plottit<-paste0(plottit,": ",scendesc[scens], "\n")
@@ -212,7 +260,7 @@ setuppage <- function(x, plotname=''){
       if(loopover=='r') y<-xscen[COLS==v2plot[i]]
       if(nrow(y)>0){
         cat("\nPreparing plot ", i)
-        if(plotdef[,'t2plot']=='bar') {p[[j]]<-plotbars(y, emb='multiple', plotdef)}
+        if(plotdef[,'t2plot']=='bar') {p[[j]]<-plotbars(y, emb='multiple', plotdef, colbar=colbar)}
         if(plotdef[,'t2plot']=='box') {p[[j]]<-plotboxes(y, emb='multiple', plotdef)}
         if(plotdef[,'t2plot']=='box') {p[[j+1]]<-calcstats(y); j<-j+1}
       }
@@ -227,6 +275,7 @@ setuppage <- function(x, plotname=''){
     
     fig<-ggarrange(plotlist=p, 
                    common.legend=TRUE, 
+                   #common.legend=FALSE, 
                    legend='right',
                    #labels = "AUTO",
                    nrow = nrow, ncol = ncol, align = 'v'
@@ -251,97 +300,7 @@ setuppage <- function(x, plotname=''){
     print(figa)
   }
   dev.off()
-  return(a)
+  return(p)
 }
 
 
-checkinfo<-function(x){
-  
-  #' Checks CAPRI information in data frame/table
-  #' 
-  #' @description Analyses data on content and returns
-  #' information as a string to be plotted as label  
-  
-  perspective<-''
-  curtit<-''
-  legtit<-''
-  
-  curcols<-as.character(unique(x$COLS))
-  numcols<-length(curcols)
-  
-  currows<-as.character(unique(x$ROWS))
-  numrows<-length(currows)
-  
-  curequal<-sum(x$ROWS==x$COLS)
-  print(currows)
-  print(curcols)
-  curlab<-"not yet defined in fuction checkinfo()"
-  if(numrows==1 & numcols>1){
-    perspective<-'act'
-    if(currows=='LEVL'){
-      if(sum(! curcols %in% mcact) == 0 ){
-        # All activities are crops
-        curlab<-"Area [1000 ha]"
-        curtit<-"Total agricultural area by crop"
-        legtit<-"CROPS"
-      }
-    }
-    if(currows%in%c("N_CAL", "N_FAT", "N_PRO")){
-      print("nutrients")
-      if(currows=="N_CAL") balterm<-"Calorie intake\n[kcal cap-1 day-1]"
-      if(currows=="N_FAT") balterm<-"Fat intake\n[g fat cap-1 day-1]"
-      if(currows=="N_PRO") balterm<-"Protein intake\n[g proteins cap-1 day-1]"
-      #cat("\n",perspective, balterm)
-      curlab<-balterm
-      curtit<-"Nutrient intake"
-      legtit<-"Food primary commodities"
-    }
-    
-  }else if(numrows>1 & numcols==1){
-    perspective<-'com'
-    if(curcols%in%c("GROF", "FEDM", "HCOM", "IMPT", "EXPT")){
-      if(curcols=="GROF") balterm<-"Gross production"
-      if(curcols=="IMPT") balterm<-"Import"
-      if(curcols=="EXPT") balterm<-"Export"
-      if(curcols=="FEDM") balterm<-"Feed use"
-      if(curcols=="HCOM") balterm<-"Human consumption"
-      #cat("\n",perspective, balterm)
-      if(sum(! currows %in% mcact) == 0 ){
-        # All products are crops
-        curlab<-paste0(balterm, "\n [1000 t]")
-        curtit<-"Total quantity by crop"
-        legtit<-"CROPS"
-      }  
-    }
-    if(curcols%in%c("N_CAL", "N_FAT", "N_PRO")){
-      print("nutrients")
-      if(curcols=="N_CAL") balterm<-"Calorie intake\n[Mcal yr-1]"
-      if(curcols=="N_FAT") balterm<-"Fat intake\n[kg fat yr-1]"
-      if(curcols=="N_PRO") balterm<-"Protein intake\n[kg proteins yr-1]"
-      #cat("\n",perspective, balterm)
-      curlab<-balterm
-      curtit<-"Nutrient intake"
-      legtit<-"Food primary commodities"
-    }
-  }else if(curequal>0){
-    #This happens only for yield
-    perspective<-'act'
-    curlab<-"Crop yield \n[kg ha-1 yr-1]"
-    curtit<-"Crop yield"
-    legtit<-"CROPS"
-  }
-  
-  # Check regional level
-  curregs<-as.character(unique(x$RALL))
-  nregs<-length(curregs)
-  nnuts0<-length(grepl("000000",curregs))
-  if(nregs==nnuts0){
-    # Plot at country level - use 2 digits
-    x<-x[, RALL := substr(RALL,1,2) ]
-    
-  }
-  
-  if(perspective=='') {cat("\nperspective missing\ncurrows=", currows,
-                           "\n curcols=", curcols)}
-  return(list(perspective, curlab, curtit, legtit))
-}

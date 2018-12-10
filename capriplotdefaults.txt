@@ -22,7 +22,7 @@ Plotname         arr   hwratio   nrow  ncol  title                rall        co
 ######################################################################################################################################################
 #
 # mbalbycountry        plots marketbalance elements for all EU countries and all crops on one page
-mbal             rwc   0.6       NA    2     'Crop quantities'    nuts0       mbal                  mcact              bar          v
+mbal             rwc   0.6       NA    2     'Crop quantities'    nuts0       mbal                  oseco              bar          v
 ncal             rwc   0.6       NA    2     'Macro nutrients'    nuts0       ncnc_pos              oseco              bar          v
 ncalinha         rcw   0.6       NA    2     'Macro nutrients'    nuts0       INHA,                 ncnc_pos           bar          v
 #
