@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "..")
 
 library(gdxrrw)
+library(dplyr)
 ```
 
 [TOC]
@@ -97,7 +98,8 @@ Pass the arguments the opendata function wants to have in the capdis context.
 getwd()
 source("capriextract_functions.r")
 # Global variables needed by the opendata function in the "capdis" context
-datapath <- "/Bioeconomy/BIOMASS/capri/"
+# datapath <- "/Bioeconomy/BIOMASS/capri/"
+datapath <- "/Bioeconomy/BIOMASS/forbiomodjrcbox/capri/"
 baseyear <- 1212
 data3dim<-c("RALL","COLS","ROWS","VALUE")
 # Load the gdx library by specifying the GAMS directory as a parameter
@@ -109,12 +111,25 @@ knitr::kable(head(es, 10), format = "markdown")
 
 if(FALSE){
     write.csv(es, "~/downloads/capdis_ES_2010.csv", row.names = FALSE)
+    saveRDS(es, file.path(datapath, "capdis_es_2010.rds"))
     saveRDS(es, "~/downloads/capdis_es_2010.rds")
     capdis_spain <- readRDS("~/downloads/capdis_es_2010.rds")
 }
 ```
 
+## Residues data
+```{r}
+esresid <- es %>% 
+    filter(ROWS == "CRESID")
 
+unique(es$COLS)
+unique(substr(es$RALL, 1,2))
+esresid %>% 
+    mutate(RALL2 = substr(RALL, 1,2)) %>% 
+    group_by(RALL2) %>% 
+    tally() %>% 
+    knitr::kable(format = "markdown")
+```
 
 
 ## Missing objects while runing the opendata function
@@ -146,16 +161,90 @@ Sys.info()[4] == "d01ri1603346.ies.jrc.it"
 
 But for the moment we can also simply overwrite the `datapath` variable.
 
+# Use `capri_sets.r` to open the metadata dump
+```{r}
+setfile <- "/Bioeconomy/BIOMASS/capri/capdis/dumpcapdis_EndOfCapdis.gdx"
+igdx(gamsSysDir = "/opt/gams/gams25.1_linux_x64_64_sfx/")
 
-# Use `gdxrrw::rgdx.param()` directly to open the metadata dump
+# Code copy-pasted from capri_sets.r
+rows<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ROWS")
+# set FROWS / set.fco,comi,comf,beef,pork,sgmi,sgmf,sgmt,eggs,poum,oani/;
+# set cropo / set.fco,set.ico/;
+# set animo_rows / die oben + set.oyani_rows,mann,manp,mank,lres/;
+frows<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FROWS")
+ico<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ICO")
+mpactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MPACT")
+mpact<-as.character(mpactexp[,1])
+mcactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "mcact")
+mcact<-as.character(mcactexp[,1])
+maactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MAACT")
+maact<-as.character(maactexp[,1])
+daactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "DAACT")
+daact<-as.character(daactexp[,1])
+fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fssact")
+fssact<-as.character(fssactexp[,1])
+# lapmactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact")
+# Error in rgdx(gdxName, list(name = symName, compress = compress, ts = ts,  : 
+#   GDX file /Bioeconomy/BIOMASS/capri/capdis/dumpcapdis_EndOfCapdis.gdx contains no symbol named 'lapmact'
+# lapmact<-as.character(lapmactexp[,1])
+# # Error: object 'lapmactexp' not found
+# lapmact_fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact_fssact")
+# # Error in rgdx(gdxName, list(name = symName, compress = compress, ts = ts,  : 
+# #   GDX file /Bioeconomy/BIOMASS/capri/capdis/dumpcapdis_EndOfCapdis.gdx contains no symbol named 'lapmact_fssact'
+# lapmact_fssact<-as.character(lapmact_fssactexp[,1])
+# # Error: object 'lapmact_fssactexp' not found
+names(maactexp)<-c("MAACT","Description")
+names(daactexp)<-c("MAACT","Description")
+feed_rowsexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FEED_ROWS")
+feed_rows<-as.character(feed_rowsexp[,1])
+fert_distexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fert_dist")
+fert_dist<-as.character(fert_distexp[,1])
+feed_to_o<-(rgdx.set(setfile,ts = TRUE,symName = "FEED_TO_O"))
+frmbal_cols<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "frmbal_cols"))
+mrkbal_cols<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MRKBAL_COLS"))
+nbil<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL"))
+# Countries and regions
+nuts0_exp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0")
+nuts0<-as.character(nuts0_exp[,1])
+cntr<-substr(nuts0,1,2)
+srnuts2<-as.character(rgdx.set(setfile,ts = TRUE,symName = "SRNUTS2")[,1])
+nuts2<-substr(srnuts2,1,4)
+rall<-rgdx.set(setfile,ts = TRUE,te=TRUE,symName = "RALL")
+
+
+# Save all data to an R file
+if(FALSE){
+    save(cntr, daact, daactexp, feed_rows, feed_rowsexp, feed_to_o, fert_dist, fert_distexp, frmbal_cols, frows, fssact, fssactexp, ico, maact, maactexp, mcact, mcactexp, mpact, mpactexp, mrkbal_cols, nbil, nuts0, nuts0_exp, nuts2, rall, rows, setfile, srnuts2, file = "/Bioeconomy/BIOMASS/capri/capdis/dumpcapdis.RData")    
+    # Load the file
+    load("/Bioeconomy/BIOMASS/capri/capdis/dumpcapdis.RData")
+}
+```
+
+## Residues metadata
+
+```{r}
+
+knitr::kable(rows[grepl("resid", rows$.te),], format = "markdown")
+```
+
+
+
+## Use `gdxrrw::rgdx.param()` directly to open the metadata dump
+Not used, kept for information purposes.
 
 Open the metadata dump file using the gdxrrw package directly:
 ```{r}
 datafile <- "/Bioeconomy/BIOMASS/capri/capdis/dumpcapdis_EndOfCapdis.gdx"
-dataparm <- "xobs"
-dumpcapdis <- rgdx.param(datafile, dataparm)
+dumpcapdis <- rgdx.param(datafile, "xobs")
 knitr::kable(head(dumpcapdis, 10), format = "markdown")
 ```
 
+
+
+# Update gdx xobs files for the missing CAPRI regions 52, 61 and 62
+
+```{r}
+
+```
 
 
