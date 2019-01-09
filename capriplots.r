@@ -27,11 +27,14 @@
 plotbars <- function(x = capri, emb = 'unique', 
                      plotdef = plotdef,
                      colbar = NULL   # If a vector with colors with the correct number of colors has been pre-defined
+                     , colbar_args   # vector with colors to be passed to colbar
                      ){
   
   print(plotdef$arr)
-  uniquex <- unique(x[ , .SD, .SDcols=plotdef$onx])
-  uniquez <- unique(x[ , .SD, .SDcols=plotdef$onz])
+  #uniquex <- unique(x[ , .SD, .SDcols=plotdef$onx])
+  uniquex <- as.vector(unique(x[[plotdef$onx]]))
+  #uniquez <- unique(x[ , .SD, .SDcols=plotdef$onz])
+  uniquez <- as.vector(unique(x[[plotdef$onz]]))
   cat("\n uniquex\n", uniquex)
   cat("\n uniquez\n", uniquez)
   if( length(uniquez) == 1 ) { 
@@ -58,9 +61,9 @@ plotbars <- function(x = capri, emb = 'unique',
   if(is.null(colbar)) {
     colbar <- colorRampPalette(c('skyblue','darkblue','pink','yellow','darkred'))
   }else{
-    if(is.function(colbar)) colbar <- colbar(33)
+    if(is.function(colbar)) colbar <- colbar
   }
-  a <- a + fillscale(a, emb, plotdef, colbar)
+  a <- a + fillscale(a, emb, plotdef, colbar, colbar_args)
   #a <- a + scale_fill_manual(values = colbar(33))
   return(a)
 }
@@ -104,12 +107,14 @@ filltheme <- function(a, plotdef){
   return(t)
 }
 
-fillscale <- function(a, emb, plotdef, colbar=NULL){
+fillscale <- function(a, emb, plotdef, colbar=NULL, colbar_args){
   if(emb!='unique'){legcols<-2}else{legcols<-NULL}
   cat(plotdef$curleg)
-  if(is.null(colbar)) 
-    colbar<-colorRampPalette(c('skyblue','darkblue','pink','yellow','darkred'))
-    colbar<-colorRampPalette(c('black','darkblue','pink','yellow','darkred'))
+  if(is.null(colbar)) {
+    colbar<-colorRampPalette(c('skyblue','darkblue','pink','yellow','darkred'))   
+  }else{
+    colbar <- colorRampPalette(unlist(colbar_args))
+  }
   t <- discrete_scale(aesthetics='fill', 
                       scale_name='',
                       palette = colbar,
@@ -125,6 +130,7 @@ fillscale <- function(a, emb, plotdef, colbar=NULL){
                                            override.aes = list(size = 1)))
     
   }
+  return(t)
 }
 
 
@@ -146,6 +152,7 @@ setuppage <- function(x, plotname='', info=info){
   
   # Read plot characteristics
   plotdef<-read.table("capriplotdefaults.txt", header = TRUE)
+  #plotdef<-read.table("E:\\capriextract/capriplotdefaults.txt", header = TRUE)
   plotdef<-plotdef[plotdef$Plotname==plotname,]
   print(names(attributes(x)))
   if(substr(plotdef$arr,1,1)=='r') plotdef$onx <- 'RALL'
@@ -215,6 +222,7 @@ setuppage <- function(x, plotname='', info=info){
     scendesc<-''
   }
   w<-11.7
+  w<-18.7
   #nplots<-5;ncol<-1
   print(gsub(".gdx","",info$filename))
   pdf(file = paste0(gsub(".gdx","",info$filename), 
@@ -237,6 +245,8 @@ setuppage <- function(x, plotname='', info=info){
   }
   
   colbar<-setcolors(x, plotdef$ony)
+  #colbar[1] is the function
+  #colbar[2] is the vector with colors to be passed as arguments to the function
   
   for(scens in 1:numscen){
     plottit<-paste0(plotdef[,'title'])
@@ -260,7 +270,7 @@ setuppage <- function(x, plotname='', info=info){
       if(loopover=='r') y<-xscen[COLS==v2plot[i]]
       if(nrow(y)>0){
         cat("\nPreparing plot ", i)
-        if(plotdef[,'t2plot']=='bar') {p[[j]]<-plotbars(y, emb='multiple', plotdef, colbar=colbar)}
+        if(plotdef[,'t2plot']=='bar') {p[[j]]<-plotbars(y, emb='multiple', plotdef, colbar=colbar[1], colbar_args = colbar[2])}
         if(plotdef[,'t2plot']=='box') {p[[j]]<-plotboxes(y, emb='multiple', plotdef)}
         if(plotdef[,'t2plot']=='box') {p[[j+1]]<-calcstats(y); j<-j+1}
       }

@@ -10,37 +10,37 @@ setcolors<-function(x, ony = NULL){
   
   
   allcols<-unique(x[, .SD, .SDcols = ony])
-  colpal <- data.frame(matrix(ncol=2))
+  colpal <- data.frame(matrix(ncol=2, nrow = 0))      #xavi: to avoid the first line with NAs
   names(colpal)<-c("item", "col")
   
   cere <- c("SWHE", "DWHE", "RYEM", "BARL", "OATS", "MAIZ", "OCER", "PARI")
   cere <- c(cere, "RAPE", "SUNF", "SOYA", "OOIL")
-  cerecols<-colorRampPalette(c("cadetblue1","blue4"))
-  cerecols<-cerecols(n = length(cere))
+  cerecols<-colorRampPalette(c("cadetblue1","blue4"))(length(cere))          #xavi: nicer in only one line
+  #cerecols<-cerecols(n = length(cere))
   colpal[cere, "item"] <- cere
   colpal[cere, "col"] <- cerecols
   
-  oils <- c("RAPE", "SUNF", "SOYA", "OOIL")
-  oilscols<-colorRampPalette(c("yellow","pink"))
-  oilscols<-oilscols(n = length(oils))
+  #oils <- c("RAPE", "SUNF", "SOYA", "OOIL")
+  #oilscols<-colorRampPalette(c("yellow","pink"))(length(oils))
+  #oilscols<-oilscols(n = length(oils))
   #colpal[oils, "item"] <- oils
   #colpal[oils, "col"] <- oilscols
   
   othe <- c("PULS", "POTA", "SUGB", "TOMA", "OVEG", "TEXT", "TOBA", "OIND", "NURS", "NECR", "FLOW", "OCRO")
-  othecols<-colorRampPalette(c("lemonchiffon","khaki4"))
-  othecols<-othecols(n = length(othe))
+  othecols<-colorRampPalette(c("lemonchiffon","khaki4"))(length(othe))
+  #othecols<-othecols(n = length(othe))
   colpal[othe, "item"] <- othe
   colpal[othe, "col"] <- othecols
   
   fodd <- c("MAIF", "ROOF", "OFAR", "OOIL")
-  foddcols<-colorRampPalette(c("lightgrey","darkgrey"))
-  foddcols<-foddcols(n = length(fodd))
+  foddcols<-colorRampPalette(c("lightgrey","darkgrey"))(length(fodd))
+  #foddcols<-foddcols(n = length(fodd))
   colpal[fodd, "item"] <- fodd
   colpal[fodd, "col"] <- foddcols
   
   perm <- c("OLIV", "APPL", "OFRU", "CITR", "TAGR", "TABO", "TWIN")
-  permcols<-colorRampPalette(c("brown","black"))
-  permcols<-permcols(n = length(perm))
+  permcols<-colorRampPalette(c("brown","black"))(length(perm))
+  #permcols<-permcols(n = length(perm))
   colpal[perm, "item"] <- perm
   colpal[perm, "col"] <- permcols
   
@@ -59,9 +59,11 @@ setcolors<-function(x, ony = NULL){
   if(length(missing)>0){
     cat("\n\n Attention, colors are not defined for: ", paste(missing, collapse=", "))
   }
-  colpal<-colpal[!is.na(colpal$item),]
-  colpal<-colpal[colpal$item %in% allcols[[1]],]
-  colpal<-merge(allcols, colpal, by.x=ony, by.y="item", sort = FALSE)
+  #xavi: colpal<-colpal[!is.na(colpal$item),]
+  #xavi: colpal<-colpal[colpal$item %in% allcols[[1]],]
+  #xavi: colpal<-merge(allcols, colpal, by.x=ony, by.y="item", sort = FALSE)
+  colpal <- merge(colpal, allcols, by.x = "item", by.y = ony, all = TRUE, sort = FALSE)
+  colpal$col[is.na(colpal1$col)] <- "pink"
   colpal<-colpal[[2]]
   
   # Make a function that returns the colors if called 
@@ -71,7 +73,8 @@ setcolors<-function(x, ony = NULL){
     colfun <- colpal[1:n]
     return(colfun)
   }
-  return(colfun)
+  #return(colfun)
+  return(list(colfun, colpal))
   
 }
 plotallnamedcolors<-function(myc = colors(), cn = colors()){

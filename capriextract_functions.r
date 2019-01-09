@@ -9,6 +9,7 @@ opendata<-function(scope,
                    curyear, 
                    baseyear='12',  # Required for scope capdistime and capmod
                    curscen=''      # Required for capmod
+                   , curscenshort=''
                    ){
 #' Open a Capri data file
 #' @description This function opens a Capri gdx data file also called a xobs file. 
@@ -54,7 +55,8 @@ opendata<-function(scope,
   }
   if(grepl("capmod",scope)){
     datafile<-paste0("capmod/res_2_", baseyear, curyear,curscen,".gdx")
-    datafile<-paste0(datapath,datafile)
+    datafile<-paste0(datapath, datafile)
+    #datafile<-paste0(datapath,"/", datafile)
     dataparm<-"dataout"
     datanames<-data5dim
     
@@ -122,7 +124,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
                      curscen='', curscenshort=''){
   
     if(reload==1){
-        capridat<-opendata(scope,curcountry,curyear,baseyear, curscen)
+        capridat<-opendata(scope,curcountry,curyear,baseyear, curscen, curscenshort)
         fattr<-capridat[[2]]
         capridat<-capridat[[1]]
     }
