@@ -14,7 +14,7 @@ setcolors<-function(x, ony = NULL){
   names(colpal)<-c("item", "col")
   
   cere <- c("SWHE", "DWHE", "RYEM", "BARL", "OATS", "MAIZ", "OCER", "PARI")
-  cere <- c(cere, "RAPE", "SUNF", "SOYA", "OOIL")
+  cere <- c(cere, "RAPE", "SUNF", "SOYA", "OOIL")          #xavi: "OOIL" appears also in fodd. I remove it from there
   cerecols<-colorRampPalette(c("cadetblue1","blue4"))(length(cere))          #xavi: nicer in only one line
   #cerecols<-cerecols(n = length(cere))
   colpal[cere, "item"] <- cere
@@ -32,7 +32,7 @@ setcolors<-function(x, ony = NULL){
   colpal[othe, "item"] <- othe
   colpal[othe, "col"] <- othecols
   
-  fodd <- c("MAIF", "ROOF", "OFAR", "OOIL")
+  fodd <- c("MAIF", "ROOF", "OFAR") #, "OOIL")
   foddcols<-colorRampPalette(c("lightgrey","darkgrey"))(length(fodd))
   #foddcols<-foddcols(n = length(fodd))
   colpal[fodd, "item"] <- fodd
@@ -60,10 +60,13 @@ setcolors<-function(x, ony = NULL){
     cat("\n\n Attention, colors are not defined for: ", paste(missing, collapse=", "))
   }
   #xavi: colpal<-colpal[!is.na(colpal$item),]
-  #xavi: colpal<-colpal[colpal$item %in% allcols[[1]],]
+  colpal<-colpal[colpal$item %in% allcols[[1]],]
   #xavi: colpal<-merge(allcols, colpal, by.x=ony, by.y="item", sort = FALSE)
   colpal <- merge(colpal, allcols, by.x = "item", by.y = ony, all = TRUE, sort = FALSE)
-  colpal$col[is.na(colpal1$col)] <- "pink"
+  colpal$col[is.na(colpal$col)] <- "pink"
+  
+  col_map <- setNames(as.character(colpal$col), colpal$item)
+  
   colpal<-colpal[[2]]
   
   # Make a function that returns the colors if called 
@@ -74,7 +77,7 @@ setcolors<-function(x, ony = NULL){
     return(colfun)
   }
   #return(colfun)
-  return(list(colfun, colpal))
+  return(list(colfun, colpal, col_map))
   
 }
 plotallnamedcolors<-function(myc = colors(), cn = colors()){
