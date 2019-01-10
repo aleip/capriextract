@@ -50,7 +50,8 @@ plotbars <- function(x = capri, emb = 'unique',
   
   numoflevles<-nrow(unique(x[,.SD, .SDcols=plotdef$ony]))
   save(x, plotdef, file="x.rdata")
-  a<-ggplot(x, aes_string(x=plotdef$onx, y="VALUE", fill=plotdef$ony)) 
+  #a<-ggplot(x, aes_string(x=plotdef$onx, y="VALUE", fill=plotdef$ony)) 
+  a<-ggplot(x, aes_string(x=plotdef$onx, y="VALUE", fill = factor(x[[plotdef$ony]], levels = (names(unlist(col_map)))))) 
   
   a<- a + geom_bar(position = 'stack', stat='identity', width = 0.8) +
     ylab(plotdef$curlab)

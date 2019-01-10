@@ -15,8 +15,7 @@ setcolors<-function(x, ony = NULL){
   
   cere <- c("SWHE", "DWHE", "RYEM", "BARL", "OATS", "MAIZ", "OCER", "PARI")
   cere <- c(cere, "RAPE", "SUNF", "SOYA", "OOIL")          #xavi: "OOIL" appears also in fodd. I remove it from there
-  cerecols<-colorRampPalette(c("cadetblue1","blue4"))(length(cere))          #xavi: nicer in only one line
-  #cerecols<-cerecols(n = length(cere))
+  cerecols<-colorRampPalette(c("cadetblue1","blue4"))(length(cere))   
   colpal[cere, "item"] <- cere
   colpal[cere, "col"] <- cerecols
   
@@ -28,19 +27,16 @@ setcolors<-function(x, ony = NULL){
   
   othe <- c("PULS", "POTA", "SUGB", "TOMA", "OVEG", "TEXT", "TOBA", "OIND", "NURS", "NECR", "FLOW", "OCRO")
   othecols<-colorRampPalette(c("lemonchiffon","khaki4"))(length(othe))
-  #othecols<-othecols(n = length(othe))
   colpal[othe, "item"] <- othe
   colpal[othe, "col"] <- othecols
   
   fodd <- c("MAIF", "ROOF", "OFAR") #, "OOIL")
   foddcols<-colorRampPalette(c("lightgrey","darkgrey"))(length(fodd))
-  #foddcols<-foddcols(n = length(fodd))
   colpal[fodd, "item"] <- fodd
   colpal[fodd, "col"] <- foddcols
   
   perm <- c("OLIV", "APPL", "OFRU", "CITR", "TAGR", "TABO", "TWIN")
   permcols<-colorRampPalette(c("brown","black"))(length(perm))
-  #permcols<-permcols(n = length(perm))
   colpal[perm, "item"] <- perm
   colpal[perm, "col"] <- permcols
   
@@ -63,6 +59,7 @@ setcolors<-function(x, ony = NULL){
   colpal<-colpal[colpal$item %in% allcols[[1]],]
   #xavi: colpal<-merge(allcols, colpal, by.x=ony, by.y="item", sort = FALSE)
   colpal <- merge(colpal, allcols, by.x = "item", by.y = ony, all = TRUE, sort = FALSE)
+  
   colpal$col[is.na(colpal$col)] <- "pink"
   
   col_map <- setNames(as.character(colpal$col), colpal$item)
