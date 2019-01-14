@@ -14,43 +14,49 @@ setcolors<-function(x, ony = NULL){
   names(colpal)<-c("item", "col")
   
   cere <- c("SWHE", "DWHE", "RYEM", "BARL", "OATS", "MAIZ", "OCER", "PARI")
-  cere <- c(cere, "RAPE", "SUNF", "SOYA", "OOIL")          #xavi: "OOIL" appears also in fodd. I remove it from there
-  cerecols<-colorRampPalette(c("cadetblue1","blue4"))(length(cere))   
+  cerecols<-colorRampPalette(c("blue4", "cadetblue1"))(length(cere))   
   colpal[cere, "item"] <- cere
   colpal[cere, "col"] <- cerecols
   
-  #oils <- c("RAPE", "SUNF", "SOYA", "OOIL")
-  #oilscols<-colorRampPalette(c("yellow","pink"))(length(oils))
-  #oilscols<-oilscols(n = length(oils))
-  #colpal[oils, "item"] <- oils
-  #colpal[oils, "col"] <- oilscols
-  
-  othe <- c("PULS", "POTA", "SUGB", "TOMA", "OVEG", "TEXT", "TOBA", "OIND", "NURS", "NECR", "FLOW", "OCRO")
-  othecols<-colorRampPalette(c("lemonchiffon","khaki4"))(length(othe))
-  colpal[othe, "item"] <- othe
-  colpal[othe, "col"] <- othecols
-  
-  fodd <- c("MAIF", "ROOF", "OFAR") #, "OOIL")
-  foddcols<-colorRampPalette(c("lightgrey","darkgrey"))(length(fodd))
-  colpal[fodd, "item"] <- fodd
-  colpal[fodd, "col"] <- foddcols
+  oils <- c("RAPE", "SUNF", "SOYA", "OOIL")
+  oilscols<-colorRampPalette(c("yellow","yellow4"))(length(oils))
+  colpal[oils, "item"] <- oils
+  colpal[oils, "col"] <- oilscols
   
   perm <- c("OLIV", "APPL", "OFRU", "CITR", "TAGR", "TABO", "TWIN")
-  permcols<-colorRampPalette(c("brown","black"))(length(perm))
+  permcols<-colorRampPalette(c("palegreen", "palegreen4","darkgreen"))(length(perm))
   colpal[perm, "item"] <- perm
   colpal[perm, "col"] <- permcols
   
-  # oils <- c("RAPE", "SUNF", "SOYA", "OOIL")
-  # oilscols<-colorRampPalette(c("yellow","orange"))
-  # oilscols<-oilscols(n = length(oils))
-  # colpal[oils, "item"] <- oils
-  # colpal[oils, "col"] <- oilscols
-  # 
-  # oils <- c("RAPE", "SUNF", "SOYA", "OOIL")
-  # oilscols<-colorRampPalette(c("yellow","orange"))
-  # oilscols<-oilscols(n = length(oils))
-  # colpal[oils, "item"] <- oils
-  # colpal[oils, "col"] <- oilscols
+  othe <- c("PULS", "POTA", "SUGB", "TOMA", "OVEG", "TEXT", "TOBA", "OIND", "NURS", "NECR", "FLOW", "OCRO")
+  #othecols<-colorRampPalette(c("lemonchiffon","khaki4"))(length(othe))
+  othecols<-colorRampPalette(c("tomato","tomato4", "tan", "tan4"))(length(othe))
+  colpal[othe, "item"] <- othe
+  colpal[othe, "col"] <- othecols
+  
+  fodd <- c("MAIF", "ROOF", "OFAR", "GRAS", "STRA") 
+  foddcols<-colorRampPalette(c("gold1","gold4"))(length(fodd))
+  colpal[fodd, "item"] <- fodd
+  colpal[fodd, "col"] <- foddcols
+  
+  meat <- c("COMF", "BEEF", "PORK", "SGMI", "SGMF", "SGMT", "EGGS", "POUM")
+  meatcols<-colorRampPalette(c("firebrick1","firebrick4"))(length(meat))
+  colpal[meat, "item"] <- meat
+  colpal[meat, "col"] <- meatcols
+  
+  dairy <- c("COMI", "WMIO", "BUTT", "SMIP", "CHES", "FRMI", "CREM", "COCM")
+  dairycols<-colorRampPalette(c("yellow1","yellow4"))(length(dairy))
+  colpal[dairy, "item"] <- dairy
+  colpal[dairy, "col"] <- dairycols
+  
+  scnd <- c("SUGA", "RAPO", "SUNO", "SOYO", "WHEP", "CASE", "SUNC", "SOYC", "DDGS", 
+            "OTHO", "OLIC", "OLIO", "RAPC", "PLMO", "RICE", "MOLA", "STAR")
+  scndcols<-colorRampPalette(c("grey90","grey10"))(length(scnd))
+  colpal[scnd, "item"] <- scnd
+  colpal[scnd, "col"] <- scndcols
+  
+  
+
   missing <- allcols$ROWS[! allcols$ROWS %in% colpal$item]
   if(length(missing)>0){
     cat("\n\n Attention, colors are not defined for: ", paste(missing, collapse=", "))

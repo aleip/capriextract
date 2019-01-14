@@ -86,7 +86,7 @@ plotboxes <- function(x = capri, emb = 'unique', plotdef=plotdef){
   a<-ggplot(x, aes_string(x="COLS", y="VALUE")) 
   a<- a + geom_boxplot(aes_string(fill="COLS"))
   a<- a + filltheme(a)
-  if(plotdef$Plotname%in%c("cropyild")){
+  if(plotdef$Plotname%in%c("cropyild", "scropyild")){
     a<-a+guides(fill=FALSE)
   }else{
     a<- a + fillscale(a, emb)

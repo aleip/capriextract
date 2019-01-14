@@ -50,7 +50,7 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   gamspath<-"C:\\apps\\GAMS\\win64\\24.9"
   workpath<-"E:/"
   capridat<-paste0(curdir, "epnf/dat/capdishsu/fssdata/")
-  #datapath<-paste0(curdir, "users/leipadr/results/")
+  datapath<-paste0(curdir, "users/leipadr/results/")
   cgams<- paste0(serverpath, "epnf/gams/")
 }else{
   workpath<-"X:/MARS_disaggregation/hsu2_statistics_xavi2/"
