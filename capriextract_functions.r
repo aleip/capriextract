@@ -113,6 +113,7 @@ opendata<-function(scope,
   }else{
       cat(datafile, " does not exist\n")
       capridat<-datafile
+      fattr <- 0
   }
   
   return(list(capridat,fattr))
@@ -126,6 +127,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
     if(reload==1){
         capridat<-opendata(scope,curcountry,curyear,baseyear, curscen, curscenshort)
         fattr<-capridat[[2]]
+        if(fattr == 0) return(0)
         capridat<-capridat[[1]]
     }
     capridat<-as.data.table(capridat)
@@ -330,36 +332,36 @@ getmarketbalance<-function(capridat,d,curyear){
     rows<-c(as.character(frows$i),as.character(ico$i))
     cols<-c(as.character(frmbal_cols$i),as.character(mrkbal_cols$i))
     cols<-c(as.character(frmbal_cols$i),"FEDM")
-    capridat<-selectrowscolsregi(capridat,cols,rows,regi,d,curyear)
+    capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
     return(capridat)
 }
 
 getfeed<-function(capridat,d,curyear){
     rows<-feed_rows
     cols<-c(maact,daact)
-    capridat<-selectrowscolsregi(capridat,cols,rows,regi,d,curyear)
+    capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
 }
 getfeed<-function(capridat,d,curyear){
     rows<-feed_rows
     cols<-c(maact,daact)
-    capridat<-selectrowscolsregi(capridat,cols,rows,regi,d,curyear)
+    capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
 }
 getmpact<-function(capridat,d,curyear){
     rows<-"LEVL"
     cols<-c(mpact)
-    capridat<-selectrowscolsregi(capridat,cols,rows,regi,d,curyear)
+    capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
 }
 getuaarlevl<-function(capridat,d){
     cols<-"UAAR"
     rows<-"LEVL"
-    capridat<-selectrowscolsregi(capridat,cols,rows,regi,d)
+    capridat<-filteropen(capridat,cols,rows,regi,d)
 }
 getnbil<-function(capridat,d){
     cols<-c(as.character(nbil$i))
     if(scope=="nbalancemain")cols<-c("MINFER","EXCRET","ATMOSD","BIOFIX","CRESID",
                                      "SURTOT","EXPPRD","SURSOI","GASTOT","RUNTOT")
     rows<-"NITF"
-    capridat<-selectrowscolsregi(capridat,cols,rows,regi,d)
+    capridat<-filteropen(capridat,cols,rows,regi,d)
 }
 
 getdata<-function(scope,curcountry,curyear,curcols,currows=currows){
@@ -381,10 +383,10 @@ getdata<-function(scope,curcountry,curyear,curcols,currows=currows){
     capridat<-rbind(capridat,getuaarlevl(capridat,d))
   }
   if(grepl("nlca",scope)){
-    capridat<-selectrowscolsregi(capridat,curcols,currows,regi,d,curyear)
+    capridat<-filteropen(capridat,curcols,currows,regi,d,curyear)
   }
   if(scope%in%c("baseyearnmin","baseyearpmin")){
-    capridat<-selectrowscolsregi(capridat,reload = 0,
+    capridat<-filteropen(capridat,reload = 0,
                                  cols = mcact,rows = currows, ydim = "Y", 
                                  regi = srnuts2, curdim5 = NULL,curyear = curyear)
   }
@@ -489,7 +491,7 @@ checkCropNbudget<-function(x, crop, output="error"){
   if(output != "mismatch"){
     cat("\n Check N-budget for ", crop)
   }
-  nflows_crop<-selectrowscolsregi(reload=0, 
+  nflows_crop<-filteropen(reload=0, 
                                   capridat=x, 
                                   cols=crop,
                                   rows=currows, 
