@@ -80,7 +80,7 @@ opendata<-function(scope,
   if(grepl("capdis",scope)){
     if(scope=="capdis") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
     if(scope=="capdiscapreg") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
-    if(scope=="capdistimes") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear,curyear)
+    if(scope=="capdistimes") datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
     datafile<-paste0(datapath,datafile,".gdx")
     dataparm<-"xobs"
     ydim<-""
@@ -127,7 +127,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
     if(reload==1){
         capridat<-opendata(scope,curcountry,curyear,baseyear, curscen, curscenshort)
         fattr<-capridat[[2]]
-        if(fattr == 0) return(0)
+        if(fattr[1] == 0) return(0)
         capridat<-capridat[[1]]
     }
     capridat<-as.data.table(capridat)
