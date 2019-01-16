@@ -14,7 +14,8 @@ setcolors<-function(x, ony = NULL){
   names(colpal)<-c("item", "col")
   
   cere <- c("SWHE", "DWHE", "RYEM", "BARL", "OATS", "MAIZ", "OCER", "PARI")
-  cerecols<-colorRampPalette(c("blue4", "cadetblue1"))(length(cere))   
+  #cerecols<-colorRampPalette(c("blue4", "cadetblue1"))(length(cere))   
+  cerecols<-colorRampPalette(c(rgb(5, 48, 97, maxColorValue=255), rgb(209, 229, 240, maxColorValue=255)))(length(cere))   
   colpal[cere, "item"] <- cere
   colpal[cere, "col"] <- cerecols
   
@@ -96,4 +97,19 @@ plotallnamedcolors<-function(myc = colors(), cn = colors()){
     geom_rect(data=d, mapping=aes(xmin=x+0.05, xmax=x+0.95, ymin=y+0.5, ymax=y+2, fill=c)) +
     geom_text(data=d, mapping=aes(x=x+0.05, y=y+1.5, label=cn), colour="white", hjust=0, vjust=1, size=3, check_overlap = TRUE) +
     geom_text(data=d, mapping=aes(x=x+0.95, y=y+1.5, label=cn), colour="black", hjust=1, vjust=1, size=3, check_overlap = TRUE)
+}
+
+callIPCCcolors <- function(
+  fle = "E:/IPCC_colors/IPCCcolors.xlsx", 
+  #sht = c("red2blue", "brown2green"))  #this is 20 colors (4 groups)
+  sht = c("scales6")) #this is 30 colors (6 groups)
+  {
+  library(xlsx)
+  pltte_IPCC <- as.data.frame(matrix(nrow = 0, ncol = 0))
+  for(s in sht){
+    IPCCcols <- read.xlsx(fle, s, header = TRUE)
+    pltte_IPCC <- rbind(pltte_IPCC, IPCCcols)
+  }
+  pltte_IPCC <- pltte_IPCC[, 2:4]
+  #
 }

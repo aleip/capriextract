@@ -59,7 +59,7 @@ plotbars <- function(x = capri, emb = 'unique',
   if(emb!='unique') a <- a + xlab("")
   a <- a + scale_y_continuous(limits = c(0,plotdef[ , 'ymax']))
   a <- a + filltheme(a, plotdef)
-
+  
   if(is.null(colbar)) {
     colbar <- colorRampPalette(c('skyblue','darkblue','pink','yellow','darkred'))
   }else{
@@ -317,5 +317,4 @@ setuppage <- function(x, plotname='', info=info){
   dev.off()
   return(p)
 }
-
 
