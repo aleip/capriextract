@@ -67,12 +67,13 @@ checkinfo<-function(x, plotdef=plotdef){
   if(plotdef$Plotname %in% c('ncalinha')) plotdef$curtit<-'Nutrient intake per Inhabitant'
   if(plotdef$Plotname %in% c('ncalinha')) plotdef$legtit<-'Food'
 
-  if(plotdef$curpanel%in%c("GROF", "FEDM", "HCOM", "IMPT", "EXPT")){
+  if(plotdef$curpanel%in%c("GROF", "FEDM", "HCOM", "IMPT", "EXPT", "INHA")){
     if(plotdef$curpanel=="GROF") balterm<-"Gross production"
     if(plotdef$curpanel=="IMPT") balterm<-"Import"
     if(plotdef$curpanel=="EXPT") balterm<-"Export"
     if(plotdef$curpanel=="FEDM") balterm<-"Feed use"
     if(plotdef$curpanel=="HCOM") balterm<-"Human consumption"
+    if(plotdef$curpanel=="INHA") balterm<-"Human consumption per capita"
     #cat("\n",perspective, balterm)
     if(sum(! currows %in% mcact) == 0 ){
       # All products are crops
@@ -80,6 +81,7 @@ checkinfo<-function(x, plotdef=plotdef){
     plotdef$curtit<-"Total quantity by crop"
     plotdef$legtit<-"CROPS"
     plotdef$curlab<-paste0(balterm, "\n [1000 t]")
+    if(plotdef$curpanel=="INHA") plotdef$curlab<-paste0(balterm, "\n [kg / cap / year]")
   }
   
   if(plotdef$curpanel == "N_CAL") 

@@ -68,8 +68,20 @@ daact<-as.character(daactexp[,1])
 fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fssact")
 fssact<-as.character(fssactexp[,1])
 
-osecoexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "OSECO")
+# oseco contains also non-food items - restict to
+cropexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FCO")
+icoexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ICO")
+animoexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ANIMO_ROWS")
+oani<-rgdx.set(setfile,ts = TRUE,symName = "OYANI_ROWS")
+animoexp <- animoexp[! animoexp$i %in% oani$i,]
+animoexp <- animoexp[! animoexp$i %in% c("MANN", "MANK", "MANP"),]
+secoexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "SECO_ROWS")
+
+
+osecoexp<-rbind(cropexp, icoexp, animoexp, secoexp)
 oseco<-as.character(osecoexp[,1])
+
+
 lapmactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact")
 lapmact<-as.character(lapmactexp[,1])
 lapmact_fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact_fssact")

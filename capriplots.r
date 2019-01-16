@@ -155,8 +155,9 @@ calcstats<-function(x = capri, plotname){
 setuppage <- function(x, plotname='', info=info){
   
   # Read plot characteristics
-  #plotdef<-read.table("capriplotdefaults.txt", header = TRUE)
-  plotdef<-read.table("E:\\capriextract/capriplotdefaults.txt", header = TRUE)
+  plotdef<-read.table("capriplotdefaults.txt", header = TRUE)
+  #al201901 - don't put hard-wired paths! they always run into errors on other PCs
+  #plotdef<-read.table("E:\\capriextract/capriplotdefaults.txt", header = TRUE)
   plotdef<-plotdef[plotdef$Plotname==plotname,]
   print(names(attributes(x)))
   if(substr(plotdef$arr,1,1)=='r') plotdef$onx <- 'RALL'
@@ -235,8 +236,8 @@ setuppage <- function(x, plotname='', info=info){
       width = w, 
       height = w *plotdef[,'hwratio']
   )
-  save(x, file='test.rdata')
-  cat(numscen, scendesc)
+  save(list=objects(), file='test.rdata')
+  cat("numscen=", numscen, scendesc)
   if (numscen > 0){
     # Adjust scales
     ymax <- vector()
@@ -255,6 +256,7 @@ setuppage <- function(x, plotname='', info=info){
   
   for(scens in 1:numscen){
     plottit<-paste0(plotdef[,'title'])
+    cat("\n", scens, scendesc)
     if(scendesc[scens]!='')plottit<-paste0(plottit,": ",scendesc[scens], "\n")
     xscen<-x
     if("SCEN" %in% names(x)) xscen<-x[SCEN==scendesc[scens]]
