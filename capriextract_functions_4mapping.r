@@ -472,6 +472,7 @@ mapping <- function(scope = "capdiscapreg",
       for (yr in sort(unique(capri4map$Y))){
         
         capri4map_yr <- capri4map[capri4map$Y %in% yr, ]
+        capri4map_yr <- capri4map_yr[, !names(capri4map_yr) %in% c("EEZ_R")]
         
         preds_hsu <- merge(hsu, capri4map_yr, by.x = "CAPRI_HSU", by.y = "RALL", all.x = FALSE)
         names(preds_hsu)[1] <- "RALL"
