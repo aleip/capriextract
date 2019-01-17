@@ -124,19 +124,19 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
                      curcountry, curyear="08", baseyear='08', 
                      curscen='', curscenshort=''){
   
-    if(reload==1){
-        capridat<-opendata(scope,curcountry,curyear,baseyear, curscen, curscenshort)
-        fattr<-capridat[[2]]
-        if(fattr[1] == 0) return(0)
-        capridat<-capridat[[1]]
-    }
-    capridat<-as.data.table(capridat)
-
-    fattr$filterCOLS<-paste(cols, collapse="-")
-    fattr$filterROWS<-paste(rows, collapse='-')
-    fattr$filterCountry<-paste(curcountry, collapse="-")
-    fattr$filterRegi<-paste(regi, collapse="-")
-    
+  if(reload==1){
+    capridat<-opendata(scope,curcountry,curyear,baseyear, curscen, curscenshort)
+    fattr<-capridat[[2]]
+    if(fattr[1] == 0) return(0)
+    capridat<-capridat[[1]]
+  }
+  capridat<-as.data.table(capridat)
+  
+  fattr$filterCOLS<-paste(cols, collapse="-")
+  fattr$filterROWS<-paste(rows, collapse='-')
+  fattr$filterCountry<-paste(curcountry, collapse="-")
+  fattr$filterRegi<-paste(regi, collapse="-")
+  
   #COLS (activities, variables for products)
   if(!is.null(cols)) capridat<-capridat[capridat$COLS%in%cols,]
   
@@ -157,14 +157,15 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
   
   #Filter time dimension only if 
   if(!scope%in%c("capdistimes","capmod", "tseriesGHG", "lapm")){
-      if(ncol(capridat)>4){
-          if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
-          if(curyear!=""){
-              if(!grepl("^20",curyear)){curyear<-paste0("20",curyear)}
-              capridat$Y<-curyear
-          }
+    if(ncol(capridat)>4){
+      if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
+      if(curyear!=""){
+        if(!grepl("^20",curyear)){curyear<-paste0("20",curyear)}
+        capridat$Y<-curyear
       }
+    }
   }
+  
   if(scope%in%c("tseriesGHG")){
     capridat<-capridat[capridat$Y%in%as.character(curyear)]
   }
@@ -173,13 +174,14 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
     print("select curdim5")
     capridat<-capridat[capridat$EMPTY%in%curdim5,]
   }
-    if(grepl("capmod", scope)){
-      capridat$SCEN<-curscenshort
-    }
-    #print(attributes(capridat))
-    #cat("-->")
-    #print(fattr)
-    return(list(capridat, fattr))
+  if(grepl("capmod", scope)){
+    capridat$SCEN<-curscenshort
+  }
+  #print(attributes(capridat))
+  #cat("-->")
+  #print(fattr)
+  # Return of information fattr does work over list as this disturbs the 'Reduce' function
+  return(capridat)
 }
 
 filtermultiple<-function(scope, 

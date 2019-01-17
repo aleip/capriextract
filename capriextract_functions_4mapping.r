@@ -579,8 +579,8 @@ mapping <- function(scope = "capdiscapreg",
         ttl <- paste0(ttl)
       }
     }else{
-      ttl <- "title here"
-      lgd <- "Legend"
+      ttl <- paste0(variab, " for ", paste(curcrops, collapse="-"))
+      lgd <- variab
     }
     
     sc_value <- round(((dt2plot@bbox[3] - dt2plot@bbox[1]) / 2), - 4)
