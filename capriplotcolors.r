@@ -13,40 +13,48 @@ setcolors<-function(x, ony = NULL){
   colpal <- data.frame(matrix(ncol=2, nrow = 0))      #xavi: to avoid the first line with NAs
   names(colpal)<-c("item", "col")
   
+  pltte <- callIPCCcolors()
+  
   cere <- c("SWHE", "DWHE", "RYEM", "BARL", "OATS", "MAIZ", "OCER", "PARI")
   #cerecols<-colorRampPalette(c("blue4", "cadetblue1"))(length(cere))   
-  cerecols<-colorRampPalette(c(rgb(5, 48, 97, maxColorValue=255), rgb(209, 229, 240, maxColorValue=255)))(length(cere))   
+  cerecols<-colorRampPalette(c(rgb(pltte[5, ], maxColorValue=255), rgb(pltte[1, ], maxColorValue=255)))(length(cere))   
   colpal[cere, "item"] <- cere
   colpal[cere, "col"] <- cerecols
   
   oils <- c("RAPE", "SUNF", "SOYA", "OOIL")
-  oilscols<-colorRampPalette(c("yellow","yellow4"))(length(oils))
+  oilscols<-colorRampPalette(c(rgb(pltte[10, ], maxColorValue=255), rgb(pltte[6, ], maxColorValue=255)))(length(oils))
   colpal[oils, "item"] <- oils
   colpal[oils, "col"] <- oilscols
   
   perm <- c("OLIV", "APPL", "OFRU", "CITR", "TAGR", "TABO", "TWIN")
-  permcols<-colorRampPalette(c("palegreen", "palegreen4","darkgreen"))(length(perm))
+  permcols<-colorRampPalette(c(rgb(pltte[15, ], maxColorValue=255), rgb(pltte[11, ], maxColorValue=255)))(length(perm))
   colpal[perm, "item"] <- perm
   colpal[perm, "col"] <- permcols
   
-  othe <- c("PULS", "POTA", "SUGB", "TOMA", "OVEG", "TEXT", "TOBA", "OIND", "NURS", "NECR", "FLOW", "OCRO")
+  othe <- c("PULS", "POTA", "SUGB", "TOMA", "OVEG", "TEXT")
   #othecols<-colorRampPalette(c("lemonchiffon","khaki4"))(length(othe))
-  othecols<-colorRampPalette(c("tomato","tomato4", "tan", "tan4"))(length(othe))
+  othecols<-colorRampPalette(c(rgb(pltte[20, ], maxColorValue=255), rgb(pltte[16, ], maxColorValue=255)))(length(othe))
+  colpal[othe, "item"] <- othe
+  colpal[othe, "col"] <- othecols
+  
+  othe <- c("TOBA", "OIND", "NURS", "NECR", "FLOW", "OCRO")
+  #othecols<-colorRampPalette(c("lemonchiffon","khaki4"))(length(othe))
+  othecols<-colorRampPalette(c(rgb(pltte[25, ], maxColorValue=255), rgb(pltte[21, ], maxColorValue=255)))(length(othe))
   colpal[othe, "item"] <- othe
   colpal[othe, "col"] <- othecols
   
   fodd <- c("MAIF", "ROOF", "OFAR", "GRAS", "STRA") 
-  foddcols<-colorRampPalette(c("gold1","gold4"))(length(fodd))
+  foddcols<-colorRampPalette(c(rgb(pltte[30, ], maxColorValue=255), rgb(pltte[26, ], maxColorValue=255)))(length(fodd))
   colpal[fodd, "item"] <- fodd
   colpal[fodd, "col"] <- foddcols
   
   meat <- c("COMF", "BEEF", "PORK", "SGMI", "SGMF", "SGMT", "EGGS", "POUM")
-  meatcols<-colorRampPalette(c("firebrick1","firebrick4"))(length(meat))
+  meatcols<-colorRampPalette(c(rgb(pltte[5, ], maxColorValue=255), rgb(pltte[1, ], maxColorValue=255)))(length(meat))
   colpal[meat, "item"] <- meat
   colpal[meat, "col"] <- meatcols
   
   dairy <- c("COMI", "WMIO", "BUTT", "SMIP", "CHES", "FRMI", "CREM", "COCM")
-  dairycols<-colorRampPalette(c("yellow1","yellow4"))(length(dairy))
+  dairycols<-colorRampPalette(c(rgb(pltte[10, ], maxColorValue=255), rgb(pltte[6, ], maxColorValue=255)))(length(dairy))
   colpal[dairy, "item"] <- dairy
   colpal[dairy, "col"] <- dairycols
   
@@ -100,7 +108,8 @@ plotallnamedcolors<-function(myc = colors(), cn = colors()){
 }
 
 callIPCCcolors <- function(
-  fle = "E:/IPCC_colors/IPCCcolors.xlsx", 
+  #fle = "E:/IPCC_colors/IPCCcolors.xlsx", 
+  fle = "E:/capriextract/IPCCcolors.xlsx", 
   #sht = c("red2blue", "brown2green"))  #this is 20 colors (4 groups)
   sht = c("scales6")) #this is 30 colors (6 groups)
   {
