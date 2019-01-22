@@ -49,7 +49,7 @@ plotbars <- function(x = capri, emb = 'unique',
   #cat("\n onx and ony", onx, ony, plotdef$curtit)
   
   numoflevles<-nrow(unique(x[,.SD, .SDcols=plotdef$ony]))
-  save(x, plotdef, file="x.rdata")
+  save(x, plotdef, file=paste0(datapath, "x.rdata"))
   #a<-ggplot(x, aes_string(x=plotdef$onx, y="VALUE", fill=plotdef$ony)) 
   a<-ggplot(x, aes_string(x=plotdef$onx, y="VALUE", fill = factor(x[[plotdef$ony]], levels = (names(unlist(col_map)))))) 
   
@@ -157,6 +157,12 @@ setuppage <- function(x, plotname='', info=info){
   # Read plot characteristics
   plotdef<-read.table("capriplotdefaults.txt", header = TRUE)
   #al201901 - don't put hard-wired paths! they always run into errors on other PCs
+  #xavi 20190121: Yes, that's true. But then we should put a copy of capriplotdefaults.txt in the working directory. Or adding a 
+  #               path in capri_dirs.r to where the file is
+  #               If we keep the working directory in ~/capriextract, then all the plots are saved there. Alternatively, we could 
+  #               include a path to where we want the plots to be saved
+  #xavi 20190121: Finally, I have used 'datapath' from capri_dirs.r to define where the plots are saved, and kept the working 
+  #               directory to ~/capriextract
   #plotdef<-read.table("E:\\capriextract/capriplotdefaults.txt", header = TRUE)
   plotdef<-plotdef[plotdef$Plotname==plotname,]
   print(names(attributes(x)))
@@ -181,7 +187,7 @@ setuppage <- function(x, plotname='', info=info){
     }
     x<-x[RALL %in% plotdefrall]
   }
-  save(x, file='test0.rdata')
+  save(x, file=paste0(datapath, 'test0.rdata'))
   plotdefcols<-plotdef[,'cols']
   if(! is.na(plotdefcols)){
     plotdefcols<-as.character(plotdefcols)
@@ -192,7 +198,7 @@ setuppage <- function(x, plotname='', info=info){
     }
     x<-x[COLS %in% plotdefcols]
   }
-  save(x, file='test1.rdata')
+  save(x, file=paste0(datapath, 'test1.rdata'))
   plotdefrows<-plotdef[,'rows']
   if(! is.na(plotdefrows)){
     plotdefrows<-as.character(plotdefrows)
@@ -205,7 +211,7 @@ setuppage <- function(x, plotname='', info=info){
     }
     x<-x[ROWS %in% as.character(plotdefrows)]
   }
-  save(x, file='test.rdata')
+  save(x, file=paste0(datapath, 'test.rdata'))
   
   ### Check arrangement of plots
   ### The third character in 'arr' determines the variable that changes with the plots
@@ -230,13 +236,13 @@ setuppage <- function(x, plotname='', info=info){
   w<-20
   #nplots<-5;ncol<-1
   print(gsub(".gdx","",info$filename))
-  pdf(file = paste0(gsub(".gdx","",info$filename), 
+  pdf(file = paste0(datapath, gsub(".gdx","",info$filename), 
                     plotname,"_",paste(scendesc, collapse="-"),".pdf"), 
       onefile = TRUE,
       width = w, 
       height = w *plotdef[,'hwratio']
   )
-  save(list=objects(), file='test.rdata')
+  save(list=objects(), file=paste0(datapath, 'test.rdata'))
   cat("numscen=", numscen, scendesc)
   if (numscen > 0){
     # Adjust scales
