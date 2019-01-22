@@ -46,10 +46,6 @@ if(scope%in%c("nlca")){
   setfilen<-paste0(ecampa3res,"sets/sets_nitrogen.gdx")
 }   
 
-
-
-
-
 rows<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ROWS")
 # set FROWS / set.fco,comi,comf,beef,pork,sgmi,sgmf,sgmt,eggs,poum,oani/;
 # set cropo / set.fco,set.ico/;
@@ -58,20 +54,40 @@ frows<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FROWS")
 ico<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ICO")
 mpactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MPACT")
 mpact<-as.character(mpactexp[,1])
+names(mpactexp)<-c("Acronym","Description")
 mcactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "mcact")
 mcact<-as.character(mcactexp[,1])
+names(mcactexp)<-c("Acronym","Description")
+mcactnohighyild<-setdiff(mcact, c("NURS", "FLOW", "TOMA"))
+
+
 maactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MAACT")
 maact<-as.character(maactexp[,1])
 daactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "DAACT")
 daact<-as.character(daactexp[,1])
 fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fssact")
 fssact<-as.character(fssactexp[,1])
+
+# oseco contains also non-food items - restict to
+cropexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FCO")
+icoexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ICO")
+animoexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ANIMO_ROWS")
+oani<-rgdx.set(setfile,ts = TRUE,symName = "OYANI_ROWS")
+animoexp <- animoexp[! animoexp$i %in% oani$i,]
+animoexp <- animoexp[! animoexp$i %in% c("MANN", "MANK", "MANP"),]
+secoexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "SECO_ROWS")
+
+
+osecoexp<-rbind(cropexp, icoexp, animoexp, secoexp)
+oseco<-as.character(osecoexp[,1])
+
+
 lapmactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact")
 lapmact<-as.character(lapmactexp[,1])
 lapmact_fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact_fssact")
 lapmact_fssact<-as.character(lapmact_fssactexp[,1])
-names(maactexp)<-c("MAACT","Description")
-names(daactexp)<-c("MAACT","Description")
+names(maactexp)<-c("Acronym","Description")
+names(daactexp)<-c("Acronym","Description")
 feed_rowsexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FEED_ROWS")
 feed_rows<-as.character(feed_rowsexp[,1])
 fert_distexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fert_dist")
@@ -83,11 +99,19 @@ nbil<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL"))
 # Countries and regions
 nuts0_exp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0")
 nuts0<-as.character(nuts0_exp[,1])
+nuts0eu15<-as.character(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0_EU15")[,1])
+nuts0eu10<-as.character(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0_EU10")[,1])
 cntr<-substr(nuts0,1,2)
+
+srnuts2names<-as.data.table(rgdx.set(setfile,te = TRUE, ts = TRUE,symName = "SRNUTS2"))
 srnuts2<-as.character(rgdx.set(setfile,ts = TRUE,symName = "SRNUTS2")[,1])
 nuts2<-substr(srnuts2,1,4)
 rall<-rgdx.set(setfile,ts = TRUE,te=TRUE,symName = "RALL")
+uaar<-as.data.frame(t(as.matrix(c("UAAR","Total agricultural activities"))))
+names(uaar)<-c("Acronym","Description")
 
+nbil_exp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL_COLS_MAIN")
+nbil<-as.character(nbil_exp[,1])
 
 # Nitrogen and GHG relevant sets
 if(exists("setfilen")){
@@ -98,13 +122,18 @@ if(exists("setfilen")){
   nemiscadd_exp<-rgdx.set(setfilen,te=TRUE,ts = TRUE,symName = "Nemiscadd")
   nemiscadd<-as.character(nemiscadd_exp[,1])
 }
+mbal<-c("GROF", "HCOM", "FEDM", "IMPT", "EXPT")
 
 meta2keep<-c("DATE OF VERSION","NAME OF PROCESSOR ORGANISATION","User","Regional breakdown")
-
-
 
 if(scope%in%c("feed_marketbal","tseries_marketbal","activities")){
   regi<-c(nuts0,srnuts2)
 }else if(grepl("nbalance",scope) || scope %in% c("nlca")){
   regi<-srnuts2
-}    
+}
+
+gethsumap<-function(){
+  mhsu<-as.data.table(rgdx.set(setfile,te=FALSE,ts = TRUE,symName = "m_srnuts2_hsu"))
+  names(mhsu) <- c("RALL", "HSU")
+  return(mhsu)
+}

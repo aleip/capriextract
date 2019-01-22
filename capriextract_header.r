@@ -1,3 +1,4 @@
+#setwd("E:/capriextract")   #xavi
 source("capri_packages.r")
 source("capri_dirs.r") # Directory settings depending on computer one is working
 
@@ -19,6 +20,7 @@ curcols<-mpact
 currows<-soilbalpos
 curdim5<-""
 
+#xavi181106: from here on, it doesn't work
 capridat<-selectrowscolsregi(reload=1, capridat=NULL, cols=curcols,
                              rows=currows, regi=curcountry, curyear=curyear)
 capripivot<-dcast(capridat, RALL + COLS ~ ROWS, value.var = "VALUE")

@@ -24,10 +24,13 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
     capridat<-"x:/adrian/models/capri/trunk20160810/dat/"
     capridat<-"x:\\dev\\capri_out_after_2016\\"
     capridat<-"X:/dev/ec3branch/dat/capdishsu/fssdata/"
-}else if(Sys.info()[4]=="MacBook-Pro-de-Xavier.local"){ #checks machine name
-    workpath<-"/Users/xavi/Documents/JRC_MARS/hsu2_statistics_xavi2/"
-    gamspath<-"/Applications/GAMS24.6/sysdir"
-    capridat<-workpath
+}else if(Sys.info()[4]=="D01RI1701864"){ #checks machine name
+  serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/"
+  localpath<-"E:/"
+  curdir<-serverpath
+  gamspath<-"C:\\apps\\GAMS\\win64\\24.9"
+  workpath<-"E:/"
+  capridat<-paste0(curdir, "capriresults_ecampa3/")
 }else{
     workpath<-"X:/MARS_disaggregation/hsu2_statistics_xavi2/"
     capridat<-workpath

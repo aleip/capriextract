@@ -1,5 +1,6 @@
 #Used Packages
-rm(list=objects())
+rm(list=objects()[!objects()%in%c("scope", "xobshsu", "hsu", "nuts23", 
+                                  "curcols", "curyears", "curcountries", "curregi", "currows")])
 library(data.table)
 library(plyr)
 #library(devtools)
@@ -11,4 +12,18 @@ library(stats)
 library(gdxrrw)
 #library(xlsx)
 library(tidyr)
+library(ggplot2)
+library(ggpubr)
+
+#if(grepl("map",scope)){
+    library(sp)
+    library(rgdal)
+    library(raster)
+    #library(graphics)
+    library(rgeos)
+    #library(ggplot2)
+    library(GISTools) 
+    library(maps)
+#}
+
 
