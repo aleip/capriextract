@@ -181,7 +181,12 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
   #cat("-->")
   #print(fattr)
   # Return of information fattr does work over list as this disturbs the 'Reduce' function
-  return(capridat)
+  #return(capridat)  #xavi20190122: I cannot see where the limitation of returning a list is.
+  #                                 It works perfectly, at least for mbal plots.
+  #                                 In case it's absolutely necessary to return only capridat, 
+  #                                 it needs to be addapted 'filtermultiple' (and maybe others)
+  #                                 in order to avoid trying to read 'fattr' 
+  return(list(capridat, fattr))
 }
 
 filtermultiple<-function(scope, 
@@ -190,7 +195,8 @@ filtermultiple<-function(scope,
   cat("\n", length(curcountries), curcountries)
   nfiles<-length(curcountries)*length(curscens)*length(curyears)
   cdat<-list()
-  fdat<-data.frame(nrow=1)
+  #fdat<-data.frame(nrow=1)
+  fdat<-data.frame(nrow=0)
   n<-0
   for(x in 1:length(curyears)){
     for(y in 1:length(curcountries)){
@@ -212,6 +218,8 @@ filtermultiple<-function(scope,
                                curscenshort = curscensshort[z]
         )
         cdat[[n]]<-capridat[[1]]
+        #cdat[[n]]<-capridat   #xavi20190122: filteropen no longer produces a list (commit d327009bdb2319d3ee3e20c3eec2f1ed143b4d6b)
+                               #xavi20190122_2: at the end, it keeps returning a list (see comment in L184)
         #print(str(capridat[[1]]))
         #cat("print from filter")
         #print(capridat[[2]])
