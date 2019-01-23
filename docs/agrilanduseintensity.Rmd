@@ -1,0 +1,155 @@
+---
+title: "agricultural land use intensity"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "..")
+
+library(gdxrrw)
+# Setup Sarah's machine
+igdx(gamsSysDir = "E:\\dev\\CAPRI\\GAMS\\win64\\24.7")
+datapath <- "E:\\dev\\CAPRI\\star_2.2\\output\\results\\capmod"
+
+# Setup Paul's machine
+if(Sys.info()["nodename"] == "d01ri1603346.ies.jrc.it" ){
+    igdx(gamsSysDir = "/opt/gams/gams25.1_linux_x64_64_sfx/")
+    datapath <- "/Bioeconomy/BIOMASS/capri/refscenLTS"
+    # Use symlink to test the capriextract::opendata() function, which requires the sub-folder to be called "capmod"
+    # $ ln -s /Bioeconomy/BIOMASS/capri/refscenLTS downloads/capmod
+    # datapath <- "/home/rougipa/downloads/" 
+}
+```
+
+
+# Install packages
+
+## Install the GDXRRW package to read gdx data
+```{r eval=FALSE}
+install.packages("E:\\mubarsa\\Documents\\Downloads\\gdxrrw_1.0.4.tar.gz", repos = NULL, type = "source")
+library(gdxrrw)
+igdx()
+```
+The function `igdx()` can load the gdx library by specifying the GAMS directory as a parameter: 
+See use in the setup chunk above.  
+
+
+Examples from the gdxrrw packages
+
+```{r}
+# wdbefore <- getwd()
+# setwd(paste0(path.package('gdxrrw'),'/tests/'))
+# source("tAll.R')
+```
+
+
+
+# Read gdx files directly using rgdx.param from the gdxrrw package
+
+
+## Read one file
+```{r}
+
+gdxfiles <- list.files(datapath, ".gdx", full.names = TRUE)
+gdxfiles[1]
+
+# Trying the gdxInfo() function
+info <- gdxInfo(gdxfiles[1], dump=FALSE, returnDF=TRUE);
+
+# Trying the rgdx() function 
+agri1 <- rgdx(gdxfiles[1])
+
+
+# Trying the rgdx.param() function, the one used by capriextract::opendata()
+data5dim <- c("RALL","EMPTY","COLS","ROWS","Y","VALUE")
+capriout <- rgdx.param(gdxfiles[1], "dataout", names = data5dim)
+
+```
+
+
+## Create a function that reads many files
+```{r}
+
+#' @param gdxfile character name of a gdx file
+#' @return data frame 
+readcaprioutput <- function(gdxfile, symName = "dataout",
+                            names = c("RALL","EMPTY","COLS","ROWS","Y","VALUE")){
+    message("\nReading ", gdxfile)
+    capriout <- rgdx.param(gdxfile, symName = symName, names = names) 
+    # Change factor to character variables
+    capriout$RALL <- as.character(capriout$RALL)
+    capriout$EMPTY <- as.character(capriout$EMPTY)
+    capriout$COLS <- as.character(capriout$COLS)
+    capriout$ROWS <- as.character(capriout$ROWS)
+    # Change year from factor to a numeric variable
+    capriout$Y <- as.numeric(as.character(capriout$Y))
+    return(capriout)
+}
+
+# Use the function to read one file (takes 6 seconds)
+system.time(res_2_0810mtr_rd_ref <- readcaprioutput(gdxfiles[1]))
+
+# Use the function to read 13 files (should take more than a minute)
+caprilist <- lapply(gdxfiles, readcaprioutput)
+capriout <- Reduce(rbind, caprilist)
+
+
+# save the output to an R file
+saveRDS(capriout, file.path(datapath, "capriout.rds"))
+
+if(FALSE){ # Read the file
+    readRDS(file.path(datapath, "capriout.rds"))
+}
+```
+
+
+# Read gdx files using the capriextract::opendata() funciton
+The capriextract repository defines a function called `opendata()` which 
+calls `capridat<-rgdx.param(datafile,dataparm)` to extract data from GAMS gdx files.
+
+
+for this to work change datapath to 
+    
+    datapath <- "/home/rougipa/downloads/" 
+
+```{r}
+
+
+
+getwd()
+# the opendata funciton
+source("capriextract_functions.r")
+
+library(gdxrrw)
+
+# Idealy you would source capri_sets.r
+# scope <- "capmod"
+# source("capri_sets.r")
+# But there are undefined variables in capri_sets.r
+
+# Global variables needed by the opendata function in the "capmod" context
+
+#baseyear <- 1212
+datanames<-c("RALL","COLS","ROWS","Y","VALUE")
+data3dim<-c("RALL","COLS","ROWS","VALUE")
+data4dim<-c("RALL","COLS","ROWS","Y","VALUE")
+data5dim<-c("RALL","EMPTY","COLS","ROWS","Y","VALUE")
+datapath
+file.exists(datapath)
+file.exists(file.path(datapath, "capmod/res_2_0810mtr_rd_ref.gdx"))
+mtr_rd_ref <- opendata(scope = "capmod", 
+                       curcountry = NULL, 
+                       curyear = 10, 
+                       baseyear='08',
+                       curscen='mtr_rd_ref' )
+
+# The data is contained in agri[[1]]
+
+mtr_rd_ref <- mtr_rd_ref[[1]]
+unique(mtr_rd_ref$Y)
+
+```
+
+
+
