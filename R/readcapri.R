@@ -16,12 +16,12 @@
 #' 
 #' # Read one file 
 #' firstfile <- file.path(datapath, "res_2_0810mtr_rd_ref.gdx")
-#' res_2_0810mtr_rd_ref <- readcaprioutput(firstfile)
+#' res_2_0810mtr_rd_ref <- readcapmod(firstfile)
 #' head(res_2_0810mtr_rd_ref)
 #' 
 #' # Read all files in the directory and combine them in a single data frame
 #' gdxfiles <- list.files(datapath, ".gdx", full.names = TRUE)
-#' caprilist <- lapply(gdxfiles, readcaprioutput)
+#' caprilist <- lapply(gdxfiles, readcapmod)
 #' capriout <- Reduce(rbind, caprilist)
 #' head(capriout)
 #' }
