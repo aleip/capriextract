@@ -4,12 +4,13 @@ An R package that reads output from the [capri model](https://www.capri-model.or
 
 # Installation
 
-Install from github:
+Tool to install remote packages:
 
+     install.packages("remotes")
 
+Install `capriextract` from github:
 
-
-Install from CITnet:
+    remotes::install_github("paulrougieux/capriextract", ref ="residues")
 
 
 # Documentation
