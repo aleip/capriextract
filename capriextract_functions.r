@@ -80,6 +80,8 @@ opendata<-function(scope,
   if(grepl("capdis",scope)){
     if(scope=="capdis") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
     if(scope=="capdiscapreg") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
+    if(scope=="capdistimes") datafile<-paste0("xobs_2_",curcountry,"_",baseyear,curyear)
+    #if(scope=="capdistimes") datapath<-paste0(d5space, "capdis_results/20181121_timeseries/")
     if(scope=="capdistimes") datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
     datafile<-paste0(datapath,datafile,".gdx")
     dataparm<-"xobs"
@@ -223,15 +225,19 @@ filtermultiple<-function(scope,
         #print(str(capridat[[1]]))
         #cat("print from filter")
         #print(capridat[[2]])
-        if(n==1){
-          fdat<-capridat[[2]]
+        if(length(capridat)>1){
+          if(n==1){
+            fdat<-capridat[[2]]
+          }else{
+            fdat<-rbind(fdat, capridat[[2]])
+          }
         }else{
-          fdat<-rbind(fdat, capridat[[2]])
+          n <- n-1
         }
       }
     }
   }
-  
+  save(cdat, file="temp_filtermultiple.rdat")
   capridat<-Reduce(rbind, cdat)
   #print(capridat)
   
