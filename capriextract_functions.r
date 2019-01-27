@@ -1,8 +1,81 @@
-source("xobsfunctions.r")
-source("capriextract_functions_4mapping.r")
-source("capriplotcolors.r")
-source("capriplottexts.r")
-source("capriplots.r")
+
+startextract<-function(scope){
+  
+  #Check the current folder
+  curfol <- getwd()
+  if( ! grepl("capriextract", curfol) ){
+    # Wrong folder
+    if( grepl("logfiles", curfol) ){
+      setwd("../capriextract/")
+    }else(
+      stop("You seem to be in a wrong folder. Please change to 'capriextract'!")
+    )
+  }
+  
+  scope <<- scope
+  
+  source("capri_packages.r")
+  source("capri_dirs.r")
+  source("capri_sets.r")
+  source("capriextract_functions.r")
+  source("xobsfunctions.r")
+  source("capriextract_functions_4mapping.r")
+  source("capriplotcolors.r")
+  source("capriplottexts.r")
+  source("capriplots.r")
+  
+}
+
+getfilesfromfolder<-function(curfol = datapath, flag = ""){
+  
+  # Change default datapath in global environment to curfol
+  datapath <<- curfol
+  
+  # Unique (daily) identifier of results
+  flag <- paste0(flag, format(Sys.time(), "%Y%m%d"))
+  flag <<- flag
+  
+  fls <- list.files(path=curfol, 
+             pattern="*.gdx", 
+             recursive=FALSE, 
+             full.names = TRUE)
+  
+  flsn <- list.files(path=curfol, 
+             pattern="*.gdx", 
+             recursive=FALSE, 
+             full.names = FALSE)
+  
+  nfls <- length(flsn)
+  flparts <- strsplit(flsn, "_")
+  
+  flsnparts <- Reduce(max, lapply(flparts, length))
+  
+  ok<-1; i<-1; ndiff<-0; diffflt <- list(); scenshort<-vector(); 
+  commonpart<-vector(); ncomm<-0
+  for (i in 1:flsnparts){
+    
+    ok <- Reduce(prod, lapply(1:nfls, function(x) flparts[[1]][i]==flparts[[x]][i]))
+    if(ok==0){
+      
+      ndiff<-ndiff+1
+      for(j in 1:nfls){ scenshort[j] <- flparts[[j]][i]}
+      diffflt[[ndiff]] <- scenshort
+      
+    }else{
+      ncomm <- ncomm+1
+      commonpart[ncomm] <- flparts[[1]][i]
+    }
+  }
+  for(j in 1:nfls){
+    scenshort[j] <- Reduce(paste0, lapply(1:ndiff, function(x) diffflt[[x]][j]))
+  }
+  
+  scenshort <<- scenshort
+  commonname <- paste(commonpart, collapse="_")
+  commonname <<- commonname
+  return(fls)
+}
+
 
 opendata<-function(scope,
                    curcountry,
@@ -31,6 +104,14 @@ opendata<-function(scope,
 #' @param curyear numeric year
 #' @return data frame
 #' @export
+#' 
+  # Check if datafile contains already a path
+  if(grepl(":", curscen)) {
+    pathincluded <- 1
+    datapath <- ""
+    datafile <- curscen
+  }else{pathincluded <- 0}
+
   if(scope%in%c("feed_marketbal","activities") | grepl("baseyear",scope)){
     datafile<-paste0("res_",curyear)
     datafile<-paste0(datafile,curcountry,".gdx")
@@ -54,7 +135,10 @@ opendata<-function(scope,
     datafile<-paste0(datapath,datafile)
   }
   if(grepl("capmod",scope)){
-    datafile<-paste0("capmod/res_2_", baseyear, curyear,curscen,".gdx")
+    
+    # Check if subfolde
+    
+    if(pathincluded == 0) datafile<-paste0("capmod/res_2_", baseyear, curyear,curscen,".gdx")
     datafile<-paste0(datapath, datafile)
     #datafile<-paste0(datapath,"/", datafile)
     dataparm<-"dataout"
@@ -237,37 +321,11 @@ filtermultiple<-function(scope,
       }
     }
   }
-  save(cdat, file="temp_filtermultiple.rdat")
+  save(cdat, file=paste0(commonname, flag, ".rdata"))
   capridat<-Reduce(rbind, cdat)
   #print(capridat)
   
   return(list(capridat, fdat))
-  # capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
-  #   Reduce(rbind, lapply(1:length(curcountries), function(y)
-  #     Reduce(rbind, lapply(1:length(curscens), function(z)
-  #       filteropen(scope, 
-  #                  reload=1, 
-  #                  # Filtering options
-  #                  cols=cols, 
-  #                  rows=rows,
-  #                  ydim=ydim, 
-  #                  curdim5=curdim5,
-  #                  regi=regi,
-  #                  # Opening options
-  #                  curcountry = curcountries[y], 
-  #                  curyear = curyears[x],
-  #                  baseyear = baseyear,
-  #                  curscen = curscens[z],
-  #                  curscenshort = curscensshort[z],
-  #                  nfiles = nfiles
-  #       )
-  #     ))
-  #   ))
-  # ))
-  # 
-  # 
-  # return(capridat)
-  # 
 }
 
 convertarguments2values<-function(...){

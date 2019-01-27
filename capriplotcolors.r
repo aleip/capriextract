@@ -109,10 +109,12 @@ plotallnamedcolors<-function(myc = colors(), cn = colors()){
 
 callIPCCcolors <- function(
   #fle = "E:/IPCC_colors/IPCCcolors.xlsx", 
-  fle = "E:/capriextract/IPCCcolors.xlsx", 
+  #fle = "E:/capriextract/IPCCcolors.xlsx", 
+  fle = "IPCCcolors.xlsx", 
   #sht = c("red2blue", "brown2green"))  #this is 20 colors (4 groups)
   sht = c("scales6")) #this is 30 colors (6 groups)
   {
+  #install.packages('rJava', type = 'source', INSTALL_opts='--merge-multiarch')
   library(xlsx)
   pltte_IPCC <- as.data.frame(matrix(nrow = 0, ncol = 0))
   for(s in sht){

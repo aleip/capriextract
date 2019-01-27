@@ -29,7 +29,7 @@ plotbars <- function(x = capri, emb = 'unique',
                      colbar = NULL   # If a vector with colors with the correct number of colors has been pre-defined
                      , colbar_args   # vector with colors to be passed to colbar
                      , col_map       # named vector with color map (with crops)
-                     ){
+){
   
   print(plotdef$arr)
   #uniquex <- unique(x[ , .SD, .SDcols=plotdef$onx])
@@ -137,6 +137,69 @@ fillscale <- function(a, emb, plotdef, colbar=NULL, colbar_args, col_map){
   return(t)
 }
 
+exportdata <- function(){
+  
+  nscen <- ncol(x)
+  nelem <-unlist(lapply(1:nscen, function(y) length(unlist(unique(x[, .SD, .SDcols=names(x)[y]])))))
+  
+  xcols <- unique(x$COLS)
+  xrows <- unique(x$ROWS)
+  
+  if(plotdef$Plotname=='gwpt') plotdef$arr <- 'rcw'
+  
+  if(plotdef$arr == 'rwc') {
+    xextra <- xcols
+    xcomm <- xrows
+    xset <- plotdef$rows
+  }else if(plotdef$arr == 'rcw') {
+    xextra <- xrows
+    xcomm <- xcols
+    xset <- plotdef$cols
+  }else{
+    stop(paste0("Not defined for plotdef$arr = ", plotdef$arr))
+  }
+  
+  nrows <- length(xcomm)
+  if(nrows > 1) xcomm<-xset
+  
+  for(c in 1:length(xextra)){
+    
+    curcol <- xextra[c]
+    anames <- paste0("A", c(1:length(scenshort)))
+    if(plotdef$arr == 'rwc') z <- dcast.data.table(x[COLS==curcol], RALL + EMPTY + COLS + ROWS + Y ~ SCEN, value.var = "VALUE")
+    if(plotdef$arr == 'rcw') z <- dcast.data.table(x[ROWS==curcol], RALL + EMPTY + COLS + ROWS + Y ~ SCEN, value.var = "VALUE")
+    setnames(z, scenshort, anames)
+    z <- z[, as.vector(setdiff(anames, "A1")) := .SD / A1, .SDcols = setdiff(anames, "A1")]
+    z1 <- melt.data.table(z, measure.vars = anames, variable.name = "SCEN", value.name = "VALUE")
+    if(plotdef$arr == 'rwc') z2 <- dcast.data.table(z1, RALL + EMPTY + COLS + Y ~ ROWS + SCEN, value.var = "VALUE") 
+    if(plotdef$arr == 'rcw') z2 <- dcast.data.table(z1, RALL + EMPTY + ROWS + Y ~ COLS + SCEN, value.var = "VALUE") 
+    
+    con <- file(paste0(datapath, substr(commonname,1,10), "_", xcomm, "-",curcol, flag, plotdef$Plotname, ".csv"), open = "wt")
+    cat("# ", file = con)
+    cat("# Full name: ", commonname, file = con)
+    cat("\n# COLS = ", as.character(curcol), file = con)
+    cat("\n# Data source:", file = con)
+    
+    info$nrow <- "# "
+    #write.csv(info, row.names = FALSE, quote = FALSE, file=con)
+    cat("\n# - ", paste(names(info), collapse = " - "), file = con)
+    for(i in 1:nrow(info)){
+      cat("\n", paste(info[i,], collapse = " - "), file = con)
+    }
+    
+    for(i in 1:length(scenshort)){
+      cat("\n# ", anames[i], " = ", scenshort[i], file = con)
+      if(i == 1) {cat(" - absolute value", file=con)}else(cat(" - relative to A1", file=con))
+      
+    }
+    cat("\n#\n", file = con)
+    write.csv(z2, row.names = FALSE, quote = FALSE, file=con)
+    close(con)
+  }
+  
+  
+}
+
 
 calcstats<-function(x = capri, plotname){
   
@@ -236,7 +299,7 @@ setuppage <- function(x, plotname='', info=info){
   w<-20
   #nplots<-5;ncol<-1
   print(gsub(".gdx","",info$filename))
-  pdf(file = paste0(datapath, gsub(".gdx","",info$filename), 
+  pdf(file = paste0(datapath, gsub(".gdx","",substr(info$filename,1,20)), 
                     plotname,"_",paste(scendesc, collapse="-"),".pdf"), 
       onefile = TRUE,
       width = w, 
@@ -255,7 +318,10 @@ setuppage <- function(x, plotname='', info=info){
     }
   }
   
-  colbar<-setcolors(x, plotdef$ony)
+  ####### temporary because Java does not work ###### 
+  omitplots <- 0
+  if (omitplots !=1 ) colbar<-setcolors(x, plotdef$ony)
+  
   #colbar[1] is the function
   #colbar[2] is the vector with colors to be passed as arguments to the function
   #colbar[3] is a named vector with color map (with crops)
@@ -281,7 +347,7 @@ setuppage <- function(x, plotname='', info=info){
       if(loopover=='c') y<-xscen[COLS==v2plot[i]]
       if(loopover=='w') y<-xscen[ROWS==v2plot[i]]
       if(loopover=='r') y<-xscen[COLS==v2plot[i]]
-      if(nrow(y)>0){
+      if(nrow(y)>0 & omitplots!=1){
         cat("\nPreparing plot ", i)
         if(plotdef[,'t2plot']=='bar') {p[[j]]<-plotbars(y, emb='multiple', plotdef, colbar=colbar[1], colbar_args = colbar[2], col_map = colbar[3])}
         if(plotdef[,'t2plot']=='box') {p[[j]]<-plotboxes(y, emb='multiple', plotdef)}
@@ -296,33 +362,38 @@ setuppage <- function(x, plotname='', info=info){
     if(is.na(nrow)) nrow<-ceiling(j/ncol)
     cat("\n j=",j," ncol=",ncol," nrow=",nrow)
     
-    fig<-ggarrange(plotlist=p, 
-                   common.legend=TRUE, 
-                   #common.legend=FALSE, 
-                   legend='right',
-                   #labels = "AUTO",
-                   nrow = nrow, ncol = ncol, align = 'v'
-                   #widths = c(1,1)
-    )
-    figa<-annotate_figure(fig, 
-                          top=text_grob(plottit,
-                                        face='bold',
-                                        color='darkgrey',
-                                        size=20,
-                                        lineheight=2))
-    
+    if(omitplots!=1){
+      fig<-ggarrange(plotlist=p, 
+                     common.legend=TRUE, 
+                     #common.legend=FALSE, 
+                     legend='right',
+                     #labels = "AUTO",
+                     nrow = nrow, ncol = ncol, align = 'v'
+                     #widths = c(1,1)
+      )
+      figa<-annotate_figure(fig, 
+                            top=text_grob(plottit,
+                                          face='bold',
+                                          color='darkgrey',
+                                          size=20,
+                                          lineheight=2))
+      print(figa)
+    }
     #ggsave(filename = paste0(v2plot,".pdf"), 
-     #   plot = figa, device="pdf", 
-#        scale = 1, 
-#        width = w, 
-#        height = w * plotdef[,'hwratio'] * nplots / ncol
-#        units = "cm",
-#        dpi = 300
-#        )
+    #   plot = figa, device="pdf", 
+    #        scale = 1, 
+    #        width = w, 
+    #        height = w * plotdef[,'hwratio'] * nplots / ncol
+    #        units = "cm",
+    #        dpi = 300
+    #        )
     cat("\nPrint ", scendesc[scens])
-    print(figa)
   }
   dev.off()
+  
+  ## Give 'x' back to global environment for further checks
+  x <<- x
+  plotdef <<- plotdef
   return(p)
 }
 

@@ -95,6 +95,8 @@ fert_dist<-as.character(fert_distexp[,1])
 feed_to_o<-(rgdx.set(setfile,ts = TRUE,symName = "FEED_TO_O"))
 frmbal_cols<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "frmbal_cols"))
 mrkbal_cols<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MRKBAL_COLS"))
+ncnc_posexp<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NCNC_POS"))
+ncnc_pos<-as.character(ncnc_posexp[,1])
 nbil<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL"))
 # Countries and regions
 nuts0_exp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0")
