@@ -137,7 +137,11 @@ fillscale <- function(a, emb, plotdef, colbar=NULL, colbar_args, col_map){
   return(t)
 }
 
-exportdata <- function(){
+exportdata <- function(refdesc = 'ref'){
+  
+  # refdesc: required if one certain run shall be used as the reference.
+  #            if none is given then the run with the scenario description 'ref' is used as reference
+  #            if none is given and 'ref' is not in the scenario descriptions, the first is used
   
   nscen <- ncol(x)
   nelem <-unlist(lapply(1:nscen, function(y) length(unlist(unique(x[, .SD, .SDcols=names(x)[y]])))))
@@ -162,6 +166,15 @@ exportdata <- function(){
   nrows <- length(xcomm)
   if(nrows > 1) xcomm<-xset
   
+  ## Check reference scenario
+  existref <- refdesc %in% unique(x$SCEN)
+  
+  if(!existref) {
+    refdesc <- scenshort[1]
+    x$SCEN[SCEN == scenshort[1]] <- 'ref'
+  }
+  scenshort <- scenshort[! scenshort == 'ref']
+  
   for(c in 1:length(xextra)){
     
     curcol <- xextra[c]
@@ -169,11 +182,12 @@ exportdata <- function(){
     if(plotdef$arr == 'rwc') z <- dcast.data.table(x[COLS==curcol], RALL + EMPTY + COLS + ROWS + Y ~ SCEN, value.var = "VALUE")
     if(plotdef$arr == 'rcw') z <- dcast.data.table(x[ROWS==curcol], RALL + EMPTY + COLS + ROWS + Y ~ SCEN, value.var = "VALUE")
     setnames(z, scenshort, anames)
-    z <- z[, as.vector(setdiff(anames, "A1")) := .SD / A1, .SDcols = setdiff(anames, "A1")]
-    z1 <- melt.data.table(z, measure.vars = anames, variable.name = "SCEN", value.name = "VALUE")
+    z <- z[, as.vector(anames) := .SD / ref, .SDcols = anames]
+    z1 <- melt.data.table(z, measure.vars = c(refdesc, anames), variable.name = "SCEN", value.name = "VALUE")
     if(plotdef$arr == 'rwc') z2 <- dcast.data.table(z1, RALL + EMPTY + COLS + Y ~ ROWS + SCEN, value.var = "VALUE") 
     if(plotdef$arr == 'rcw') z2 <- dcast.data.table(z1, RALL + EMPTY + ROWS + Y ~ COLS + SCEN, value.var = "VALUE") 
     
+    if(! grepl("//$", datapath)) datapath <- paste0(datapath, "/")
     con <- file(paste0(datapath, substr(commonname,1,10), "_", xcomm, "-",curcol, flag, plotdef$Plotname, ".csv"), open = "wt")
     cat("# ", file = con)
     cat("# Full name: ", commonname, file = con)
@@ -187,9 +201,10 @@ exportdata <- function(){
       cat("\n", paste(info[i,], collapse = " - "), file = con)
     }
     
+    cat("\n# ref = Reference scenario - absolute values", file = con)
     for(i in 1:length(scenshort)){
       cat("\n# ", anames[i], " = ", scenshort[i], file = con)
-      if(i == 1) {cat(" - absolute value", file=con)}else(cat(" - relative to A1", file=con))
+      cat(" - relative to REF", file=con)
       
     }
     cat("\n#\n", file = con)
@@ -215,10 +230,11 @@ calcstats<-function(x = capri, plotname){
   
 }
 
-setuppage <- function(x, plotname='', info=info){
+setuppage <- function(x, plotname='', info=info, ddebug=0){
   
   # Read plot characteristics
   plotdef<-read.table("capriplotdefaults.txt", header = TRUE)
+  ddebug <<- ddebug
   #al201901 - don't put hard-wired paths! they always run into errors on other PCs
   #xavi 20190121: Yes, that's true. But then we should put a copy of capriplotdefaults.txt in the working directory. Or adding a 
   #               path in capri_dirs.r to where the file is
@@ -228,7 +244,7 @@ setuppage <- function(x, plotname='', info=info){
   #               directory to ~/capriextract
   #plotdef<-read.table("E:\\capriextract/capriplotdefaults.txt", header = TRUE)
   plotdef<-plotdef[plotdef$Plotname==plotname,]
-  print(names(attributes(x)))
+  if(ddebug==1) print(names(attributes(x)))
   if(substr(plotdef$arr,1,1)=='r') plotdef$onx <- 'RALL'
   if(substr(plotdef$arr,1,1)=='c') plotdef$onx <- 'COLS'
   if(substr(plotdef$arr,1,1)=='w') plotdef$onx <- 'ROWS'
@@ -298,7 +314,7 @@ setuppage <- function(x, plotname='', info=info){
   w<-11.7
   w<-20
   #nplots<-5;ncol<-1
-  print(gsub(".gdx","",info$filename))
+  if(ddebug==1) print(gsub(".gdx","",info$filename))
   pdf(file = paste0(datapath, gsub(".gdx","",substr(info$filename,1,20)), 
                     plotname,"_",paste(scendesc, collapse="-"),".pdf"), 
       onefile = TRUE,
@@ -306,11 +322,11 @@ setuppage <- function(x, plotname='', info=info){
       height = w *plotdef[,'hwratio']
   )
   save(list=objects(), file=paste0(datapath, 'test.rdata'))
-  cat("numscen=", numscen, scendesc)
+  if(ddebug==1) cat("numscen=", numscen, scendesc)
   if (numscen > 0){
     # Adjust scales
     ymax <- vector()
-    print(v2plot)
+    if(ddebug==1) print(v2plot)
     for (i in 1:nplots){
       if(loopover=='c') ymax[i]<-max(x[COLS==v2plot[i], lapply(.SD, sum, na.rm=TRUE), .SDcols='VALUE', by=c(eval(plotdef$onx), "SCEN")]$VALUE)
       if(loopover=='w') ymax[i]<-max(x[ROWS==v2plot[i], lapply(.SD, sum, na.rm=TRUE), .SDcols='VALUE', by=c(eval(plotdef$onx), "SCEN")]$VALUE)
@@ -319,7 +335,7 @@ setuppage <- function(x, plotname='', info=info){
   }
   
   ####### temporary because Java does not work ###### 
-  omitplots <- 0
+  omitplots <- 1
   if (omitplots !=1 ) colbar<-setcolors(x, plotdef$ony)
   
   #colbar[1] is the function
@@ -328,13 +344,13 @@ setuppage <- function(x, plotname='', info=info){
   
   for(scens in 1:numscen){
     plottit<-paste0(plotdef[,'title'])
-    cat("\n", scens, scendesc)
+    if(ddebug==1) cat("\n", scens, scendesc)
     if(scendesc[scens]!='')plottit<-paste0(plottit,": ",scendesc[scens], "\n")
     xscen<-x
     if("SCEN" %in% names(x)) xscen<-x[SCEN==scendesc[scens]]
     
     p<-list()
-    if(length(v2plot)==0) cat("\n No plots to do: ", v2plot)
+    if(ddebug==1) if(length(v2plot)==0) cat("\n No plots to do: ", v2plot)
     cat("\n Plots to do: ", v2plot)
     
     j<-1
@@ -360,7 +376,7 @@ setuppage <- function(x, plotname='', info=info){
     ncol<-plotdef[,'ncol']
     nrow<-plotdef[,'nrow']
     if(is.na(nrow)) nrow<-ceiling(j/ncol)
-    cat("\n j=",j," ncol=",ncol," nrow=",nrow)
+    if(ddebug==1) cat("\n j=",j," ncol=",ncol," nrow=",nrow)
     
     if(omitplots!=1){
       fig<-ggarrange(plotlist=p, 
@@ -387,7 +403,7 @@ setuppage <- function(x, plotname='', info=info){
     #        units = "cm",
     #        dpi = 300
     #        )
-    cat("\nPrint ", scendesc[scens])
+    if(ddebug==1) cat("\nPrint ", scendesc[scens])
   }
   dev.off()
   

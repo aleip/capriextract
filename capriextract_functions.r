@@ -26,7 +26,7 @@ startextract<-function(scope){
   
 }
 
-getfilesfromfolder<-function(curfol = datapath, flag = ""){
+getfilesfromfolder<-function(curfol = datapath, flag = "", reference=NULL){
   
   # Change default datapath in global environment to curfol
   datapath <<- curfol
@@ -36,30 +36,46 @@ getfilesfromfolder<-function(curfol = datapath, flag = ""){
   flag <<- flag
   
   fls <- list.files(path=curfol, 
-             pattern="*.gdx", 
+             pattern="*.gdx$", 
              recursive=FALSE, 
              full.names = TRUE)
   
   flsn <- list.files(path=curfol, 
-             pattern="*.gdx", 
+             pattern="*.gdx$", 
              recursive=FALSE, 
              full.names = FALSE)
   
+  
   nfls <- length(flsn)
+  if(! is.null(reference)) {nref <- which(flsn == reference)}else{nref<-nfls+1}
   flparts <- strsplit(flsn, "_")
   
   flsnparts <- Reduce(max, lapply(flparts, length))
   
+  checkflparts<-function(i, x){
+    xok <- flparts[[1]][i]==flparts[[x]][i]
+    if(x == nref) xok <- TRUE
+    #cat("\n", x, i, flparts[[x]][i], xok)
+    return(xok)
+    
+  }
+  
   ok<-1; i<-1; ndiff<-0; diffflt <- list(); scenshort<-vector(); 
   commonpart<-vector(); ncomm<-0
+  cat("\n ", flsnparts)
   for (i in 1:flsnparts){
     
-    ok <- Reduce(prod, lapply(1:nfls, function(x) flparts[[1]][i]==flparts[[x]][i]))
+    #cat(" ", i)
+    ok <- Reduce(prod, lapply(1:nfls, function(x) checkflparts(i, x)))
     if(ok==0){
       
       ndiff<-ndiff+1
-      for(j in 1:nfls){ scenshort[j] <- flparts[[j]][i]}
+      for(j in 1:nfls){ 
+        scenshort[j] <- flparts[[j]][i]
+        if(is.na(flparts[[j]][i])) scenshort[j]<-0
+      }
       diffflt[[ndiff]] <- scenshort
+      
       
     }else{
       ncomm <- ncomm+1
@@ -68,12 +84,74 @@ getfilesfromfolder<-function(curfol = datapath, flag = ""){
   }
   for(j in 1:nfls){
     scenshort[j] <- Reduce(paste0, lapply(1:ndiff, function(x) diffflt[[x]][j]))
+    if(scenshort[j] == paste(rep("0", ndiff), collapse="")) { scenshort[j] <- 'ref'}
   }
   
   scenshort <<- scenshort
-  commonname <- paste(commonpart, collapse="_")
+  commonname <- gsub("\\.gdx","",paste(commonpart, collapse="_"))
   commonname <<- commonname
   return(fls)
+}
+
+checkstepreports <- function(curfol, nruns){
+  
+  for (i in 1:nruns){
+    if(i == 1) iter_chgtable <- data.table()
+    if(i == 1) iter_chgmax <- data.table()
+    if(i == 1) iter_chgmxmx <- data.table()
+    stepfile <- paste0(curfol, "/", i, "/stepOutput.gdx")
+    #file.copy(from=stepfile, to=paste0(datapath, "stepOutput", i, ".gdx"))
+    step<-rgdx.param(stepfile, "stepOutput")
+    step<-as.data.table(step)
+    setnames(step, paste0(".i", 1:5), c("RALL", "COLS", "ROWS", "Y", "STEP"))
+    
+    iter_chg <- step[COLS == 'iter_chg']
+    iter_chg$SCEN <- i
+    
+    # Keep only the maximum changes per country and step
+    iter1 <- iter_chg[, max:= max(.SD), .SDcols = "stepOutput", by = .(RALL, STEP)]
+    iter1 <- iter1[stepOutput == max]
+    iter_chgtable <- rbind(iter_chgtable, iter1)
+    
+    
+    iter2 <- iter_chg[ROWS == 'MAX']
+    iter2 <- iter2[,max:=max(.SD), .SDcols = "stepOutput", by = .(STEP)]
+    iter3 <- iter2[stepOutput == max]
+    iter_chgmax <- rbind(iter_chgmax, iter2)
+    iter_chgmxmx <- rbind(iter_chgmxmx, iter3)
+  }
+  # iter_chgtable <- dcast.data.table(iter_chgtable, RALL + SCEN + ROWS ~ STEP, value.var="stepOutput")
+  # iter_chgmax <- dcast.data.table(iter_chgmax, RALL + SCEN ~ STEP, value.var="stepOutput")
+  # iter_chgmxmx <- dcast.data.table(iter_chgmxmx, SCEN + RALL ~ STEP, value.var="stepOutput")
+  iter_chgtable <- dcast.data.table(iter_chgtable, STEP + RALL + SCEN ~ ROWS, value.var="stepOutput")
+  iter_chgmax <- dcast.data.table(iter_chgmax, STEP + SCEN ~ RALL, value.var="stepOutput")
+  iter_chgmxmx <- dcast.data.table(iter_chgmxmx, STEP + RALL ~ SCEN, value.var="stepOutput")
+  
+  con <- file(paste0(datapath, substr(commonname,1,10), "_iterchngtable", ".csv"), open = "wt")
+  cat("# ", file = con)
+  cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
+  cat("\n", file = con)
+  write.csv(iter_chgtable, row.names = FALSE, quote = FALSE, na="", file=con)
+  close(con)
+  
+  con <- file(paste0(datapath, substr(commonname,1,10), "_iterchngmax", ".csv"), open = "wt")
+  cat("# ", file = con)
+  cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
+  cat("\n", file = con)
+  write.csv(iter_chgmax, row.names = FALSE, quote = FALSE, na="", file=con)
+  close(con)
+  
+  con <- file(paste0(datapath, substr(commonname,1,10), "_iterchngmxmx", ".csv"), open = "wt")
+  cat("# ", file = con)
+  cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
+  cat("\n", file = con)
+  write.csv(iter_chgmxmx, row.names = FALSE, quote = FALSE, na="", file=con)
+  close(con)
+  
+  save(iter_chgtable, iter_chgmax, iter_chgmxmx, file=paste0(datapath, "/stepreport.rdata"))
+  
+  
+  
 }
 
 
@@ -106,7 +184,7 @@ opendata<-function(scope,
 #' @export
 #' 
   # Check if datafile contains already a path
-  if(grepl(":", curscen)) {
+  if(grepl(":", curscen) | grepl("jrciprap246p", curscen)) {
     pathincluded <- 1
     datapath <- ""
     datafile <- curscen
@@ -258,7 +336,11 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
   #capridat<-capridat[,setdiff(names(capridat),c("Y"))]
   if(!is.null(curdim5)){
     print("select curdim5")
-    capridat<-capridat[capridat$EMPTY%in%curdim5,]
+    if(curdim5[1]=="nonempty"){
+        capridat<-capridat[capridat$EMPTY!='',]
+      }else{
+        capridat<-capridat[capridat$EMPTY%in%curdim5,]
+      }
   }
   if(grepl("capmod", scope)){
     capridat$SCEN<-curscenshort
@@ -321,9 +403,14 @@ filtermultiple<-function(scope,
       }
     }
   }
-  save(cdat, file=paste0(commonname, flag, ".rdata"))
+  
+  if(! exists("commonname")) commonname <- ""
+  if(! exists("flag")) flag <- paste0("temp_", paste(curcountries, collapse = ""), scope)
   capridat<-Reduce(rbind, cdat)
+  save(capridat, file=paste0(datapath, commonname, flag, ".rdata"))
   #print(capridat)
+  info <<- fdat
+  caprid <<- capridat
   
   return(list(capridat, fdat))
 }
