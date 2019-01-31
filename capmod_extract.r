@@ -32,6 +32,10 @@ loadglobalsfrombatch <- function(savepath = curdir,
     
     # Retrieve fortran.gms from log-folder
     batchdir <- paste0(dp, "/log/")
+    
+    # Specific setting (AL) - logfiles copied to google drive
+    if(dp=="google") batchdir <- paste0(google, "/projects/capri_runs/")
+    
     cat(batchdir)
     fortran <- list.files(batchdir, pattern = paste0(logf, ".*"))
   }
@@ -74,14 +78,13 @@ loadglobalsfrombatch <- function(savepath = curdir,
     
   }
   setglobals<-setglobals[order(setglobals$n)]
-  tt <- gsub(" ","_",gsub("-|:","",setglobals[setglobal=="Time",r1]))
+  tt <- gsub(" ","_",gsub("-|:","",setglobals[V1=="Time",r1]))
   rt <- setglobals[V1=="GamsStartNo", 3:ncol(setglobals)]
-  ort <- unlist(rt)
-  View(ort)
+  ort <- paste0("r", sort(as.numeric(rt)))
   newnames <- c("setglobal", "n", paste0("r", rt))
   setnames(setglobals, colnames(setglobals), newnames)
+  setglobals <- setglobals[, c("setglobal", "n", ort), with=FALSE]
   View(setglobals)
-  setglobals <- setglobals[,c("setglobal", "n", paste0("r", 1:length(fortran))), with=FALSE]
   cat("\nWrite file ", paste0(savepath, "/", tt, "globals.csv"))
   write.csv(setglobals, file=paste0(savepath, "/", tt, "globals.csv"))
   return(setglobals)
