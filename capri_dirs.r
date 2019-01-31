@@ -13,6 +13,7 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   datapath<-"x:/dev/leipadr/results/"
   datapath<-"x:/dev/capriresults_ecampa3/"
   cgams<-"x:/dev/epnf/gams/"
+  google <- "x:/adrian/google/"
 
 }else if(Sys.info()[4]=="D01RI1600881"){ #checks machine name
 
@@ -29,7 +30,8 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   datapath<-paste0(curdir, "capriresults_ecampa3/")
   datapath<-paste0(curdir, "users/leipadr/results/")
   cgams<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/epnf/gams/"
-
+  google <- "x:/adrian/google/"
+  
 }else if(Sys.info()[4]=="S-JRCIPRAP246P"){ #checks machine name
   
   # CAPRI server (new 2018)
