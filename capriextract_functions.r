@@ -29,21 +29,23 @@ startextract<-function(scope){
 getfilesfromfolder<-function(curfol = datapath, flag = "", reference=NULL){
   
   # Change default datapath in global environment to curfol
-  datapath <<- curfol
+  resultpath <<- curfol
   
   # Unique (daily) identifier of results
   flag <- paste0(flag, format(Sys.time(), "%Y%m%d"))
   flag <<- flag
   
   fls <- list.files(path=curfol, 
-             pattern="*.gdx$", 
+             pattern="res.*.gdx$", 
              recursive=FALSE, 
              full.names = TRUE)
   
   flsn <- list.files(path=curfol, 
-             pattern="*.gdx$", 
+             pattern="res.*.gdx$", 
              recursive=FALSE, 
              full.names = FALSE)
+  # Specific changes due to "_" in name elements
+  flsn <- gsub("globiom_eu_2018\\+REFERENCE\\+REFERENCE", "globiomeu2018", flsn)
   
   
   nfls <- length(flsn)
@@ -53,7 +55,11 @@ getfilesfromfolder<-function(curfol = datapath, flag = "", reference=NULL){
   flsnparts <- Reduce(max, lapply(flparts, length))
   
   checkflparts<-function(i, x){
-    xok <- flparts[[1]][i]==flparts[[x]][i]
+    if(i > length(flparts[[x]])){
+      xok <- FALSE
+    }else{
+      xok <- flparts[[1]][i]==flparts[[x]][i]
+    }
     if(x == nref) xok <- TRUE
     #cat("\n", x, i, flparts[[x]][i], xok)
     return(xok)
@@ -65,7 +71,7 @@ getfilesfromfolder<-function(curfol = datapath, flag = "", reference=NULL){
   cat("\n ", flsnparts)
   for (i in 1:flsnparts){
     
-    #cat(" ", i)
+    cat(" ", i)
     ok <- Reduce(prod, lapply(1:nfls, function(x) checkflparts(i, x)))
     if(ok==0){
       
@@ -87,19 +93,34 @@ getfilesfromfolder<-function(curfol = datapath, flag = "", reference=NULL){
     if(scenshort[j] == paste(rep("0", ndiff), collapse="")) { scenshort[j] <- 'ref'}
   }
   
+  scenshort <- gsub("\\.gdx","",scenshort)
   scenshort <<- scenshort
   commonname <- gsub("\\.gdx","",paste(commonpart, collapse="_"))
   commonname <<- commonname
   return(fls)
 }
 
-checkstepreports <- function(curfol, nruns){
+checkstepreports <- function(curfol=NULL, nruns=NULL){
+  
+  if(is.null(curfol)) curfol <- paste0(datapath, "../temp")
+  
+  if(is.null(nruns)) {
+    flsn <- list.files(path=curfol, 
+                       pattern="^[0-9]*$", 
+                       recursive=FALSE, 
+                       full.names = FALSE)
+    flsn <- flsn[order(as.numeric(flsn))]
+    nruns <- length(flsn)
+  }else{
+    
+    flsn <- as.character(1:nruns)
+  }
   
   for (i in 1:nruns){
     if(i == 1) iter_chgtable <- data.table()
     if(i == 1) iter_chgmax <- data.table()
     if(i == 1) iter_chgmxmx <- data.table()
-    stepfile <- paste0(curfol, "/", i, "/stepOutput.gdx")
+    stepfile <- paste0(curfol, "/", flsn[i], "/stepOutput.gdx")
     #file.copy(from=stepfile, to=paste0(datapath, "stepOutput", i, ".gdx"))
     step<-rgdx.param(stepfile, "stepOutput")
     step<-as.data.table(step)
@@ -127,31 +148,32 @@ checkstepreports <- function(curfol, nruns){
   iter_chgmax <- dcast.data.table(iter_chgmax, STEP + SCEN ~ RALL, value.var="stepOutput")
   iter_chgmxmx <- dcast.data.table(iter_chgmxmx, STEP + RALL ~ SCEN, value.var="stepOutput")
   
-  con <- file(paste0(datapath, substr(commonname,1,10), "_iterchngtable", ".csv"), open = "wt")
+  conpath <- datapath
+  # 
+  if(exists("resultpath")) conpath <- paste0(resultpath, "/")
+  
+  con <- file(paste0(conpath, substr(commonname,1,10), "_iterchngtable", ".csv"), open = "wt")
   cat("# ", file = con)
   cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
   cat("\n", file = con)
   write.csv(iter_chgtable, row.names = FALSE, quote = FALSE, na="", file=con)
   close(con)
   
-  con <- file(paste0(datapath, substr(commonname,1,10), "_iterchngmax", ".csv"), open = "wt")
+  con <- file(paste0(conpath, substr(commonname,1,10), "_iterchngmax", ".csv"), open = "wt")
   cat("# ", file = con)
   cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
   cat("\n", file = con)
   write.csv(iter_chgmax, row.names = FALSE, quote = FALSE, na="", file=con)
   close(con)
   
-  con <- file(paste0(datapath, substr(commonname,1,10), "_iterchngmxmx", ".csv"), open = "wt")
+  con <- file(paste0(conpath, substr(commonname,1,10), "_iterchngmxmx", ".csv"), open = "wt")
   cat("# ", file = con)
   cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
   cat("\n", file = con)
   write.csv(iter_chgmxmx, row.names = FALSE, quote = FALSE, na="", file=con)
   close(con)
   
-  save(iter_chgtable, iter_chgmax, iter_chgmxmx, file=paste0(datapath, "/stepreport.rdata"))
-  
-  
-  
+  save(iter_chgtable, iter_chgmax, iter_chgmxmx, file=paste0(conpath, "/stepreport.rdata"))
 }
 
 
@@ -253,31 +275,39 @@ opendata<-function(scope,
   if(file.exists(datafile)){
     cat("\n ",datafile)
     #d<-list(datafile,dataparm,datanames,ydim)
-    capridat<-rgdx.param(datafile,dataparm)
-    names(capridat)<-datanames
-    if(scope=="capdistimes") {
+    #Wrap a 'try' around in case there is a problem with the gdx file
+    capridat <- NULL
+    try(capridat<-rgdx.param(datafile,dataparm), silent = TRUE)
+    if(! is.null(capridat)){
+      names(capridat)<-datanames
+      if(scope=="capdistimes") {
         capridat$Y <- curyear
         capridat<-capridat[,data4dim]
-    }
-    if(grepl("lapm", scope)){
-      capridat$Y<-gsub("_","",curyear)
-      if(curyear=="")capridat$Y<-"2010"
-      #capridat$NUTS2<-curcountry
-      if(curyear=="preds"){
-        capridat$ROWS<-"LEVL"
       }
-      #capridat<-capridat[, c("NUTS2", data4dim)]
-    }
-    #setattr(capridat,paste0(datafile,n),datafile)
-    fattr<-data.frame(nrow=1)
-    f<-gsub(".*/","", datafile)
-    fattr$filename[1]<-f
-    fattr$filepath[1]<-gsub(f, "", datafile)
-    fattr$filemtime[1]<-as.character(file.mtime(datafile))
-  }else{
-      cat(datafile, " does not exist\n")
+      if(grepl("lapm", scope)){
+        capridat$Y<-gsub("_","",curyear)
+        if(curyear=="")capridat$Y<-"2010"
+        #capridat$NUTS2<-curcountry
+        if(curyear=="preds"){
+          capridat$ROWS<-"LEVL"
+        }
+        #capridat<-capridat[, c("NUTS2", data4dim)]
+      }
+      #setattr(capridat,paste0(datafile,n),datafile)
+      fattr<-data.frame(nrow=1)
+      f<-gsub(".*/","", datafile)
+      fattr$filename[1]<-f
+      fattr$filepath[1]<-gsub(f, "", datafile)
+      fattr$filemtime[1]<-as.character(file.mtime(datafile))
+    }else{
+      cat("\n", datafile, " cannot be opened\n")
       capridat<-datafile
       fattr <- 0
+    }
+  }else{
+    cat("\n", datafile, " does not exist\n")
+    capridat<-datafile
+    fattr <- 0
   }
   
   return(list(capridat,fattr))

@@ -1,10 +1,14 @@
-loadglobalsfrombatch <- function(savepath = curdir,
+loadglobalsfrombatch <- function(savepath = NULL,
                                  dp = datapath,
                                  bathpath = NULL,
                                  batchdir = NULL,
                                  logf = NULL){
   
+  # logf -> indicate logf if the settings are to be retrieve from a file that is written to %results_out%/log
+  #         in the special case that this is copied to google drive (AL) use flag 'google' for the dp
   
+  
+  xlsok <- require(xlsx)
   if(is.null(logf)){
     
     # Retrieve fortran.gms from the batch output
@@ -34,11 +38,17 @@ loadglobalsfrombatch <- function(savepath = curdir,
     batchdir <- paste0(dp, "/log/")
     
     # Specific setting (AL) - logfiles copied to google drive
-    if(dp=="google") batchdir <- paste0(google, "/projects/capri_runs/")
+    if(dp=="google") batchdir <- paste0(google, "/projects/capri_runs/log/")
     
     cat(batchdir)
     fortran <- list.files(batchdir, pattern = paste0(logf, ".*"))
   }
+  
+  if(is.null(savepath)) {
+    savepath <- paste0(dp, "/log/")
+    if(dp=="google") savepath <- paste0(google, "/projects/capri_runs/log/")
+  }
+  
   setglob <- lapply(1:length(fortran), function(x) {
   #setglob <- lapply(1:3, function(x) {
     
@@ -54,6 +64,10 @@ loadglobalsfrombatch <- function(savepath = curdir,
     setglobal <- setglobal[! grepl("altLicense|NET_MIGR|FIX_BUDGET_FAC_SUBS|Supply|abMob|closure_|solpringSupply|limrow|limcol", setglobal)]
     setglobal <- c(setglobal, paste0("$SETGLOBAL batchfolder ", batchdir))
     setglobal <- gsub("\\*   Time and date   :", "$SETGLOBAL Time", setglobal)
+    
+    #only NOW
+    setglobal <- setglobal[! grepl("curCCscen", setglobal)]
+    
     close(con)
     
     
@@ -70,8 +84,9 @@ loadglobalsfrombatch <- function(savepath = curdir,
   curn <- names(setglobals)
   setglobals$n <- 1:nrow(setglobals)
   setglobals <- setglobals[,c("n", curn), with=FALSE]
-  for (i in 2:length(fortran)){
-    
+  #for (i in 2:length(fortran)){
+  for (i in 2:4){
+    cat("\n - ", i)
     setglobals <- merge(setglobals, setglob[[i]], by = "V1")
     setnames(setglobals, colnames(setglobals), c("V1", "n", paste0("r", seq(1:i))))
     setglobals[get(paste0("r", i))==r1, paste0("r", i)] <- ""
@@ -81,23 +96,28 @@ loadglobalsfrombatch <- function(savepath = curdir,
   tt <- gsub(" ","_",gsub("-|:","",setglobals[V1=="Time",r1]))
   rt <- setglobals[V1=="GamsStartNo", 3:ncol(setglobals)]
   ort <- paste0("r", sort(as.numeric(rt)))
+  print(ort)
   newnames <- c("setglobal", "n", paste0("r", rt))
   setnames(setglobals, colnames(setglobals), newnames)
   setglobals <- setglobals[, c("setglobal", "n", ort), with=FALSE]
   View(setglobals)
   cat("\nWrite file ", paste0(savepath, "/", tt, "globals.csv"))
   write.csv(setglobals, file=paste0(savepath, "/", tt, "globals.csv"))
+  if(xlsok) write.xlsx(setglobals, file = paste0(savepath, "/", tt, "global_test.xlsx"), sheetName = "setglobals", col.names=TRUE, row.names=FALSE)
   return(setglobals)
 }
 
-loadcapmod <- function(){
+
+
+loadcapmod <- function(subf = ""){
   startextract('capmod')
-  fls <- getfilesfromfolder(curfol = paste0("\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/users/leipadr/results/capmod/20190125_mititech"), 
+  fls <- getfilesfromfolder(curfol = paste0(datapath, "capmod/", subf), 
                             flag = 'mititech', 
                             reference="res_2_0830mtr_rd_refON.gdx"
   )
   
-  
+  checkstepreports()
+  return(fls)
   
   
 }
