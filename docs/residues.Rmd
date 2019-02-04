@@ -1,0 +1,250 @@
+---
+title: "Capri extract"
+output: 
+  html_document: 
+    keep_md: yes
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "..")
+
+library(gdxrrw)
+library(dplyr)
+```
+
+[TOC]
+
+# Introduction 
+Reading data on agricultural residues from the capri model, using the capriextract R functions.
+
+
+# Requirements
+
+## Installing R packages
+
+External packages used by the capriextract functions: 
+
+```
+cat capri_packages.r
+#Used Packages
+rm(list=objects())
+library(data.table)
+library(plyr)
+#library(devtools)
+#install_github("hadley/dplyr@master")   #to install the last version of dplyr
+library(dplyr)    #installed the dev version from https://github.com/hadley/dplyr
+#library(reshape)
+library(reshape2)
+library(stats)
+library(gdxrrw)
+#library(xlsx)
+library(tidyr)
+```
+
+The `gdxrrw` package is needed for the `rgdx.param()` function which reads gdx data. 
+Package `gdxrrw` is not available on CRAN:
+```
+Warning in install.packages :
+  package ‘gdxrrw’ is not available (for R version 3.5.1)
+```
+It is available from support.gams.com
+[GDXRRW: Interfacing GAMS and R](https://support.gams.com/gdxrrw:interfacing_gams_and_r)
+
+```{r eval=FALSE, echo=TRUE}
+install.packages("~/downloads/gdxrrw_1.0.4.tar.gz", repos = NULL, type = "source")
+```
+
+## Installing the GAMS system and related GDX libraries
+Error loading the GDX API: use igdx() to diagnose and solve the problem
+```{r eval=FALSE}
+igdx() 
+# The GDX library has not been loaded
+```
+
+Note from support.gams.com
+[GDXRRW: Interfacing GAMS and R](https://support.gams.com/gdxrrw:interfacing_gams_and_r)
+
+> For GDXRRW to work it must load shared libraries from the GAMS system directory. One common problem is a failure to find the GAMS system directory and these shared libraries. The igdx command can be used to show what GAMS system directory GDXRRW has found (igdx()) and to point GDXRRW to a particular GAMS system directory if so
+
+I ran the following to install gams:
+```
+mkdir /opt/gams
+cd /opt/gams/
+chmod u+x /home/user/downloads/linux_x64_64_sfx.exe 
+ll /home/user/downloads/linux_x64_64_sfx.exe 
+/home/user/downloads/linux_x64_64_sfx.exe 
+
+# Move to the gams folder
+cd gams25.1_linux_x64_64_sfx/
+./gamsinst 
+```
+
+Now in R, the `igdx()` can load the gdx library by specifying the GAMS directory as a parameter: 
+```{r}
+igdx(gamsSysDir = "/opt/gams/gams25.1_linux_x64_64_sfx/")
+```
+
+
+
+# use `opendata()` from `capriextract_functions.r`
+
+## Run the `opendata` function directly on spanish data
+The opendata function has 3 arguments,
+but global variables are also needed to make the `opendata`  function work. 
+Pass the arguments the opendata function wants to have in the capdis context.
+```{r eval=TRUE}
+getwd()
+source("capriextract_functions.r")
+# Global variables needed by the opendata function in the "capdis" context
+# datapath <- "/Bioeconomy/BIOMASS/capri/"
+datapath <- "/Bioeconomy/BIOMASS/forbiomodjrcbox/capri/"
+baseyear <- 1212
+data3dim<-c("RALL","COLS","ROWS","VALUE")
+# Load the gdx library by specifying the GAMS directory as a parameter
+igdx(gamsSysDir = "/opt/gams/gams25.1_linux_x64_64_sfx/")
+# use the function
+es <- opendata("capdis", "ES", "2010")
+
+knitr::kable(head(es, 10), format = "markdown")
+
+if(FALSE){
+    write.csv(es, "~/downloads/capdis_ES_2010.csv", row.names = FALSE)
+    saveRDS(es, file.path(datapath, "capdis_es_2010.rds"))
+    saveRDS(es, "~/downloads/capdis_es_2010.rds")
+    capdis_spain <- readRDS("~/downloads/capdis_es_2010.rds")
+}
+```
+
+## Residues data
+```{r}
+esresid <- es %>% 
+    filter(ROWS == "CRESID")
+
+unique(es$COLS)
+unique(substr(es$RALL, 1,2))
+esresid %>% 
+    mutate(RALL2 = substr(RALL, 1,2)) %>% 
+    group_by(RALL2) %>% 
+    tally() %>% 
+    knitr::kable(format = "markdown")
+```
+
+
+## Missing objects while runing the opendata function
+
+To load data under the capdis scope, the following objects have to be present
+in the global environement: 
+
+ * datapath, 
+ * baseyear 
+ * and data3dim.
+
+For example here is an error returned when data3dim is not defined:
+> Error in opendata("capdis", "ES", "2010") : object 'data3dim' not found
+
+Where is data3dim defined?
+```
+grep -n data3dim *.r
+capriextract_functions.r:42:    datanames<-data3dim
+capri_sets.r:4:data3dim<-c("RALL","COLS","ROWS","VALUE")
+```
+
+## Note on the data paths
+The `capri_dirs.r` script defines the data paths depending on which machine is runing.
+It uses the system name to adapt path variables to each particular system. 
+We could use the following conditional switch:
+```{r}
+Sys.info()[4] == "d01ri1603346.ies.jrc.it" 
+```
+
+But for the moment we can also simply overwrite the `datapath` variable.
+
+# Use `capri_sets.r` to open the metadata dump
+```{r}
+setfile <- "/Bioeconomy/BIOMASS/capri/capdis/dumpcapdis_EndOfCapdis.gdx"
+igdx(gamsSysDir = "/opt/gams/gams25.1_linux_x64_64_sfx/")
+
+# Code copy-pasted from capri_sets.r
+rows<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ROWS")
+# set FROWS / set.fco,comi,comf,beef,pork,sgmi,sgmf,sgmt,eggs,poum,oani/;
+# set cropo / set.fco,set.ico/;
+# set animo_rows / die oben + set.oyani_rows,mann,manp,mank,lres/;
+frows<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FROWS")
+ico<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "ICO")
+mpactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MPACT")
+mpact<-as.character(mpactexp[,1])
+mcactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "mcact")
+mcact<-as.character(mcactexp[,1])
+maactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MAACT")
+maact<-as.character(maactexp[,1])
+daactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "DAACT")
+daact<-as.character(daactexp[,1])
+fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fssact")
+fssact<-as.character(fssactexp[,1])
+# lapmactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact")
+# Error in rgdx(gdxName, list(name = symName, compress = compress, ts = ts,  : 
+#   GDX file /Bioeconomy/BIOMASS/capri/capdis/dumpcapdis_EndOfCapdis.gdx contains no symbol named 'lapmact'
+# lapmact<-as.character(lapmactexp[,1])
+# # Error: object 'lapmactexp' not found
+# lapmact_fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact_fssact")
+# # Error in rgdx(gdxName, list(name = symName, compress = compress, ts = ts,  : 
+# #   GDX file /Bioeconomy/BIOMASS/capri/capdis/dumpcapdis_EndOfCapdis.gdx contains no symbol named 'lapmact_fssact'
+# lapmact_fssact<-as.character(lapmact_fssactexp[,1])
+# # Error: object 'lapmact_fssactexp' not found
+names(maactexp)<-c("MAACT","Description")
+names(daactexp)<-c("MAACT","Description")
+feed_rowsexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FEED_ROWS")
+feed_rows<-as.character(feed_rowsexp[,1])
+fert_distexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fert_dist")
+fert_dist<-as.character(fert_distexp[,1])
+feed_to_o<-(rgdx.set(setfile,ts = TRUE,symName = "FEED_TO_O"))
+frmbal_cols<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "frmbal_cols"))
+mrkbal_cols<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MRKBAL_COLS"))
+nbil<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL"))
+# Countries and regions
+nuts0_exp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NUTS0")
+nuts0<-as.character(nuts0_exp[,1])
+cntr<-substr(nuts0,1,2)
+srnuts2<-as.character(rgdx.set(setfile,ts = TRUE,symName = "SRNUTS2")[,1])
+nuts2<-substr(srnuts2,1,4)
+rall<-rgdx.set(setfile,ts = TRUE,te=TRUE,symName = "RALL")
+
+
+# Save all data to an R file
+if(FALSE){
+    save(cntr, daact, daactexp, feed_rows, feed_rowsexp, feed_to_o, fert_dist, fert_distexp, frmbal_cols, frows, fssact, fssactexp, ico, maact, maactexp, mcact, mcactexp, mpact, mpactexp, mrkbal_cols, nbil, nuts0, nuts0_exp, nuts2, rall, rows, setfile, srnuts2, file = "/Bioeconomy/BIOMASS/capri/capdis/dumpcapdis.RData")    
+    # Load the file
+    load("/Bioeconomy/BIOMASS/capri/capdis/dumpcapdis.RData")
+}
+```
+
+## Residues metadata
+
+```{r}
+
+knitr::kable(rows[grepl("resid", rows$.te),], format = "markdown")
+```
+
+
+
+## Use `gdxrrw::rgdx.param()` directly to open the metadata dump
+Not used, kept for information purposes.
+
+Open the metadata dump file using the gdxrrw package directly:
+```{r}
+datafile <- "/Bioeconomy/BIOMASS/capri/capdis/dumpcapdis_EndOfCapdis.gdx"
+dumpcapdis <- rgdx.param(datafile, "xobs")
+knitr::kable(head(dumpcapdis, 10), format = "markdown")
+```
+
+
+
+# Update gdx xobs files for the missing CAPRI regions 52, 61 and 62
+
+```{r}
+
+```
+
+
