@@ -1,5 +1,5 @@
 #Used Packages
-rm(list=objects()[!objects()%in%c("scope", "xobshsu", "hsu", "nuts23", 
+rm(list=objects()[!objects()%in%c("scope", "xobshsu", "hsu", "nuts23", "subf", "tpath", 
                                   "curcols", "curyears", "curcountries", "curregi", "currows")])
 library(data.table)
 library(plyr)

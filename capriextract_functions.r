@@ -100,9 +100,9 @@ getfilesfromfolder<-function(curfol = datapath, flag = "", reference=NULL){
   return(fls)
 }
 
-checkstepreports <- function(curfol=NULL, nruns=NULL){
+checkstepreports <- function(curfol=NULL, nruns=NULL, tpath="temp"){
   
-  if(is.null(curfol)) curfol <- paste0(datapath, "../temp")
+  if(is.null(curfol)) curfol <- paste0(datapath, "../", tpath)
   
   if(is.null(nruns)) {
     flsn <- list.files(path=curfol, 
@@ -127,19 +127,21 @@ checkstepreports <- function(curfol=NULL, nruns=NULL){
     setnames(step, paste0(".i", 1:5), c("RALL", "COLS", "ROWS", "Y", "STEP"))
     
     iter_chg <- step[COLS == 'iter_chg']
-    iter_chg$SCEN <- i
-    
-    # Keep only the maximum changes per country and step
-    iter1 <- iter_chg[, max:= max(.SD), .SDcols = "stepOutput", by = .(RALL, STEP)]
-    iter1 <- iter1[stepOutput == max]
-    iter_chgtable <- rbind(iter_chgtable, iter1)
-    
-    
-    iter2 <- iter_chg[ROWS == 'MAX']
-    iter2 <- iter2[,max:=max(.SD), .SDcols = "stepOutput", by = .(STEP)]
-    iter3 <- iter2[stepOutput == max]
-    iter_chgmax <- rbind(iter_chgmax, iter2)
-    iter_chgmxmx <- rbind(iter_chgmxmx, iter3)
+    if(nrow(iter_chg)>0){
+      iter_chg$SCEN <- i
+      
+      # Keep only the maximum changes per country and step
+      iter1 <- iter_chg[, max:= max(.SD), .SDcols = "stepOutput", by = .(RALL, STEP)]
+      iter1 <- iter1[stepOutput == max]
+      iter_chgtable <- rbind(iter_chgtable, iter1)
+      
+      
+      iter2 <- iter_chg[ROWS == 'MAX']
+      iter2 <- iter2[,max:=max(.SD), .SDcols = "stepOutput", by = .(STEP)]
+      iter3 <- iter2[stepOutput == max]
+      iter_chgmax <- rbind(iter_chgmax, iter2)
+      iter_chgmxmx <- rbind(iter_chgmxmx, iter3)
+    }
   }
   # iter_chgtable <- dcast.data.table(iter_chgtable, RALL + SCEN + ROWS ~ STEP, value.var="stepOutput")
   # iter_chgmax <- dcast.data.table(iter_chgmax, RALL + SCEN ~ STEP, value.var="stepOutput")
@@ -173,7 +175,7 @@ checkstepreports <- function(curfol=NULL, nruns=NULL){
   write.csv(iter_chgmxmx, row.names = FALSE, quote = FALSE, na="", file=con)
   close(con)
   
-  save(iter_chgtable, iter_chgmax, iter_chgmxmx, file=paste0(conpath, "/stepreport.rdata"))
+  save(iter_chgtable, iter_chgmax, iter_chgmxmx, file=paste0(conpath, substr(commonname,1,10), "_stepreport.rdata"))
 }
 
 

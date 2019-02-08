@@ -84,8 +84,8 @@ loadglobalsfrombatch <- function(savepath = NULL,
   curn <- names(setglobals)
   setglobals$n <- 1:nrow(setglobals)
   setglobals <- setglobals[,c("n", curn), with=FALSE]
-  #for (i in 2:length(fortran)){
-  for (i in 2:4){
+  #for (i in 2:4){
+  for (i in 2:length(fortran)){
     cat("\n - ", i)
     setglobals <- merge(setglobals, setglob[[i]], by = "V1")
     setnames(setglobals, colnames(setglobals), c("V1", "n", paste0("r", seq(1:i))))
@@ -96,7 +96,7 @@ loadglobalsfrombatch <- function(savepath = NULL,
   tt <- gsub(" ","_",gsub("-|:","",setglobals[V1=="Time",r1]))
   rt <- setglobals[V1=="GamsStartNo", 3:ncol(setglobals)]
   ort <- paste0("r", sort(as.numeric(rt)))
-  print(ort)
+  #print(ort)
   newnames <- c("setglobal", "n", paste0("r", rt))
   setnames(setglobals, colnames(setglobals), newnames)
   setglobals <- setglobals[, c("setglobal", "n", ort), with=FALSE]
@@ -109,15 +109,22 @@ loadglobalsfrombatch <- function(savepath = NULL,
 
 
 
-loadcapmod <- function(subf = ""){
+loadcapmod <- function(subf = "", tpath="temp", batchdir=NULL){
   startextract('capmod')
+  glb <-loadglobalsfrombatch(batchdir=batchdir, savepath=paste0(datapath, "capmod/", subf))
   fls <- getfilesfromfolder(curfol = paste0(datapath, "capmod/", subf), 
-                            flag = 'mititech', 
-                            reference="res_2_0830mtr_rd_refON.gdx"
+                            flag = 'tariffs', 
+                            reference=NULL
   )
   
-  checkstepreports()
-  return(fls)
+  checkstepreports(tpath=tpath)
+  capri<-filtermultiple(scope = scope,cols=NULL,rows=NULL,ydim=NULL,curdim5='',
+                        regi=NULL,curcountries = "",curyears = '30',baseyear = '08', 
+                        curscens = fls,
+                        curscensshort = scenshort
+  )
+  
+  return(capri)
   
   
 }
