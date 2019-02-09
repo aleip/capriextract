@@ -6,14 +6,11 @@
 #' @examples \dontrun{
 #' caprirunfile <- "x:\\dev\\epnf\\gams\\fortran.gms"
 #' InitCapriEnv(caprirunfile)
-#' str(caprisetting)
+#' str(c)
 #' }
 #' @export
 require(data.table)
 InitCapriEnv <- function(capri.runfile = NULL){
-  
-  cat("\n", objects())
-  rm(list=objects()[! objects() %in% c("capri.runfile")])
   
   if(! is.null(caprirunfile)){
     
@@ -46,50 +43,42 @@ InitCapriEnv <- function(capri.runfile = NULL){
       
     })))
     
-    if(! exists("caprisetting")){
-      caprisetting <- list()
+    if(! exists("cenv")){
+      cenv <- list()
     }
-    
-    # Copy relevant parameter into the 
-    caprisetting$gamsexe <- Sys.which("gams.exe")
-    
-    # Location of the GAMS.exe file
-    caprisetting$gamsexe <- setglobals[V1 == "GAMSexe", V2]
     
     # Main gams-directory from which the gams program has to be called
     # All gams scripts are in underfolders of curdir
-    caprisetting$curdir <- setglobals[V1 == "curDir", V2]
+    cenv$curdir <- setglobals[V1 == "curDir", V2]
     
     # Folder of results-data. As sometimes runs build on results,
     # but don't want to overwrite, a separate result-folder can 
     # be defined for the storing the results of the current CAPRI run.
-    caprisetting$resin <- setglobals[V1 == "results_in", V2]
-    caprisetting$resout <- setglobals[V1 == "results_out", V2]
-    if(caprisetting$resin == '') caprisetting$resin <- setglobals[V1 == "Resdir", V2]
-    if(caprisetting$resout == '') caprisetting$resout <- setglobals[V1 == "Resdir", V2]
+    cenv$resin <- setglobals[V1 == "results_in", V2]
+    cenv$resout <- setglobals[V1 == "results_out", V2]
+    if(cenv$resin == '') cenv$resin <- setglobals[V1 == "Resdir", V2]
+    if(cenv$resout == '') cenv$resout <- setglobals[V1 == "Resdir", V2]
     
     # Folder where input data for CAPRI runs are stored
-    caprisetting$datdir <- setglobals[V1 == "Datdir", V2]
+    cenv$datdir <- setglobals[V1 == "Datdir", V2]
     
     # Scratch dir - directory for temporary files or for debugging files
-    caprisetting$scrdir <- setglobals[V1 == "scrdir", V2]
+    cenv$scrdir <- setglobals[V1 == "scrdir", V2]
     
     # Additional suffix for the result files
-    caprisetting$resid <- setglobals[V1 == "ResId", V2]
-    if(caprisetting$resid == 'ResId') caprisetting$resid <- ''
-    
-    
+    cenv$resid <- setglobals[V1 == "ResId", V2]
+    if(cenv$resid == 'ResId') cenv$resid <- ''
   }
   
-  # Push updated caprisetting into the global environnment
-  caprisetting <<- caprisetting
+  # Push updated c into the global environnment
+  cenv <<- cenv
   StoreCapriInit()
   invisible()
   
 }
 
 #' Initialize CAPRI settings to perform CAPRI data extractions and processing
-#' @description The function \code{getcapri()} retrieves CAPRI environent parameter stored in the list caprisettings
+#' @description The function \code{getcapri()} retrieves CAPRI environent parameter stored in the list cenv
 #' @param x parameter that should be returned
 #' @return current value for x
 #' @examples \dontrun{
@@ -97,9 +86,9 @@ InitCapriEnv <- function(capri.runfile = NULL){
 #' }
 #' @export
 require(data.table)
-GetCapriSetting <- function(x=NULL){
+GetCenv <- function(x=NULL){
   
-  y <- caprisetting[[x]]
+  y <- cenv[[x]]
   return(y)
   
 }
@@ -119,12 +108,72 @@ StoreCapriInit <- function(){
   me <- Sys.info()[7]
   pc <- Sys.info()[4]
   
-  if(file.exists(".caprisettings.rdata")) load(file=".caprisettings.rdata")
+  if(file.exists(".caprisettings.Rdata")) load(file=".caprisettings.Rdata")
   if(!exists("caprisettingarchive")) caprisettingarchive <- list()
-  caprisettingarchive[[paste0(me, pc)]] <- caprisetting
-  save(caprisettingarchive, file=".caprisettings.rdata")
+  caprisettingarchive[[paste0(me, pc)]] <- cenv
+  save(caprisettingarchive, file=".caprisettings.Rdata")
   invisible()
   
+}
+
+#' Update CAPRI environemnt setting
+#' @description The function \code{UpdateCapriInit()} updates settings stored in the 
+#'              current session and stores settings by user (user) and computer (nodename) 
+#'              using the function \code{StoreCapriInit()}
+#' @param x parameter that should be returned
+#' @return current value for x
+#' @examples \dontrun{
+#' tobedone
+#' }
+#' @export
+UpdateCapriInit <- function(
+  x = NULL  # List of vectors of lenght 2 c(variablename, value) 
+            # eg. list(c(c("curdir", "X:/dev/epnf/gams")),c("datdir", "X:/dev/epnf/dat"))
+  
+  ){
+  
+  if (is.null(x)){
+    message("Exit - no parameter provided")
+  }else{
+    
+    nx <- length(x)
+    if(! exists("cenv")){
+      RetrieveCapriInit()
+    }
+    for (i in 1 : nx){
+      cenv[[x[[i]][1]]] <- x[[i]][2]
+    }
+  }
+  StoreCapriInit()
+  cenv <<- cenv
+}
+
+#' Update CAPRI environemnt setting
+#' @description The function \code{UpdateCapriInit()} updates settings stored in the 
+#'              current session and stores settings by user (user) and computer (nodename) 
+#'              using the function \code{StoreCapriInit()}
+#' @param x parameter that should be returned
+#' @return current value for x
+#' @examples \dontrun{
+#' tobedone
+#' }
+#' @export
+RemoveCapriEnv <- function(x = NULL){
+                           # Vector of parameters to be removed
+  if (is.null(x)){
+    message("Exit - no parameter provided")
+  }else{
+    
+    nx <- length(x)
+    if(! exists("cenv")){
+      RetrieveCapriInit()
+    }
+    for (i in 1:nx){
+      cenv[x[i]] <- NULL
+    }
+  }
+  StoreCapriInit()
+  cenv <<- cenv
 }
 
 #' Retrive CAPRI settings from archived settings
@@ -141,10 +190,10 @@ RetrieveCapriInit <- function(){
   me <- Sys.info()[7]
   pc <- Sys.info()[4]
   
-  if(file.exists(".caprisettings.rdata")) load(file=".caprisettings.rdata")
+  if(file.exists(".caprisettings.Rdata")) load(file=".caprisettings.Rdata")
   if(!exists("caprisettingarchive")) caprisettingarchive <- list()
   x <- names(caprisettingarchive)
-  if(paste0(me,pc, "x") %in% x){
+  if(paste0(me,pc) %in% x){
     
     caprisetting <- caprisettingarchive[[paste0(me, pc)]] 
 
@@ -155,17 +204,22 @@ RetrieveCapriInit <- function(){
     print(names(caprisettingarchive))
     choice <- readline(prompt = "Please enter 0 to abort and choose another method\n or select the nunber of the settings you want to retrieve.")
     if(choice !=0){
-      
-      if(choice <= length(caprisettingarchive))
-      
-        caprisetting <- caprisettingarchive[[choice]] 
-      
+      if(choice <= length(caprisettingarchive)){
+        c <- caprisettingarchive[[choice]] 
+      }
+    }else{
+      message(paste0("Please run InitCapriEnv(capri.runfile) if you have a CAPRI runfile at hand.\n",
+                     "Otherwise Choose the option .... (to be developed)."))       
     }
-    
   }
   
+  if(file.exists(".caprisets.Rdata")) {
+    GetCapriSets() 
+  }else{
+    message(paste0("CAPRI sets have not been initialized.\n",
+                   "Please run UpdateCapriSets(setfile) if you have gdx file with relevant CAPRI sets."))
+  }
   invisible()
-  
 }
 
 
@@ -178,6 +232,9 @@ RetrieveCapriInit <- function(){
 #' @export
 GetCapriSets <- function() {
   
+  load(".caprisets.Rdata")
+  s <<- s
+  sdesc <<- sdesc
   
   
 }
@@ -191,7 +248,8 @@ GetCapriSets <- function() {
 #' tobedone
 #' }
 #' @export
-UpdateCapriSets <- function(setfile = NULL) {
+UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
+                            ) {
   
   require(gdxrrw)
   if(gdxrrw::igdx() == FALSE){
