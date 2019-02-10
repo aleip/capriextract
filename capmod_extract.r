@@ -129,6 +129,23 @@ loadcapmod <- function(subf = "", tpath="temp", batchdir=NULL){
   
 }
 
+makemultiplefigures <- function(x = NULL, f = NULL, info = NULL){
+  source("capriplots.r")
+  if(is.null(x)){
+    message("Please provide a CAPRI data table.")
+  }else{
+    if(is.null(f)){
+      message("No figures requested")
+    }else{
+      for (i in 1:length(f)){
+        cat("\nCreating figure ", f[i], "for dataset ")
+        figok <- setuppage(x=caprid, plotname=f[i], info=info, ddebug = 0)
+        exportdata(x = lastdataplotted)
+      }
+    }
+  }
+}
+
 
 
 extractlca <- function(fls = NULL, curcountries = "", curyears = '30', baseyear = '08', curscenshort = NULL){

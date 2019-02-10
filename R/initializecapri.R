@@ -146,6 +146,9 @@ UpdateCapriInit <- function(
   }
   StoreCapriInit()
   cenv <<- cenv
+  
+  y <- unlist(lapply(1:length(x), function(z) cenv[[x[[z]][1]]]))
+  return(y)
 }
 
 #' Update CAPRI environemnt setting
@@ -219,6 +222,8 @@ RetrieveCapriInit <- function(){
     message(paste0("CAPRI sets have not been initialized.\n",
                    "Please run UpdateCapriSets(setfile) if you have gdx file with relevant CAPRI sets."))
   }
+  
+  cenv <<- caprisetting
   invisible()
 }
 
@@ -285,8 +290,24 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   sets2get.name <- c(sets2get.name, "Animal production activities")
   sets2get.eles <- c(sets2get.eles, "maact")
   
+  sets2get.name <- c(sets2get.name, "Production activities in supply model")
+  sets2get.eles <- c(sets2get.eles, "mpact")
+  
   sets2get.name <- c(sets2get.name, "Aggregated aninam production activities")
   sets2get.eles <- c(sets2get.eles, "daact")
+  
+  #lapmactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact")
+  #lapmact_fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact_fssact")
+  #feed_rowsexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FEED_ROWS")
+  #fert_distexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fert_dist")
+  #feed_to_o<-(rgdx.set(setfile,ts = TRUE,symName = "FEED_TO_O"))
+  #frmbal_cols<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "frmbal_cols"))
+  #mrkbal_cols<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MRKBAL_COLS"))
+  #ncnc_posexp<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NCNC_POS"))
+  #ncnc_pos<-as.character(ncnc_posexp[,1])
+  #nbil<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL"))
+  #nbil_exp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL_COLS_MAIN")
+  #nbil<-as.character(nbil_exp[,1])
   
 
   # 2. Products
@@ -313,6 +334,18 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
 
   sets2get.name <- c(sets2get.name, "Processed / secondary products")
   sets2get.eles <- c(sets2get.eles, "seco_rows")
+
+  sets2get.name <- c(sets2get.name, "Soil balance elements")
+  sets2get.eles <- c(sets2get.eles, "SOILBALPOS_R")
+  
+  sets2get.name <- c(sets2get.name, "Nitrogen balance")
+  sets2get.eles <- c(sets2get.eles, "NBIL")
+  
+  sets2get.name <- c(sets2get.name, "Nutrients in food")
+  sets2get.eles <- c(sets2get.eles, "NCNC_POS")
+  
+  
+  
   
   # Regions
   # Countries and regions
@@ -335,9 +368,6 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   # 4. Mappings
   maps2get.name <- c(maps2get.name, "Mapping between data base activities from COCO and high/low yield variants used in CAPREG/CAPMOD")
   maps2get.eles <- c(maps2get.eles, "dact_to_pact")
-  
-  # Apply R-styles to set names. Note that set elements remain in CAPRI style.
-  elementnames <- tolower(sets2get.name)
   
   cat("\nRetrieve sets... ")
   s <- lapply(1 : length(sets2get.eles), function(x) {
@@ -386,46 +416,35 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
     return(e)
   }))
     
-  names(s) <- sets2get.eles
+  # Apply R-styles to set names. Note that set elements remain in CAPRI style.
+  elementnames <- tolower(sets2get.eles)
+  elementnames <- gsub("_rows", "", elementnames)
+  elementnames <- gsub("_r", "", elementnames)
+  
+  names(s) <- elementnames
   
   # Add sets with set-arithmetic without retrieving
+  s$mcactnohighyild <- setdiff(s$mcact, c("NURS", "FLOW", "TOMA"))
   s$cropo <- c(s$fco, s$ico)
-  #sname$cropo <- "All crop outputs"
+  s$oseco <- c(s$fco, s$ico, s$animo, s$seco)
+  s$mbal <- c("GROF", "HCOM", "FEDM", "IMPT", "EXPT")
+  
   
   s$nuts2 <- substr(s$srnuts2,1,4)
   s$regi  <- c(s$nuts0, s$srnuts2)
   
-  s$mcactnohighyild <- setdiff(s$mcact, c("NURS", "FLOW", "TOMA"))
-  #sname$mcactnohighyild <- "Crop activities excluding those with very high yields."
 
   # The sets below still need to be included above as they are relevant 
   # for several processing tasks
   #
-  #osecoexp<-rbind(cropexp, icoexp, animoexp, secoexp)
-  #lapmactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact")
-  #lapmact_fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact_fssact")
-  #feed_rowsexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FEED_ROWS")
-  #fert_distexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fert_dist")
-  #feed_to_o<-(rgdx.set(setfile,ts = TRUE,symName = "FEED_TO_O"))
-  #frmbal_cols<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "frmbal_cols"))
-  #mrkbal_cols<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MRKBAL_COLS"))
-  #ncnc_posexp<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NCNC_POS"))
-  #ncnc_pos<-as.character(ncnc_posexp[,1])
-  #nbil<-(rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL"))
-
-  #nbil_exp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "NBIL_COLS_MAIN")
-  #nbil<-as.character(nbil_exp[,1])
   
   # Nitrogen and GHG relevant sets
   # if(exists("setfilen")){
-  #   soilbalpos_exp<-rgdx.set(setfilen,te=TRUE,ts = TRUE,symName = "SOILBALPOS_R")
-  #   soilbalpos<-as.character(soilbalpos_exp[,1])
   #   nflowsr_exp<-rgdx.set(setfilen,te=TRUE,ts = TRUE,symName = "nflowsr")
   #   nflowsr<-as.character(nflowsr_exp[,1])
   #   nemiscadd_exp<-rgdx.set(setfilen,te=TRUE,ts = TRUE,symName = "Nemiscadd")
   #   nemiscadd<-as.character(nemiscadd_exp[,1])
   # }
-  # mbal<-c("GROF", "HCOM", "FEDM", "IMPT", "EXPT")
   # 
   # meta2keep<-c("DATE OF VERSION","NAME OF PROCESSOR ORGANISATION","User","Regional breakdown")
   # 

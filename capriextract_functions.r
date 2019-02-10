@@ -100,6 +100,71 @@ getfilesfromfolder<-function(curfol = datapath, flag = "", reference=NULL){
   return(fls)
 }
 
+ExtractShortCommonName <- function(fls, reference = NULL){
+  
+  flsn <- gsub("globiom_eu_2018\\+REFERENCE\\+REFERENCE", "globiomeu2018", fls)
+  
+  
+  nfls <- length(flsn)
+  if(! is.null(reference)) {nref <- which(flsn == reference)}else{nref<-nfls+1}
+  flparts <- strsplit(flsn, "_")
+  
+  flsnparts <- Reduce(max, lapply(flparts, length))
+  
+  checkflparts<-function(i, x){
+    if(i > length(flparts[[x]])){
+      xok <- FALSE
+    }else{
+      xok <- flparts[[1]][i]==flparts[[x]][i]
+    }
+    if(x == nref) xok <- TRUE
+    #cat("\n", x, i, flparts[[x]][i], xok)
+    return(xok)
+    
+  }
+  
+  ok<-1; i<-1; ndiff<-0; diffflt <- list(); scenshort<-vector(); 
+  commonpart<-vector(); ncomm<-0
+  #cat("\n ", flsnparts)
+  for (i in 1:flsnparts){
+    
+    #cat(" ", i)
+    ok <- Reduce(prod, lapply(1:nfls, function(x) checkflparts(i, x)))
+    if(ok==0){
+      
+      ndiff<-ndiff+1
+      for(j in 1:nfls){ 
+        scenshort[j] <- flparts[[j]][i]
+        if(is.na(flparts[[j]][i])) scenshort[j]<-0
+      }
+      diffflt[[ndiff]] <- scenshort
+      
+      
+    }else{
+      ncomm <- ncomm+1
+      commonpart[ncomm] <- flparts[[1]][i]
+    }
+  }
+  for(j in 1:nfls){
+    scenshort[j] <- Reduce(paste0, lapply(1:ndiff, function(x) diffflt[[x]][j]))
+    if(scenshort[j] == paste(rep("0", ndiff), collapse="")) { scenshort[j] <- 'ref'}
+  }
+  
+  scenshort <- gsub("\\.gdx","",scenshort)
+  scenshort <- gsub("\\.gdx","",scenshort)
+  commonname <- gsub("\\.gdx","",paste(commonpart, collapse="_"))
+  commonname <<- commonname
+  return(list(scenshort, commonname))  
+  
+}
+ExtractShortName <- function(fls, reference = NULL){
+  scenshort <- ExtractShortCommonName(fls, reference=NULL)[[1]]
+}
+ExtractCommonName <- function(fls, reference = NULL){
+  scenshort <- ExtractShortCommonName(fls, reference=NULL)[[2]]
+  return(scenshort)
+}
+
 checkstepreports <- function(curfol=NULL, nruns=NULL, tpath="temp"){
   
   if(is.null(curfol)) curfol <- paste0(datapath, "../", tpath)
@@ -244,7 +309,7 @@ opendata<-function(scope,
     datafile<-paste0(datapath, datafile)
     #datafile<-paste0(datapath,"/", datafile)
     dataparm<-"dataout"
-    datanames<-data5dim
+    datanames<-c("rall","empty","cols","rows","y","value")
     
   }
   if(grepl("lapm", scope)){
@@ -327,6 +392,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
     capridat<-capridat[[1]]
   }
   capridat<-as.data.table(capridat)
+  View(capridat)
   
   fattr$filterCOLS<-paste(cols, collapse="-")
   fattr$filterROWS<-paste(rows, collapse='-')
@@ -334,20 +400,20 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
   fattr$filterRegi<-paste(regi, collapse="-")
   
   #COLS (activities, variables for products)
-  if(!is.null(cols)) capridat<-capridat[capridat$COLS%in%cols,]
+  if(!is.null(cols)) capridat<-capridat[capridat$cols%in%cols,]
   
   #ROWS (products, variables for activities)
-  if(!is.null(rows)) capridat<-capridat[capridat$ROWS%in%rows,]
+  if(!is.null(rows)) capridat<-capridat[capridat$rows%in%rows,]
   
   #Filter regional level 
   if(!is.null(regi)){
     if(length(regi)==1){  
       if(regi=="HSU"){
-        capridat<-capridat[grepl("U[1-9]",capridat$RALL),]   
-        capridat<-capridat[! grepl("HU[1-9]",capridat$RALL),]   
+        capridat<-capridat[grepl("U[1-9]",capridat$rall),]   
+        capridat<-capridat[! grepl("HU[1-9]",capridat$rall),]   
       }
     }else{
-      capridat<-capridat[capridat$RALL%in%regi,]
+      capridat<-capridat[capridat$rall%in%regi,]
     }
   }
   
@@ -363,19 +429,19 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
   }
   
   if(scope%in%c("tseriesGHG")){
-    capridat<-capridat[capridat$Y%in%as.character(curyear)]
+    capridat<-capridat[capridat$y%in%as.character(curyear)]
   }
   #capridat<-capridat[,setdiff(names(capridat),c("Y"))]
   if(!is.null(curdim5)){
-    print("select curdim5")
+    #print("select curdim5")
     if(curdim5[1]=="nonempty"){
-        capridat<-capridat[capridat$EMPTY!='',]
+        capridat<-capridat[capridat$empty!='',]
       }else{
-        capridat<-capridat[capridat$EMPTY%in%curdim5,]
+        capridat<-capridat[capridat$empty%in%curdim5,]
       }
   }
   if(grepl("capmod", scope)){
-    capridat$SCEN<-curscenshort
+    capridat$scen<-curscenshort
   }
   #print(attributes(capridat))
   #cat("-->")
@@ -391,7 +457,8 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
 
 filtermultiple<-function(scope, 
                          cols=curcols, rows=currows, ydim="Y", curdim5=NULL, regi, 
-                         curcountries, curyears="08", baseyear='08', curscens='', curscensshort=''){
+                         curcountries, curyears="08", baseyear='08', curscens='', curscensshort='',
+                         resultfile=NULL){
   cat("\n", length(curcountries), curcountries)
   nfiles<-length(curcountries)*length(curscens)*length(curyears)
   cdat<-list()
@@ -418,6 +485,7 @@ filtermultiple<-function(scope,
                                curscenshort = curscensshort[z]
         )
         cdat[[n]]<-capridat[[1]]
+        #View(cdat[[n]], as.character(n))
         #cdat[[n]]<-capridat   #xavi20190122: filteropen no longer produces a list (commit d327009bdb2319d3ee3e20c3eec2f1ed143b4d6b)
                                #xavi20190122_2: at the end, it keeps returning a list (see comment in L184)
         #print(str(capridat[[1]]))
@@ -439,10 +507,14 @@ filtermultiple<-function(scope,
   if(! exists("commonname")) commonname <- ""
   if(! exists("flag")) flag <- paste0("temp_", paste(curcountries, collapse = ""), scope)
   capridat<-Reduce(rbind, cdat)
-  save(capridat, file=paste0(datapath, commonname, flag, ".rdata"))
   #print(capridat)
   info <<- fdat
   caprid <<- capridat
+
+    if(! is.null(resultfile)) {
+    cat("\nSave to ", resultfile)
+    save(caprid, info, file=paste0(resultfile, ".rdata"))
+  }
   
   return(list(capridat, fdat))
 }

@@ -9,17 +9,17 @@ checkinfo<-function(x, plotdef=plotdef){
   curtit<-''
   legtit<-''
   
-  curcols<-as.character(unique(x$COLS))
+  curcols<-as.character(unique(x$cols))
   numcols<-length(curcols)
   
-  currows<-as.character(unique(x$ROWS))
+  currows<-as.character(unique(x$rows))
   numrows<-length(currows)
   
   save(list=objects(), file="capriplottexts.rdata")
   
-  curequal<-sum(x$ROWS==x$COLS)
-  print(currows)
-  print(curcols)
+  curequal<-sum(x$rows==x$COLS)
+  #print(currows)
+  #print(curcols)
   curlab<-"not yet defined in fuction checkinfo()"
   if(numrows==1 & numcols>1){
     perspective<-'act'
@@ -52,17 +52,17 @@ checkinfo<-function(x, plotdef=plotdef){
   }
   
   # Check regional level
-  curregs<-as.character(unique(x$RALL))
+  curregs<-as.character(unique(x$rall))
   nregs<-length(curregs)
   nnuts0<-length(grepl("000000",curregs))
   if(nregs==nnuts0){
     # Plot at country level - use 2 digits
-    x<-x[, RALL := substr(RALL,1,2) ]
+    x<-x[, RALL := substr(rall,1,2) ]
     
   }
   
-  cat("\n check if curpanel is there:\n")
-  print(plotdef)
+  #cat("\n check if curpanel is there:\n")
+  #print(plotdef)
   if(plotdef$Plotname %in% c('ncalinha')) plotdef$perspective<-'nutrition'
   if(plotdef$Plotname %in% c('ncalinha')) plotdef$curtit<-'Nutrient intake per Inhabitant'
   if(plotdef$Plotname %in% c('ncalinha')) plotdef$legtit<-'Food'
@@ -75,7 +75,7 @@ checkinfo<-function(x, plotdef=plotdef){
     if(plotdef$curpanel=="HCOM") balterm<-"Human consumption"
     if(plotdef$curpanel=="INHA") balterm<-"Human consumption per capita"
     #cat("\n",perspective, balterm)
-    if(sum(! currows %in% mcact) == 0 ){
+    if(sum(! currows %in% s$mcact) == 0 ){
       # All products are crops
     }  
     plotdef$curtit<-"Total quantity by crop"
