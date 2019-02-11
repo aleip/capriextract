@@ -10,9 +10,11 @@
 #' }
 #' @export
 require(data.table)
-InitCapriEnv <- function(capri.runfile = NULL){
+InitCapriEnv <- function(capri.runfile = NULL,
+                         scope = NULL){
   
-  if(! is.null(caprirunfile)){
+  require(gdxrrw)
+  if(! is.null(capri.runfile)){
     
     # Read the caprirunfile and retrieve relevant information
     # In CAPRI, the relevant parameter are given as $SETGLOBAL 
@@ -68,7 +70,11 @@ InitCapriEnv <- function(capri.runfile = NULL){
     # Additional suffix for the result files
     cenv$resid <- setglobals[V1 == "ResId", V2]
     if(cenv$resid == 'ResId') cenv$resid <- ''
+  }else{
+    RetrieveCapriInit()
   }
+  
+  startextract(scope=scope)  
   
   # Push updated c into the global environnment
   cenv <<- cenv
@@ -198,7 +204,7 @@ RetrieveCapriInit <- function(){
   x <- names(caprisettingarchive)
   if(paste0(me,pc) %in% x){
     
-    caprisetting <- caprisettingarchive[[paste0(me, pc)]] 
+    c <- caprisettingarchive[[paste0(me, pc)]] 
 
   }else{
     
@@ -208,11 +214,13 @@ RetrieveCapriInit <- function(){
     choice <- readline(prompt = "Please enter 0 to abort and choose another method\n or select the nunber of the settings you want to retrieve.")
     if(choice !=0){
       if(choice <= length(caprisettingarchive)){
-        c <- caprisettingarchive[[choice]] 
+        cat("\nUsing settings from ", paste0(me,pc))
+        c <- caprisettingarchive[[as.numeric(choice)]]
       }
     }else{
       message(paste0("Please run InitCapriEnv(capri.runfile) if you have a CAPRI runfile at hand.\n",
-                     "Otherwise Choose the option .... (to be developed)."))       
+                     "Otherwise Choose the option .... (to be developed)."))
+      c <- NULL
     }
   }
   
@@ -223,7 +231,7 @@ RetrieveCapriInit <- function(){
                    "Please run UpdateCapriSets(setfile) if you have gdx file with relevant CAPRI sets."))
   }
   
-  cenv <<- caprisetting
+  cenv <<- c
   invisible()
 }
 
@@ -455,4 +463,32 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   
   save(s, sdesc, m, file = ".caprisets.Rdata")
   invisible()
+}
+
+
+startextract<-function(scope){
+  
+  #Check the current folder
+  curfol <- getwd()
+  if( ! grepl("capriextract", curfol) ){
+    # Wrong folder
+    if( grepl("logfiles", curfol) ){
+      setwd("../capriextract/")
+    }else(
+      stop("You seem to be in a wrong folder. Please change to 'capriextract'!")
+    )
+  }
+  
+  scope <<- scope
+  
+  #source("capri_packages.r")
+  #source("capri_dirs.r")
+  #source("capri_sets.r")
+  source("capriextract_functions.r")
+  source("xobsfunctions.r")
+  source("capriextract_functions_4mapping.r")
+  source("capriplotcolors.r")
+  source("capriplottexts.r")
+  source("capriplots.r")
+  
 }

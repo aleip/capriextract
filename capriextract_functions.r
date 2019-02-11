@@ -1,32 +1,6 @@
 
-startextract<-function(scope){
-  
-  #Check the current folder
-  curfol <- getwd()
-  if( ! grepl("capriextract", curfol) ){
-    # Wrong folder
-    if( grepl("logfiles", curfol) ){
-      setwd("../capriextract/")
-    }else(
-      stop("You seem to be in a wrong folder. Please change to 'capriextract'!")
-    )
-  }
-  
-  scope <<- scope
-  
-  source("capri_packages.r")
-  source("capri_dirs.r")
-  source("capri_sets.r")
-  source("capriextract_functions.r")
-  source("xobsfunctions.r")
-  source("capriextract_functions_4mapping.r")
-  source("capriplotcolors.r")
-  source("capriplottexts.r")
-  source("capriplots.r")
-  
-}
 
-getfilesfromfolder<-function(curfol = datapath, flag = "", reference=NULL){
+getfilesfromfolder<-function(curfol = datapath, pattern='res.*.gdx$', flag = "", reference=NULL){
   
   # Change default datapath in global environment to curfol
   resultpath <<- curfol
@@ -36,12 +10,12 @@ getfilesfromfolder<-function(curfol = datapath, flag = "", reference=NULL){
   flag <<- flag
   
   fls <- list.files(path=curfol, 
-             pattern="res.*.gdx$", 
+             pattern=pattern, 
              recursive=FALSE, 
              full.names = TRUE)
   
   flsn <- list.files(path=curfol, 
-             pattern="res.*.gdx$", 
+             pattern=pattern, 
              recursive=FALSE, 
              full.names = FALSE)
   # Specific changes due to "_" in name elements
