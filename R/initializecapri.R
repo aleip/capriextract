@@ -132,22 +132,30 @@ StoreCapriInit <- function(){
 #' tobedone
 #' }
 #' @export
-UpdateCapriInit <- function(
-  x = NULL  # List of vectors of lenght 2 c(variablename, value) 
-            # eg. list(c(c("curdir", "X:/dev/epnf/gams")),c("datdir", "X:/dev/epnf/dat"))
-  
-  ){
-  
-  if (is.null(x)){
+UpdateCapriInit <- function(x = NULL){
+                            # List of vectors of lenght 2 c(variablename, value) 
+                            #      eg. list(c(c("curdir", "X:/dev/epnf/gams")),c("datdir", "X:/dev/epnf/dat"))
+                            # OR vector of length 2
+  failure <- 0
+  if(is.null(x)){
     message("Exit - no parameter provided")
-  }else{
-    
+    invisible()
+  }
+  if(! exists("cenv")){
+    RetrieveCapriInit()
+  }
+  if(is.list(x)){
     nx <- length(x)
-    if(! exists("cenv")){
-      RetrieveCapriInit()
-    }
     for (i in 1 : nx){
-      cenv[[x[[i]][1]]] <- x[[i]][2]
+      if(length(x[[i]]) < 2){
+        message("Exit - vector",i," has less than 2 elements (parameter name, parameter value)")
+      }else{
+        cenv[[x[[i]][1]]] <- x[[i]][2]
+      }
+    }
+  }else{
+    if(is.vector(x)){
+      cenv[[x[1]]] <- x[2]
     }
   }
   StoreCapriInit()

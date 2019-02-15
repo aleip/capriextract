@@ -42,10 +42,10 @@ getfilesfromfolder<-function(curfol = datapath, pattern='res.*.gdx$', flag = "",
   
   ok<-1; i<-1; ndiff<-0; diffflt <- list(); scenshort<-vector(); 
   commonpart<-vector(); ncomm<-0
-  cat("\n ", flsnparts)
+  #cat("\n ", flsnparts)
   for (i in 1:flsnparts){
     
-    cat(" ", i)
+    #cat(" ", i)
     ok <- Reduce(prod, lapply(1:nfls, function(x) checkflparts(i, x)))
     if(ok==0){
       
@@ -139,27 +139,52 @@ ExtractCommonName <- function(fls, reference = NULL){
   return(scenshort)
 }
 
-checkstepreports <- function(curfol=NULL, nruns=NULL, tpath="temp"){
+checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir, 
+                             outpath=cenv$resout, commonname = NULL){
   
-  if(is.null(curfol)) curfol <- paste0(datapath, "../", tpath)
+
+  if(is.null(tpath)){
+    message("Please indicate a folder used by CAPRI as 'scrdir'. ",
+            "\nTried to get it from the CAPRI environment cenv$scrdir but found nothing.")
+    invsible(0)
+  }
+  if(is.null(outpath)){
+    message("Please indicate a folder used by CAPRI as 'resout'. ",
+            "\nTried to get it from the CAPRI environment cenv$scrdir but found nothing.")
+    invsible(0)
+  }else{
+    conpath <- outpath
+    if(! grepl("/$", conpath)) conpath <- paste0(conpath, "/")
+  }
+  if(! exists("commonname")){
+    commonname <- format(Sys.time(), "%Y%m%d%H%M")
+  }
   
-  if(is.null(nruns)) {
-    flsn <- list.files(path=curfol, 
-                       pattern="^[0-9]*$", 
-                       recursive=FALSE, 
-                       full.names = FALSE)
-    flsn <- flsn[order(as.numeric(flsn))]
+  if(runasbatch == 1){
+    if(is.null(nruns)) {
+      flsn <- list.files(path=tpath, 
+                         pattern="^[0-9]*$", 
+                         recursive=FALSE, 
+                         full.names = FALSE)
+      flsn <- flsn[order(as.numeric(flsn))]
+    }else{
+      
+      flsn <- as.character(nruns)
+      
+    }
     nruns <- length(flsn)
   }else{
     
-    flsn <- as.character(1:nruns)
+    message("So far used only for batch runs")
+    
   }
+  print(flsn)
   
   for (i in 1:nruns){
     if(i == 1) iter_chgtable <- data.table()
     if(i == 1) iter_chgmax <- data.table()
     if(i == 1) iter_chgmxmx <- data.table()
-    stepfile <- paste0(curfol, "/", flsn[i], "/stepOutput.gdx")
+    stepfile <- paste0(tpath, "/", flsn[i], "/stepOutput.gdx")
     #file.copy(from=stepfile, to=paste0(datapath, "stepOutput", i, ".gdx"))
     step<-rgdx.param(stepfile, "stepOutput")
     step<-as.data.table(step)
@@ -188,33 +213,42 @@ checkstepreports <- function(curfol=NULL, nruns=NULL, tpath="temp"){
   iter_chgtable <- dcast.data.table(iter_chgtable, STEP + RALL + SCEN ~ ROWS, value.var="stepOutput")
   iter_chgmax <- dcast.data.table(iter_chgmax, STEP + SCEN ~ RALL, value.var="stepOutput")
   iter_chgmxmx <- dcast.data.table(iter_chgmxmx, STEP + RALL ~ SCEN, value.var="stepOutput")
+  iter_chgmxmxtot <- iter_chgmxmx[RALL == "TOT"]
   
-  conpath <- datapath
+  
+  
   # 
-  if(exists("resultpath")) conpath <- paste0(resultpath, "/")
-  
-  con <- file(paste0(conpath, substr(commonname,1,10), "_iterchngtable", ".csv"), open = "wt")
+  commonname <- paste0(conpath, commonname)
+  con <- file(paste0(commonname, "_iterchngtable", ".csv"), open = "wt")
   cat("# ", file = con)
   cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
   cat("\n", file = con)
   write.csv(iter_chgtable, row.names = FALSE, quote = FALSE, na="", file=con)
   close(con)
   
-  con <- file(paste0(conpath, substr(commonname,1,10), "_iterchngmax", ".csv"), open = "wt")
+  con <- file(paste0(commonname, "_iterchngmax", ".csv"), open = "wt")
   cat("# ", file = con)
   cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
   cat("\n", file = con)
   write.csv(iter_chgmax, row.names = FALSE, quote = FALSE, na="", file=con)
   close(con)
   
-  con <- file(paste0(conpath, substr(commonname,1,10), "_iterchngmxmx", ".csv"), open = "wt")
+  con <- file(paste0(commonname, "_iterchngmxmx", ".csv"), open = "wt")
   cat("# ", file = con)
   cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
   cat("\n", file = con)
   write.csv(iter_chgmxmx, row.names = FALSE, quote = FALSE, na="", file=con)
   close(con)
+
+  con <- file(paste0(commonname, "_iterchngmxmxtot", ".csv"), open = "wt")
+  cat("# ", file = con)
+  cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
+  cat("\n", file = con)
+  write.csv(iter_chgmxmxtot, row.names = FALSE, quote = FALSE, na="", file=con)
+  close(con)
   
-  save(iter_chgtable, iter_chgmax, iter_chgmxmx, file=paste0(conpath, substr(commonname,1,10), "_stepreport.rdata"))
+  save(iter_chgtable, iter_chgmax, iter_chgmxmx, file=paste0(commonname, "_stepreport.rdata"))
+  cat("\nSaved to ", conpath)
 }
 
 
