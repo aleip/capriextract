@@ -1,3 +1,13 @@
+#' Load $setglobals from CAPRI steering files
+#' @description The function \code{loadglobalsfrombatch()} reads relevant CAPRI settings and saves them in one file.
+#'              For runs in the batch mode it reads them fro the batchout folder.
+#'              Alternatively can read multiple CAPRI steering files from the 'log' result folder
+#' @param savepath Indicates where the otuput of the function should be saved
+#' @param dp Datapath - uses a global environment variable if given; is used only of bathpath or savepath are NULL
+#' @param bathpath Used to identify files to read. This concept still needs to be further developed
+#' @param batchdir idem
+#' @param logf idem
+
 loadglobalsfrombatch <- function(savepath = NULL,
                                  dp = datapath,
                                  bathpath = NULL,

@@ -29,7 +29,8 @@ ncalinha         rcw   0.6       NA    2     'Macro nutrients'    nuts0       IN
 #
 croplevl         rcw   0.6       NA    1     'Crop areas'         nuts0       mcact                 LEVL,              bar          v
 gwpt             rcw   0.6       NA    1     'GHG emissions'      nuts0       mpact                 GWPT,              bar          v
-nbil             rwc   0.6       NA    1     'N flows'            nuts0       nbil                  Impact,            bar          v
+*nbil             rwc   0.6       NA    1     'N flows'            nuts0       nbil                  Impact,            bar          v
+nbil             rwc   0.6       NA    2     'N flows'            nuts0       nbalsoil              Impact,            bar          v
 #
-cropyild         crw   0.6       NA    1     'Crop Yields'        nuts0eu15   mcactnohighyild       mcactnohighyild    box          v
-scropyild        crw   0.6       NA    1     'Crop Yields'        nuts0eu15   mcactnohighyild       SWHE,              box          v
+cropyild         crw   0.6       NA    1     'Crop Yields'        nuts0_eu15  mcactnohighyild       mcactnohighyild    box          v
+scropyild        crw   0.6       NA    1     'Crop Yields'        nuts0_eu15  mcactnohighyild       SWHE,              box          v

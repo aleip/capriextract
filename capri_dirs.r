@@ -24,9 +24,9 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   curdir<-serverpath
 
   gamspath<-"X:/dev/GAMS/win64/24.4"
-  gamspath<-"X:/dev/GAMS/win64/24.8"
   gamspath<-"C:/GAMS/win64/24.8"
   gamspath<-"C:/Program Files/GAMS/win64/24.8"
+  gamspath<-"X:/dev/GAMS/win64/24.8"
   workpath<-"x:/adrian/tools/rprojects/"
   capridat<-paste0(curdir, "capriresults_ecampa3/")
   datapath<-paste0(curdir, "capriresults_ecampa3/")

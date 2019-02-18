@@ -17,7 +17,7 @@ checkinfo<-function(x, plotdef=plotdef){
   
   save(list=objects(), file="capriplottexts.rdata")
   
-  curequal<-sum(x$rows==x$COLS)
+  curequal<-sum(x$rows==x$cols)
   #print(currows)
   #print(curcols)
   curlab<-"not yet defined in fuction checkinfo()"
@@ -26,29 +26,30 @@ checkinfo<-function(x, plotdef=plotdef){
     if(currows=='LEVL'){
       if(sum(! curcols %in% mcact) == 0 ){
         # All activities are crops
-        curlab<-"Area [1000 ha]"
-        curtit<-"Total agricultural area by crop"
-        legtit<-"CROPS"
+        plotdef$curlab<-"Area [1000 ha]"
+        plotdef$curtit<-"Total agricultural area by crop"
+        plotdef$legtit<-"CROPS"
       }
     }
   }else if(numrows>1 & numcols==1){
     perspective<-'com'
     if(curcols%in%c("N_CAL", "N_FAT", "N_PRO")){
-      print("nutrients")
+      #print("nutrients")
       if(curcols=="N_CAL") balterm<-"Calorie intake\n[Mcal yr-1]"
       if(curcols=="N_FAT") balterm<-"Fat intake\n[kg fat yr-1]"
       if(curcols=="N_PRO") balterm<-"Protein intake\n[kg proteins yr-1]"
       #cat("\n",perspective, balterm)
-      curlab<-balterm
-      curtit<-"Nutrient intake"
-      legtit<-"Food primary commodities"
+      plotdef$curlab<-balterm
+      plotdef$curtit<-"Nutrient intake"
+      plotdef$legtit<-"Food primary commodities"
     }
   }else if(curequal>0){
+    #cat("\nCrop yield")
     #This happens only for yield
     perspective<-'act'
-    curlab<-"Crop yield \n[kg ha-1 yr-1]"
-    curtit<-"Crop yield"
-    legtit<-"CROPS"
+    plotdef$curlab<-expression("Crop yield [kg ha"^-1 ~ "yr"^-1 ~ "]")
+    plotdef$curtit<-"Crop yield"
+    plotdef$legtit<-"CROPS"
   }
   
   # Check regional level

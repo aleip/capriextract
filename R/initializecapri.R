@@ -443,8 +443,8 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   s$mcactnohighyild <- setdiff(s$mcact, c("NURS", "FLOW", "TOMA"))
   s$cropo <- c(s$fco, s$ico)
   s$oseco <- c(s$fco, s$ico, s$animo, s$seco)
-  s$mbal <- c("GROF", "HCOM", "FEDM", "IMPT", "EXPT")
-  
+  s$mbal <- c("GROF", "HCOM", "FEDM", "IMPT", "EXPT", "INDM", "PRCM")
+  s$nbalsoil <- c("SURSOI", "SURTOT", "MINFER", "MANAPP", "MANGRA", "BIOFIX", "ATMOSD", "CRESID")
   
   s$nuts2 <- substr(s$srnuts2,1,4)
   s$regi  <- c(s$nuts0, s$srnuts2)

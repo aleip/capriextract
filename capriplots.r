@@ -76,16 +76,19 @@ plotboxes <- function(x = capri, emb = 'unique', plotdef=plotdef){
   uniquex <- unique(x[ , .SD, .SDcols=plotdef$onx])
   uniquey <- unique(x[ , .SD, .SDcols=plotdef$ony])
   uniquez <- unique(x[ , .SD, .SDcols=plotdef$onz])
-  cat("\n uniquex", plotdef$onx, "\n"); print(uniquex)
-  cat("\n uniquey", plotdef$ony, "\n"); print(uniquey)
-  cat("\n uniquez", plotdef$onz, "\n"); print(uniquez)
-  if( length(uniquez) == 1 ) { 
-    plotdef[ ,'curpanel'] <- uniquez}else{
-      plotdef[ ,'curpanel'] <- uniquex  }
+  #cat("\n uniquex", plotdef$onx, "\n"); print(uniquex)
+  #cat("\n uniquey", plotdef$ony, "\n"); print(uniquey)
+  #cat("\n uniquez", plotdef$onz, "\n"); print(uniquez)
+  #if( length(uniquez) == 1 ) { 
+  #  plotdef[ ,'curpanel'] <- uniquez}else{
+  #    plotdef[ ,'curpanel'] <- uniquex  }
+  plotdef[, 'curpanel'] <- plotdef$Plotname
   plotdef<-checkinfo(x, plotdef)
   a<-ggplot(x, aes_string(x="cols", y="value")) 
   a<- a + geom_boxplot(aes_string(fill="cols"))
-  a<- a + filltheme(a)
+  a <- a + xlab("Crops") + ggtitle(plotdef$curtit)
+  a <- a + ylab(plotdef$curlab)
+  a <- a + filltheme(a)
   if(plotdef$Plotname%in%c("cropyild", "scropyild")){
     a<-a+guides(fill=FALSE)
   }else{
@@ -166,6 +169,14 @@ exportdata <- function(x = NULL, refdesc = 'ref'){
     xextra <- xrows
     xcomm <- xcols
     xset <- plotdef$cols
+  }else if(plotdef$arr == 'crw') {
+    if(plotdef$Plotname == 'cropyild') { 
+      xextra <- "YILD"
+    }else{
+      xextra <- xrows
+    }
+    xcomm <- xcols
+    xset <- plotdef$cols
   }else{
     stop(paste0("Not defined for plotdef$arr = ", plotdef$arr))
   }
@@ -176,23 +187,25 @@ exportdata <- function(x = NULL, refdesc = 'ref'){
   ## Check reference scenario
   existref <- refdesc %in% unique(x$scen)
   
+  scenshort <- unique(x$scen)
   if(!existref) {
     refdesc <- scenshort[1]
   }
   #cat("\n",as.character(scenshort[1]), "\n")
   xy <- x[scen == refdesc, scen:='ref'] 
-  scenshort <- unique(x$scen)
-  scenshort <- scenshort[scenshort != 'ref']
+  scenshort <- scenshort[scenshort != refdesc]
   cat("existref=", existref, refdesc)
-  View(xy)
+  #View(xy)
   #cat("\nscenshort=\n", paste(as.character(scenshort), collapse="\n"))
   
   for(c in 1:length(xextra)){
     
     curcol <- xextra[c]
+    
     anames <- paste0("A", c(1:length(scenshort)))
     if(plotdef$arr == 'rwc') z <- dcast.data.table(xy[cols==curcol], rall + empty + cols + rows + y ~ scen, value.var = "value")
     if(plotdef$arr == 'rcw') z <- dcast.data.table(xy[rows==curcol], rall + empty + cols + rows + y ~ scen, value.var = "value")
+    if(curcol == 'YILD') z <- dcast.data.table(xy, rall + empty + cols + y ~ scen, value.var="value")
     #cat("\nNames of z:\n", paste(as.character(names(z)), collapse="\n"))
     setnames(z, scenshort, anames)
     z <- z[, as.vector(anames) := .SD / ref, .SDcols = anames]
@@ -200,6 +213,7 @@ exportdata <- function(x = NULL, refdesc = 'ref'){
     z1 <- melt.data.table(z, measure.vars = c('ref', anames), variable.name = "scen", value.name = "value")
     if(plotdef$arr == 'rwc') z2 <- dcast.data.table(z1, rall + empty + cols + y ~ rows + scen, value.var = "value") 
     if(plotdef$arr == 'rcw') z2 <- dcast.data.table(z1, rall + empty + rows + y ~ cols + scen, value.var = "value") 
+    if(curcol == 'YILD') z2 <- dcast.data.table(z1, rall + empty + cols + y ~ scen, value.var="value")
     
     if(! grepl("//$", datapath)) datapath <- paste0(datapath, "/")
     con <- file(paste0(datapath, substr(commonname,1,10), "_", xcomm, "-",curcol, flag, plotdef$Plotname, ".csv"), open = "wt")
@@ -249,8 +263,8 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
   # Include required functions
   source("capriplotcolors.r")
   source("capriplottexts.r")
-  require(xlsx)
-  require(ggplot2)
+  #xlsok <- require(xlsx, quietly=TRUE)
+  require(ggplot2, quietly=TRUE)
   require(ggpubr)
 
   # Read plot characteristics
@@ -316,7 +330,9 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
     }
     x<-x[rows %in% as.character(plotdefrows)]
   }
-  save(x, file=paste0(datapath, 'test.rdata'))
+  # In case that the selection of plotdefrows restricts what is available for plotdefcols
+  plotdefcols <- unique(x$cols)
+  save(x, file=paste0(datapath, 'test2.rdata'))
   
   ### Check arrangement of plots
   ### The third character in 'arr' determines the variable that changes with the plots
@@ -354,7 +370,7 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
       width = w, 
       height = w *plotdef[,'hwratio']
   )
-  save(list=objects(), file=paste0(datapath, 'test.rdata'))
+  save(list=objects(), file=paste0(datapath, 'test3.rdata'))
   if(ddebug==1) cat("numscen=", numscen, scendesc)
   if (numscen > 0){
     # Adjust scales
@@ -368,8 +384,9 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
   }
   
   ####### temporary because Java does not work ###### 
-  omitplots <- 0
-  if (omitplots !=1 ) colbar<-setcolors(x, plotdef$ony)
+  #omitplots <- xlsok
+  #if (! omitplots) 
+  colbar<-setcolors(x, plotdef$ony)
   
   #colbar[1] is the function
   #colbar[2] is the vector with colors to be passed as arguments to the function
@@ -411,6 +428,7 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
     if(is.na(nrow)) nrow<-ceiling(j/ncol)
     if(ddebug==1) cat("\n j=",j," ncol=",ncol," nrow=",nrow)
     
+    cat("\nLength of p=", length(p))
     if(omitplots!=1){
       fig<-ggarrange(plotlist=p, 
                      common.legend=TRUE, 
@@ -439,6 +457,7 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
     if(ddebug==1) cat("\nPrint ", scendesc[scens])
   }
   dev.off()
+  cat("\nLength of p=", length(p))
   
   ## Give 'x' back to global environment for further checks
   lastdataplotted <<- x
