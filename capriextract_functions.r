@@ -1,4 +1,18 @@
 
+checkflparts<-function(i, x){
+  #cat("\n", flparts[[x]][i], "=", flparts[[1]][i])
+  if(i > length(flparts[[x]])){
+    xok <- FALSE
+  }else if(i > length(flparts[[1]])){
+    xok <- FALSE
+  }else{
+    xok <- flparts[[1]][i]==flparts[[x]][i]
+  }
+  if(x == nref) xok <- TRUE
+  #cat("\n", x, i, xok)
+  return(xok)
+  
+}
 
 getfilesfromfolder<-function(curfol = datapath, pattern='res.*.gdx$', flag = "", reference=NULL){
   
@@ -22,61 +36,13 @@ getfilesfromfolder<-function(curfol = datapath, pattern='res.*.gdx$', flag = "",
   flsn <- gsub("globiom_eu_2018\\+REFERENCE\\+REFERENCE", "globiomeu2018", flsn)
   
   
-  nfls <- length(flsn)
-  if(! is.null(reference)) {nref <- which(flsn == reference)}else{nref<-nfls+1}
-  flparts <- strsplit(flsn, "_")
-  
-  flsnparts <- Reduce(max, lapply(flparts, length))
-  
-  checkflparts<-function(i, x){
-    if(i > length(flparts[[x]])){
-      xok <- FALSE
-    }else{
-      xok <- flparts[[1]][i]==flparts[[x]][i]
-    }
-    if(x == nref) xok <- TRUE
-    #cat("\n", x, i, flparts[[x]][i], xok)
-    return(xok)
-    
-  }
-  
-  ok<-1; i<-1; ndiff<-0; diffflt <- list(); scenshort<-vector(); 
-  commonpart<-vector(); ncomm<-0
-  #cat("\n ", flsnparts)
-  for (i in 1:flsnparts){
-    
-    #cat(" ", i)
-    ok <- Reduce(prod, lapply(1:nfls, function(x) checkflparts(i, x)))
-    if(ok==0){
-      
-      ndiff<-ndiff+1
-      for(j in 1:nfls){ 
-        scenshort[j] <- flparts[[j]][i]
-        if(is.na(flparts[[j]][i])) scenshort[j]<-0
-      }
-      diffflt[[ndiff]] <- scenshort
-      
-      
-    }else{
-      ncomm <- ncomm+1
-      commonpart[ncomm] <- flparts[[1]][i]
-    }
-  }
-  for(j in 1:nfls){
-    scenshort[j] <- Reduce(paste0, lapply(1:ndiff, function(x) diffflt[[x]][j]))
-    if(scenshort[j] == paste(rep("0", ndiff), collapse="")) { scenshort[j] <- 'ref'}
-  }
-  
-  scenshort <- gsub("\\.gdx","",scenshort)
-  scenshort <<- scenshort
-  commonname <- gsub("\\.gdx","",paste(commonpart, collapse="_"))
-  commonname <<- commonname
   return(fls)
 }
 
 ExtractShortCommonName <- function(fls, reference = NULL){
   
-  flsn <- gsub("globiom_eu_2018\\+REFERENCE\\+REFERENCE", "globiomeu2018", fls)
+  flsn <- basename(fls)
+  flsn <- gsub("globiom_eu_2018\\+REFERENCE\\+REFERENCE", "globiomeu2018", flsn)
   
   
   nfls <- length(flsn)
@@ -84,18 +50,6 @@ ExtractShortCommonName <- function(fls, reference = NULL){
   flparts <- strsplit(flsn, "_")
   
   flsnparts <- Reduce(max, lapply(flparts, length))
-  
-  checkflparts<-function(i, x){
-    if(i > length(flparts[[x]])){
-      xok <- FALSE
-    }else{
-      xok <- flparts[[1]][i]==flparts[[x]][i]
-    }
-    if(x == nref) xok <- TRUE
-    #cat("\n", x, i, flparts[[x]][i], xok)
-    return(xok)
-    
-  }
   
   ok<-1; i<-1; ndiff<-0; diffflt <- list(); scenshort<-vector(); 
   commonpart<-vector(); ncomm<-0
@@ -210,12 +164,14 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
   # iter_chgtable <- dcast.data.table(iter_chgtable, RALL + SCEN + ROWS ~ STEP, value.var="stepOutput")
   # iter_chgmax <- dcast.data.table(iter_chgmax, RALL + SCEN ~ STEP, value.var="stepOutput")
   # iter_chgmxmx <- dcast.data.table(iter_chgmxmx, SCEN + RALL ~ STEP, value.var="stepOutput")
-  iter_chgtable <- dcast.data.table(iter_chgtable, STEP + RALL + SCEN ~ ROWS, value.var="stepOutput")
-  iter_chgmax <- dcast.data.table(iter_chgmax, STEP + SCEN ~ RALL, value.var="stepOutput")
-  iter_chgmxmx <- dcast.data.table(iter_chgmxmx, STEP + RALL ~ SCEN, value.var="stepOutput")
-  iter_chgmxmxtot <- iter_chgmxmx[RALL == "TOT"]
+  if(length(iter_chgtable)>0){
+    iter_chgtable <- dcast.data.table(iter_chgtable, STEP + RALL + SCEN ~ ROWS, value.var="stepOutput")
+    iter_chgmax <- dcast.data.table(iter_chgmax, STEP + SCEN ~ RALL, value.var="stepOutput")
+    iter_chgmxmx <- dcast.data.table(iter_chgmxmx, STEP + RALL ~ SCEN, value.var="stepOutput")
+    iter_chgmxmxtot <- iter_chgmxmx[RALL == "TOT"]
+  }
   
-  
+  View(iter_chgmxmxtot)
   
   # 
   commonname <- paste0(conpath, commonname)
@@ -519,7 +475,7 @@ filtermultiple<-function(scope,
   info <<- fdat
   caprid <<- capridat
 
-    if(! is.null(resultfile)) {
+  if(! is.null(resultfile)) {
     cat("\nSave to ", resultfile)
     save(caprid, info, file=paste0(resultfile, ".rdata"))
   }

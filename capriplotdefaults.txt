@@ -24,13 +24,15 @@ Plotname         arr   hwratio   nrow  ncol  title                rall        co
 # mbalbycountry        plots marketbalance elements for all EU countries and all crops on one page
 mbal             rwc   0.6       NA    2     'Crop quantities'    nuts0       mbal                  oseco              bar          v
 mbaldiff         rwc   0.6       NA    2     'Crop quantities'    nuts0       mbal                  oseco              bardiff      v
-ncal             rwc   0.6       NA    2     'Macro nutrients'    nuts0       ncnc_pos              oseco              bar          v
+ncal             rwc   0.6       NA    2     'Macro nutrients'    nuts0       ncnc_pos              xx                 bar          v
 ncalinha         rcw   0.6       NA    2     'Macro nutrients'    nuts0       INHA,                 ncnc_pos           bar          v
+*cpri             rcw   0.6       NA    1     'Consumer Prices'    nuts0_eu15  CPRI,                 xx                 bar          v
 #
 croplevl         rcw   0.6       NA    1     'Crop areas'         nuts0       mcact                 LEVL,              bar          v
 gwpt             rcw   0.6       NA    1     'GHG emissions'      nuts0       mpact                 GWPT,              bar          v
 *nbil             rwc   0.6       NA    1     'N flows'            nuts0       nbil                  Impact,            bar          v
-nbil             rwc   0.6       NA    2     'N flows'            nuts0       nbalsoil              Impact,            bar          v
+nbil             rwc   0.6       NA    2     'N flows'            nuts0       nbalsoil              ImpactHa,          bar          v
 #
 cropyild         crw   0.6       NA    1     'Crop Yields'        nuts0_eu15  mcactnohighyild       mcactnohighyild    box          v
+cpri             crw   0.6       NA    1     'Consumer Prices'    nuts0_eu15  CPRI,                 xx                 omit         v
 scropyild        crw   0.6       NA    1     'Crop Yields'        nuts0_eu15  mcactnohighyild       SWHE,              box          v

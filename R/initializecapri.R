@@ -311,7 +311,7 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   
   sets2get.name <- c(sets2get.name, "Aggregated aninam production activities")
   sets2get.eles <- c(sets2get.eles, "daact")
-  
+
   #lapmactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact")
   #lapmact_fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact_fssact")
   #feed_rowsexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FEED_ROWS")
@@ -359,6 +359,9 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   
   sets2get.name <- c(sets2get.name, "Nutrients in food")
   sets2get.eles <- c(sets2get.eles, "NCNC_POS")
+  
+  sets2get.name <- c(sets2get.name, "Products in the market model")
+  sets2get.eles <- c(sets2get.eles, "xx")
   
   
   

@@ -43,15 +43,7 @@ checkinfo<-function(x, plotdef=plotdef){
       plotdef$curtit<-"Nutrient intake"
       plotdef$legtit<-"Food primary commodities"
     }
-  }else if(curequal>0){
-    #cat("\nCrop yield")
-    #This happens only for yield
-    perspective<-'act'
-    plotdef$curlab<-expression("Crop yield [kg ha"^-1 ~ "yr"^-1 ~ "]")
-    plotdef$curtit<-"Crop yield"
-    plotdef$legtit<-"CROPS"
-  }
-  
+  }  
   # Check regional level
   curregs<-as.character(unique(x$rall))
   nregs<-length(curregs)
@@ -67,13 +59,23 @@ checkinfo<-function(x, plotdef=plotdef){
   if(plotdef$Plotname %in% c('ncalinha')) plotdef$perspective<-'nutrition'
   if(plotdef$Plotname %in% c('ncalinha')) plotdef$curtit<-'Nutrient intake per Inhabitant'
   if(plotdef$Plotname %in% c('ncalinha')) plotdef$legtit<-'Food'
-
-  if(plotdef$curpanel%in%c("GROF", "FEDM", "HCOM", "IMPT", "EXPT", "INHA")){
+  if(plotdef$Plotname %in% c('cpri')) plotdef$perspective<-'prices'
+  if(plotdef$Plotname %in% c('cpri')) plotdef$curtit<-'Consumer prices'
+  if(plotdef$Plotname %in% c('cpri')) plotdef$legtit<-'Food'
+  if(plotdef$Plotname %in% c('cpri')) plotdef$curlab<-expression("Prices [?? t"^-1 ~ "]")
+  if(plotdef$Plotname %in% c('cropyild')) plotdef$perspective<-'act'
+  if(plotdef$Plotname %in% c('cropyild')) plotdef$curlab<-expression("Crop yield [kg ha"^-1 ~ "yr"^-1 ~ "]")
+  if(plotdef$Plotname %in% c('cropyild')) plotdef$curtit<-"Crop yield"
+  if(plotdef$Plotname %in% c('cropyild')) plotdef$legtit<-"CROPS"
+  
+  if(plotdef$curpanel%in%c("GROF", "FEDM", "HCOM", "IMPT", "EXPT", "INDM", "PRCM", "INHA")){
     if(plotdef$curpanel=="GROF") balterm<-"Gross production"
     if(plotdef$curpanel=="IMPT") balterm<-"Import"
     if(plotdef$curpanel=="EXPT") balterm<-"Export"
     if(plotdef$curpanel=="FEDM") balterm<-"Feed use"
     if(plotdef$curpanel=="HCOM") balterm<-"Human consumption"
+    if(plotdef$curpanel=="INDM") balterm<-"Use in industry"
+    if(plotdef$curpanel=="PRCM") balterm<-"Processing for secondary products"
     if(plotdef$curpanel=="INHA") balterm<-"Human consumption per capita"
     #cat("\n",perspective, balterm)
     if(sum(! currows %in% s$mcact) == 0 ){

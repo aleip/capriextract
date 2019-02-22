@@ -8,9 +8,20 @@
 #' @param batchdir idem
 #' @param logf idem
 
+loadmultipleglobal <- function(savepath = NULL,
+                               dp = cenv$resdir,
+                               batchf = paste0(cenv$resdir, "/../batchout"),
+                               pattern = NULL,
+                               batchdir = NULL,
+                               logf = NULL){
+  fls <- list.files(paste0(cenv$resdir, "/../batchout"), pattern = pattern)
+  for(f in fls){a<-f; x <- loadglobalsfrombatch(batchdir=a)}
+  
+}
+
 loadglobalsfrombatch <- function(savepath = NULL,
-                                 dp = datapath,
-                                 bathpath = NULL,
+                                 dp = cenv$resdir,
+                                 batchf = paste0(cenv$resdir, "/../batchout"),
                                  batchdir = NULL,
                                  logf = NULL){
   
@@ -24,12 +35,6 @@ loadglobalsfrombatch <- function(savepath = NULL,
     # Retrieve fortran.gms from the batch output
     # Missing information: name of file
     
-    # Default batchdir location
-    if(is.null(bathpath)){
-      batchf <- paste0(dp, "../batchout")
-    }else{
-      batchf <- bathpath
-    }
     cat("\n batchf=", batchf, "\n", dp, "\n", datapath)
     if(is.null(batchdir)) {
       batchdirs <- file.info(list.files(batchf, full.names=TRUE))
@@ -96,10 +101,16 @@ loadglobalsfrombatch <- function(savepath = NULL,
   setglobals <- setglobals[,c("n", curn), with=FALSE]
   #for (i in 2:4){
   for (i in 2:length(fortran)){
-    cat("\n - ", i)
+    #cat("\n - ", i)
     setglobals <- merge(setglobals, setglob[[i]], by = "V1")
     setnames(setglobals, colnames(setglobals), c("V1", "n", paste0("r", seq(1:i))))
-    setglobals[get(paste0("r", i))==r1, paste0("r", i)] <- ""
+    
+    # In case it is easier to have blanks where the same value is as in the first column
+    # set keepsameasfirstempty to 1
+    keepsameasfirstempty <- 0
+    if(keepsameasfirstempty==1){
+      setglobals[get(paste0("r", i))==r1, paste0("r", i)] <- ""
+    }
     
   }
   setglobals<-setglobals[order(setglobals$n)]
@@ -110,10 +121,13 @@ loadglobalsfrombatch <- function(savepath = NULL,
   newnames <- c("setglobal", "n", paste0("r", rt))
   setnames(setglobals, colnames(setglobals), newnames)
   setglobals <- setglobals[, c("setglobal", "n", ort), with=FALSE]
-  View(setglobals)
-  cat("\nWrite file ", paste0(savepath, "/", tt, "globals.csv"))
+  #View(setglobals)
+  #cat("\nWrite file ", paste0(savepath, "/", tt, "globals.csv"))
   write.csv(setglobals, file=paste0(savepath, "/", tt, "globals.csv"))
-  if(xlsok) write.xlsx(setglobals, file = paste0(savepath, "/", tt, "global_test.xlsx"), sheetName = "setglobals", col.names=TRUE, row.names=FALSE)
+  if(xlsok) write.xlsx(setglobals, file = paste0(savepath, "/", tt, "global.xlsx"), sheetName = "setglobals", col.names=TRUE, row.names=FALSE)
+  cat("\n", paste0(batchdir, "/batch.html"))
+  cat("\n", paste0(savepath, "/", tt, "batchout.html"))
+  file.copy(paste0(batchdir, "/batch.html"), paste0(savepath, "/", tt, "batchout.html"))
   return(setglobals)
 }
 

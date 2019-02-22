@@ -89,7 +89,7 @@ plotboxes <- function(x = capri, emb = 'unique', plotdef=plotdef){
   a <- a + xlab("Crops") + ggtitle(plotdef$curtit)
   a <- a + ylab(plotdef$curlab)
   a <- a + filltheme(a)
-  if(plotdef$Plotname%in%c("cropyild", "scropyild")){
+  if(plotdef$Plotname%in%c("cropyild", "scropyild", "cpri")){
     a<-a+guides(fill=FALSE)
   }else{
     a<- a + fillscale(a, emb)
@@ -359,18 +359,21 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
   #nplots<-5;ncol<-1
   if(ddebug==1) print(gsub(".gdx","",info$filename))
   pdfname <- datapath
-  pdfname <- paste0(pdfname, gsub(".gdx","",substr(info$filename,1,20)))
+  pdfname <- paste0(pdfname, gsub("SSP[1-5]", "SSPs", gsub(".gdx","",substr(info$filename[1],1,20))))
   pdfname <- paste0(pdfname, plotname,"_")
   scenname <- paste(scendesc, collapse="-")
   if(nchar(scenname)>20){scenname <- paste0(numscen, "scens")}  
   pdfname <- paste0(pdfname, scenname)
   pdfname <- paste0(pdfname, ".pdf")
+  rname <- gsub("pdf", "rdata", pdfname)
   pdf(file = pdfname, 
       onefile = TRUE,
       width = w, 
       height = w *plotdef[,'hwratio']
   )
   save(list=objects(), file=paste0(datapath, 'test3.rdata'))
+  cat("\n", pdfname)
+  cat("\n", rname)
   if(ddebug==1) cat("numscen=", numscen, scendesc)
   if (numscen > 0){
     # Adjust scales
@@ -384,7 +387,14 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
   }
   
   ####### temporary because Java does not work ###### 
-  #omitplots <- xlsok
+  omitplots <- FALSE
+  if(plotdef[,'t2plot']=='omit') omitplots <- TRUE
+  if(omitplots){
+    xdcast <- dcast.data.table(x, rall + y + scen ~ cols + rows, value.var="value")
+    write.csv(xdcast, file = gsub("rdata", "csv", rname))
+  }
+  save(x, xdcast, file=rname)
+  
   #if (! omitplots) 
   colbar<-setcolors(x, plotdef$ony)
   
@@ -400,7 +410,7 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
     if("scen" %in% names(x)) xscen<-x[scen==scendesc[scens]]
     
     p<-list()
-    if(ddebug==1) if(length(v2plot)==0) cat("\n No plots to do: ", v2plot)
+    if(ddebug==1) if(length(v2plot)==0) cat("\n No plots to do: ", as.character(v2plot))
     cat("\nScen", scens, "/", numscen, " for ",plotname, ". Plots to do: ", v2plot)
     
     j<-1
