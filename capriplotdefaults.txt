@@ -23,6 +23,8 @@ Plotname         arr   hwratio   nrow  ncol  title                rall        co
 #
 # mbalbycountry        plots marketbalance elements for all EU countries and all crops on one page
 mbal             rwc   0.6       NA    2     'Crop quantities'    nuts0       mbal                  oseco              bar          v
+hcom             rwc   0.6       NA    2     'Crop quantities'    nuts0       HCOM,                 oseco              bar          v
+indm             rwc   0.6       NA    2     'Crop quantities'    nuts0       INDM,                 oseco              bar          v
 mbaldiff         rwc   0.6       NA    2     'Crop quantities'    nuts0       mbal                  oseco              bardiff      v
 ncal             rwc   0.6       NA    2     'Macro nutrients'    nuts0       ncnc_pos              xx                 bar          v
 ncalinha         rcw   0.6       NA    2     'Macro nutrients'    nuts0       INHA,                 ncnc_pos           bar          v
@@ -30,8 +32,9 @@ ncalinha         rcw   0.6       NA    2     'Macro nutrients'    nuts0       IN
 #
 croplevl         rcw   0.6       NA    1     'Crop areas'         nuts0       mcact                 LEVL,              bar          v
 gwpt             rcw   0.6       NA    1     'GHG emissions'      nuts0       mpact                 GWPT,              bar          v
-*nbil             rwc   0.6       NA    1     'N flows'            nuts0       nbil                  Impact,            bar          v
-nbil             rwc   0.6       NA    2     'N flows'            nuts0       nbalsoil              ImpactHa,          bar          v
+impactgwp        rwc   0.6       NA    1     'N flows'            nuts0       ImpactGwp,            ALL                bar          v
+nbil             rwc   0.6       NA    1     'N flows'            nuts0       nbil                  ImpactHa,          bar          v
+nbalsoil         rwc   0.6       NA    2     'N flows'            nuts0       nbalsoil              ImpactHa,          bar          v
 #
 cropyild         crw   0.6       NA    1     'Crop Yields'        nuts0_eu15  mcactnohighyild       mcactnohighyild    box          v
 cpri             crw   0.6       NA    1     'Consumer Prices'    nuts0_eu15  CPRI,                 xx                 omit         v

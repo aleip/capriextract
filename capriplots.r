@@ -31,6 +31,7 @@ plotbars <- function(x = capri, emb = 'unique',
                      , col_map       # named vector with color map (with crops)
 ){
   
+  if(!exists("datapath")) datapath <- cenv$resdir
   #print(plotdef$arr)
   #uniquex <- unique(x[ , .SD, .SDcols=plotdef$onx])
   uniquex <- as.vector(unique(x[[plotdef$onx]]))
@@ -140,7 +141,7 @@ fillscale <- function(a, emb, plotdef, colbar=NULL, colbar_args, col_map){
   return(t)
 }
 
-exportdata <- function(x = NULL, refdesc = 'ref'){
+exportdata <- function(x = NULL, refdesc = 'ref', flag=''){
   
   cat("\nExporting data ...")
   # refdesc: required if one certain run shall be used as the reference.
@@ -151,9 +152,10 @@ exportdata <- function(x = NULL, refdesc = 'ref'){
     message("Please provide a dataset to export.")
     invisible()
   }
-  if(! exists("commonname")){
-    commonname <- substr(info[[2]][1], 1, 20)
-  }
+  commonname <- ''
+  # if(! exists("commonname")){
+  #   commonname <- substr(info[[2]][1], 1, 20)
+  # }
   nscen <- ncol(x)
   nelem <-unlist(lapply(1:nscen, function(y) length(unlist(unique(x[, .SD, .SDcols=names(x)[y]])))))
   
@@ -188,45 +190,58 @@ exportdata <- function(x = NULL, refdesc = 'ref'){
   existref <- refdesc %in% unique(x$scen)
   
   scenshort <- unique(x$scen)
+  filenames  <- unique(x$run)
   if(!existref) {
     refdesc <- scenshort[1]
   }
   #cat("\n",as.character(scenshort[1]), "\n")
   xy <- x[scen == refdesc, scen:='ref'] 
+  xy <- xy[! duplicated(xy[,1:6])]
   scenshort <- scenshort[scenshort != refdesc]
   cat("existref=", existref, refdesc)
   #View(xy)
   #cat("\nscenshort=\n", paste(as.character(scenshort), collapse="\n"))
-  
+  save(x, xy, refdesc, scenshort, xcomm, file="xy.rdata")
   for(c in 1:length(xextra)){
     
     curcol <- xextra[c]
     
     anames <- paste0("A", c(1:length(scenshort)))
-    if(plotdef$arr == 'rwc') z <- dcast.data.table(xy[cols==curcol], rall + empty + cols + rows + y ~ scen, value.var = "value")
-    if(plotdef$arr == 'rcw') z <- dcast.data.table(xy[rows==curcol], rall + empty + cols + rows + y ~ scen, value.var = "value")
-    if(curcol == 'YILD') z <- dcast.data.table(xy, rall + empty + cols + y ~ scen, value.var="value")
-    #cat("\nNames of z:\n", paste(as.character(names(z)), collapse="\n"))
+    
+    #View(xy)
+    # Year included in scen
+    form1 <- formula("rall + cols + rows ~ scen")
+    form2rwc <- formula("rall + cols ~ rows + scen")
+    form2rcw <- formula("rall + rows ~ cols + scen")
+    form2yild <- formula("rall + cols ~ scen")
+    
+    if(plotdef$arr == 'rwc') z <- dcast.data.table(xy[cols==curcol], form1, value.var = "value", sum)
+    if(plotdef$arr == 'rcw') z <- dcast.data.table(xy[rows==curcol], form1, value.var = "value")
+    if(curcol == 'YILD') z <- dcast.data.table(xy, form1, value.var="value")
     setnames(z, scenshort, anames)
     z <- z[, as.vector(anames) := .SD / ref, .SDcols = anames]
     #cat("\n",paste(c(refdesc, "anames=", anames), collapse="\n"))
-    z1 <- melt.data.table(z, measure.vars = c('ref', anames), variable.name = "scen", value.name = "value")
-    if(plotdef$arr == 'rwc') z2 <- dcast.data.table(z1, rall + empty + cols + y ~ rows + scen, value.var = "value") 
-    if(plotdef$arr == 'rcw') z2 <- dcast.data.table(z1, rall + empty + rows + y ~ cols + scen, value.var = "value") 
-    if(curcol == 'YILD') z2 <- dcast.data.table(z1, rall + empty + cols + y ~ scen, value.var="value")
+    #View(z)
+    z1 <- melt.data.table(z, measure.vars = c('ref', anames), 
+                          variable.name = "scen", 
+                          value.name = "value")
+    if(plotdef$arr == 'rwc') z2 <- dcast.data.table(z1, form2rwc, value.var = "value") 
+    if(plotdef$arr == 'rcw') z2 <- dcast.data.table(z1, form2rcw, value.var = "value") 
+    if(curcol == 'YILD') z2 <- dcast.data.table(z1, form2yild, value.var="value")
     
-    if(! grepl("//$", datapath)) datapath <- paste0(datapath, "/")
-    con <- file(paste0(datapath, substr(commonname,1,10), "_", xcomm, "-",curcol, flag, plotdef$Plotname, ".csv"), open = "wt")
+    if(! grepl("//$", cenv$datapath)) datapath <- paste0(cenv$datapath, "/")
+    con <- file(paste0(datapath, flag, "SSPs", plotdef$Plotname, 
+                       substr(commonname,1,10), "_", xcomm, "-",curcol, ".csv"), open = "wt")
     cat("# ", file = con)
     cat("# Full name: ", commonname, file = con)
     cat("\n# cols = ", as.character(curcol), file = con)
     cat("\n# Data source:", file = con)
     
-    info$nrow <- "# "
+    #info$nrow <- "# "
     #write.csv(info, row.names = FALSE, quote = FALSE, file=con)
-    cat("\n# - ", paste(names(info), collapse = " - "), file = con)
-    for(i in 1:nrow(info)){
-      cat("\n", paste(info[i,], collapse = " - "), file = con)
+    #cat("\n# - ", paste(names(info), collapse = " - "), file = con)
+    for(i in 1:length(filenames)){
+      cat("\n", paste(scenshort[i], ": ", filenames[i], collapse = " - "), file = con)
     }
     
     cat("\n# ref = Reference scenario - absolute values", file = con)
@@ -258,7 +273,8 @@ calcstats<-function(x = capri, plotname){
   
 }
 
-setuppage <- function(x, plotname='', info=info, ddebug=0){
+setuppage <- function(x, plotname='', filen=NULL, ddebug=0,   
+                      omitplots = FALSE){
   
   # Include required functions
   source("capriplotcolors.r")
@@ -266,7 +282,7 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
   #xlsok <- require(xlsx, quietly=TRUE)
   require(ggplot2, quietly=TRUE)
   require(ggpubr)
-
+  
   # Read plot characteristics
   plotdef<-read.table("capriplotdefaults.txt", header = TRUE)
   #ddebug <<- ddebug
@@ -295,6 +311,7 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
   if(substr(plotdef$arr,3,3)=='w') plotdef$onz <- 'rows'
   
   ### Filter data - the sets are given under 'rall' (rall), 'acts' (cols), and 'prod' (rows) 
+  print(plotdef)
   plotdefrall<-plotdef[,'rall']
   if(! is.null(plotdefrall)){
     plotdefrall<-as.character(plotdefrall)
@@ -305,7 +322,7 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
     }
     x<-x[rall %in% plotdefrall]
   }
-  save(x, file=paste0(datapath, 'test0.rdata'))
+  save(x, plotdef, file=paste0(datapath, 'test0.rdata'))
   plotdefcols<-plotdef[,'cols']
   if(! is.na(plotdefcols)){
     plotdefcols<-as.character(plotdefcols)
@@ -313,13 +330,17 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
       plotdefcols <- s[[plotdefcols]]
     }else{
       plotdefcols <- toupper(strsplit(as.character(plotdefcols),",")[[1]])
+      x$cols <- toupper(x$cols)
     }
     if(ddebug==1) cat("\nplotdefcols=", plotdefcols, "\n")
     x<-x[cols %in% plotdefcols]
   }
   save(x, file=paste0(datapath, 'test1.rdata'))
   plotdefrows<-plotdef[,'rows']
-  if(! is.na(plotdefrows)){
+  cat("\n", plotdefrows)
+  if(plotdefrows=="ALL"){
+    plotdefrows <- as.character(unique(x[cols%in%plotdefcols]$rows))
+  }else if(! is.na(plotdefrows)){
     plotdefrows<-as.character(plotdefrows)
     #cat("\nFilter for ",plotdefrows," using ", grepl(",",plotdefrows))
     if(! grepl(",",plotdefrows)){
@@ -356,21 +377,6 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
   }
   w<-11.7
   w<-20
-  #nplots<-5;ncol<-1
-  if(ddebug==1) print(gsub(".gdx","",info$filename))
-  pdfname <- datapath
-  pdfname <- paste0(pdfname, gsub("SSP[1-5]", "SSPs", gsub(".gdx","",substr(info$filename[1],1,20))))
-  pdfname <- paste0(pdfname, plotname,"_")
-  scenname <- paste(scendesc, collapse="-")
-  if(nchar(scenname)>20){scenname <- paste0(numscen, "scens")}  
-  pdfname <- paste0(pdfname, scenname)
-  pdfname <- paste0(pdfname, ".pdf")
-  rname <- gsub("pdf", "rdata", pdfname)
-  pdf(file = pdfname, 
-      onefile = TRUE,
-      width = w, 
-      height = w *plotdef[,'hwratio']
-  )
   save(list=objects(), file=paste0(datapath, 'test3.rdata'))
   cat("\n", pdfname)
   cat("\n", rname)
@@ -387,12 +393,11 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
   }
   
   ####### temporary because Java does not work ###### 
-  omitplots <- FALSE
   if(plotdef[,'t2plot']=='omit') omitplots <- TRUE
-  if(omitplots){
-    xdcast <- dcast.data.table(x, rall + y + scen ~ cols + rows, value.var="value")
-    write.csv(xdcast, file = gsub("rdata", "csv", rname))
-  }
+  cat("\nNow make unique")
+  x <- x[! duplicated(x[,1:6])]
+  xdcast <- dcast.data.table(x, rall + y + scen ~ cols + rows, value.var="value")
+  write.csv(xdcast, file = gsub("rdata", "csv", rname))
   save(x, xdcast, file=rname)
   
   #if (! omitplots) 
@@ -401,77 +406,93 @@ setuppage <- function(x, plotname='', info=info, ddebug=0){
   #colbar[1] is the function
   #colbar[2] is the vector with colors to be passed as arguments to the function
   #colbar[3] is a named vector with color map (with crops)
-  
-  for(scens in 1:numscen){
-    plottit<-paste0(plotdef[,'title'])
-    if(ddebug==1) cat("\n", scens, scendesc)
-    if(scendesc[scens]!='')plottit<-paste0(plottit,": ",scendesc[scens], "\n")
-    xscen<-x
-    if("scen" %in% names(x)) xscen<-x[scen==scendesc[scens]]
-    
-    p<-list()
-    if(ddebug==1) if(length(v2plot)==0) cat("\n No plots to do: ", as.character(v2plot))
-    cat("\nScen", scens, "/", numscen, " for ",plotname, ". Plots to do: ", v2plot)
-    
-    j<-1
-    for (i in 1:nplots){
+  if(! omitplots){
+    #nplots<-5;ncol<-1
+    pdfname <- datapath
+    pdfname <- paste0(pdfname, filen, "SSPs", plotname,"_")
+    scenname <- paste(scendesc, collapse="-")
+    if(nchar(scenname)>20){scenname <- paste0(numscen, "scens")}  
+    pdfname <- paste0(pdfname, scenname)
+    pdfname <- paste0(pdfname, ".pdf")
+    rname <- gsub("pdf", "rdata", pdfname)
+    pdf(file = pdfname, 
+        onefile = TRUE,
+        width = w, 
+        height = w *plotdef[,'hwratio']
+    )
+    for(scens in 1:numscen){
+      plottit<-paste0(plotdef[,'title'])
+      if(ddebug==1) cat("\n", scens, scendesc)
+      if(scendesc[scens]!='')plottit<-paste0(plottit,": ",scendesc[scens], "\n")
+      xscen<-x
+      if("scen" %in% names(x)) xscen<-x[scen==scendesc[scens]]
       
-      # Select data
-      y<-xscen
-      plotdef$ymax <- ymax[i]
+      p<-list()
+      if(ddebug==1) if(length(v2plot)==0) cat("\n No plots to do: ", as.character(v2plot))
+      cat("\nScen", scens, "/", numscen, " for ",plotname, ". Plots to do: ", v2plot)
       
-      if(loopover=='c') y<-xscen[cols==v2plot[i]]
-      if(loopover=='w') y<-xscen[rows==v2plot[i]]
-      if(loopover=='r') y<-xscen[cols==v2plot[i]]
-      if(nrow(y)>0 & omitplots!=1){
-        #cat("\nPreparing plot ", i)
-        if(plotdef[,'t2plot']=='bar') {p[[j]]<-plotbars(y, emb='multiple', plotdef, colbar=colbar[1], colbar_args = colbar[2], col_map = colbar[3])}
-        if(plotdef[,'t2plot']=='box') {p[[j]]<-plotboxes(y, emb='multiple', plotdef)}
-        if(plotdef[,'t2plot']=='box') {p[[j+1]]<-calcstats(y); j<-j+1}
+      j<-1
+      for (i in 1:nplots){
+        
+        # Select data
+        y<-xscen
+        plotdef$ymax <- ymax[i]
+        
+        if(loopover=='c') y<-xscen[cols==v2plot[i]]
+        if(loopover=='w') y<-xscen[rows==v2plot[i]]
+        if(loopover=='r') y<-xscen[cols==v2plot[i]]
+        if(nrow(y)>0 & omitplots!=1){
+          #cat("\nPreparing plot ", i)
+          if(plotdef[,'t2plot']=='bar') {p[[j]]<-plotbars(y, emb='multiple', plotdef, colbar=colbar[1], colbar_args = colbar[2], col_map = colbar[3])}
+          if(plotdef[,'t2plot']=='box') {p[[j]]<-plotboxes(y, emb='multiple', plotdef)}
+          if(plotdef[,'t2plot']=='box') {p[[j+1]]<-calcstats(y); j<-j+1}
+        }
+        j <- j +1
       }
-      j <- j +1
+      j<-j-1
+      nrall<-length(unique(x$rall))
+      ncol<-plotdef[,'ncol']
+      nrow<-plotdef[,'nrow']
+      if(is.na(nrow)) nrow<-ceiling(j/ncol)
+      if(ddebug==1) cat("\n j=",j," ncol=",ncol," nrow=",nrow)
+      
+      cat("\nLength of p=", length(p))
+      if(omitplots!=1){
+        fig<-ggarrange(plotlist=p, 
+                       common.legend=TRUE, 
+                       #common.legend=FALSE, 
+                       legend='right',
+                       #labels = "AUTO",
+                       nrow = nrow, ncol = ncol, align = 'v'
+                       #widths = c(1,1)
+        )
+        figa<-annotate_figure(fig, 
+                              top=text_grob(plottit,
+                                            face='bold',
+                                            color='darkgrey',
+                                            size=20,
+                                            lineheight=2))
+        print(figa)
+      }
+      #ggsave(filename = paste0(v2plot,".pdf"), 
+      #   plot = figa, device="pdf", 
+      #        scale = 1, 
+      #        width = w, 
+      #        height = w * plotdef[,'hwratio'] * nplots / ncol
+      #        units = "cm",
+      #        dpi = 300
+      #        )
+      if(ddebug==1) cat("\nPrint ", scendesc[scens])
     }
-    j<-j-1
-    nrall<-length(unique(x$rall))
-    ncol<-plotdef[,'ncol']
-    nrow<-plotdef[,'nrow']
-    if(is.na(nrow)) nrow<-ceiling(j/ncol)
-    if(ddebug==1) cat("\n j=",j," ncol=",ncol," nrow=",nrow)
-    
-    cat("\nLength of p=", length(p))
-    if(omitplots!=1){
-      fig<-ggarrange(plotlist=p, 
-                     common.legend=TRUE, 
-                     #common.legend=FALSE, 
-                     legend='right',
-                     #labels = "AUTO",
-                     nrow = nrow, ncol = ncol, align = 'v'
-                     #widths = c(1,1)
-      )
-      figa<-annotate_figure(fig, 
-                            top=text_grob(plottit,
-                                          face='bold',
-                                          color='darkgrey',
-                                          size=20,
-                                          lineheight=2))
-      print(figa)
-    }
-    #ggsave(filename = paste0(v2plot,".pdf"), 
-    #   plot = figa, device="pdf", 
-    #        scale = 1, 
-    #        width = w, 
-    #        height = w * plotdef[,'hwratio'] * nplots / ncol
-    #        units = "cm",
-    #        dpi = 300
-    #        )
-    if(ddebug==1) cat("\nPrint ", scendesc[scens])
+    dev.off()
+  }else{
+    p <- x
   }
-  dev.off()
-  cat("\nLength of p=", length(p))
   
   ## Give 'x' back to global environment for further checks
   lastdataplotted <<- x
   plotdef <<- plotdef
+  exportdata(lastdataplotted, flag=filen)
   return(p)
 }
 

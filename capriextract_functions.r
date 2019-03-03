@@ -21,7 +21,6 @@ getfilesfromfolder<-function(curfol = datapath, pattern='res.*.gdx$', flag = "",
   
   # Unique (daily) identifier of results
   flag <- paste0(flag, format(Sys.time(), "%Y%m%d"))
-  flag <<- flag
   
   fls <- list.files(path=curfol, 
              pattern=pattern, 
