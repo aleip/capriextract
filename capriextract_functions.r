@@ -95,7 +95,11 @@ ExtractCommonName <- function(fls, reference = NULL){
 checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir, 
                              outpath=cenv$resout, commonname = NULL){
   
-
+  require(gdxrrw)
+  if(gdxrrw::igdx() == FALSE){
+    gdxrrw::igdx(cenv$gamsdir)
+  }
+  
   if(is.null(tpath)){
     message("Please indicate a folder used by CAPRI as 'scrdir'. ",
             "\nTried to get it from the CAPRI environment cenv$scrdir but found nothing.")
@@ -138,26 +142,28 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
     if(i == 1) iter_chgmax <- data.table()
     if(i == 1) iter_chgmxmx <- data.table()
     stepfile <- paste0(tpath, "/", flsn[i], "/stepOutput.gdx")
-    #file.copy(from=stepfile, to=paste0(datapath, "stepOutput", i, ".gdx"))
-    step<-rgdx.param(stepfile, "stepOutput")
-    step<-as.data.table(step)
-    setnames(step, paste0(".i", 1:5), c("RALL", "COLS", "ROWS", "Y", "STEP"))
-    
-    iter_chg <- step[COLS == 'iter_chg']
-    if(nrow(iter_chg)>0){
-      iter_chg$SCEN <- i
+    cat("\n", stepfile)
+    if(file.exists(stepfile)){
+      step<-rgdx.param(stepfile, "stepOutput")
+      step<-as.data.table(step)
+      setnames(step, paste0(".i", 1:5), c("RALL", "COLS", "ROWS", "Y", "STEP"))
       
-      # Keep only the maximum changes per country and step
-      iter1 <- iter_chg[, max:= max(.SD), .SDcols = "stepOutput", by = .(RALL, STEP)]
-      iter1 <- iter1[stepOutput == max]
-      iter_chgtable <- rbind(iter_chgtable, iter1)
-      
-      
-      iter2 <- iter_chg[ROWS == 'MAX']
-      iter2 <- iter2[,max:=max(.SD), .SDcols = "stepOutput", by = .(STEP)]
-      iter3 <- iter2[stepOutput == max]
-      iter_chgmax <- rbind(iter_chgmax, iter2)
-      iter_chgmxmx <- rbind(iter_chgmxmx, iter3)
+      iter_chg <- step[COLS == 'iter_chg']
+      if(nrow(iter_chg)>0){
+        iter_chg$SCEN <- i
+        
+        # Keep only the maximum changes per country and step
+        iter1 <- iter_chg[, max:= max(.SD), .SDcols = "stepOutput", by = .(RALL, STEP)]
+        iter1 <- iter1[stepOutput == max]
+        iter_chgtable <- rbind(iter_chgtable, iter1)
+        
+        
+        iter2 <- iter_chg[ROWS == 'MAX']
+        iter2 <- iter2[,max:=max(.SD), .SDcols = "stepOutput", by = .(STEP)]
+        iter3 <- iter2[stepOutput == max]
+        iter_chgmax <- rbind(iter_chgmax, iter2)
+        iter_chgmxmx <- rbind(iter_chgmxmx, iter3)
+      }
     }
   }
   # iter_chgtable <- dcast.data.table(iter_chgtable, RALL + SCEN + ROWS ~ STEP, value.var="stepOutput")
@@ -168,9 +174,9 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
     iter_chgmax <- dcast.data.table(iter_chgmax, STEP + SCEN ~ RALL, value.var="stepOutput")
     iter_chgmxmx <- dcast.data.table(iter_chgmxmx, STEP + RALL ~ SCEN, value.var="stepOutput")
     iter_chgmxmxtot <- iter_chgmxmx[RALL == "TOT"]
+    View(iter_chgmxmxtot, commonname)
   }
   
-  View(iter_chgmxmxtot)
   
   # 
   commonname <- paste0(conpath, commonname)
@@ -205,6 +211,130 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
   save(iter_chgtable, iter_chgmax, iter_chgmxmx, file=paste0(commonname, "_stepreport.rdata"))
   cat("\nSaved to ", conpath)
 }
+
+loadmultipleglobal <- function(savepath = NULL,
+                               dp = cenv$resdir,
+                               batchf = paste0(cenv$resdir, "/../batchout"),
+                               pattern = NULL,
+                               batchdir = NULL,
+                               logf = NULL){
+  fls <- list.files(paste0(cenv$resdir, "/../batchout"), pattern = pattern)
+  for(f in fls){a<-f; x <- loadglobalsfrombatch(batchdir=a)}
+  
+}
+
+loadglobalsfrombatch <- function(savepath = NULL,
+                                 dp = cenv$resdir,
+                                 batchf = paste0(cenv$resdir, "/../batchout"),
+                                 batchdir = NULL,
+                                 logf = NULL){
+  
+  # logf -> indicate logf if the settings are to be retrieve from a file that is written to %results_out%/log
+  #         in the special case that this is copied to google drive (AL) use flag 'google' for the dp
+  
+  
+  xlsok <- require(xlsx)
+  if(is.null(logf)){
+    
+    # Retrieve fortran.gms from the batch output
+    # Missing information: name of file
+    
+    cat("\n batchf=", batchf, "\n", dp, "\n", cenv$resdir)
+    if(is.null(batchdir)) {
+      batchdirs <- file.info(list.files(batchf, full.names=TRUE))
+      batchdirs <- batchdirs[with(batchdirs, order(as.POSIXct(ctime),decreasing=TRUE)), ]
+      batchdir <- rownames(batchdirs)[1]
+    }else{
+      batchdir <- paste0(batchf, "/", batchdir)
+    }
+    
+    cat(batchdir)
+    # Check fortra_X files
+    fortran <- list.files(batchdir, pattern = "fortra_[0-9]*.gms")
+  }else{
+    
+    # Retrieve fortran.gms from log-folder
+    batchdir <- paste0(dp, "/log/")
+    
+    # Specific setting (AL) - logfiles copied to google drive
+    if(dp=="google") batchdir <- paste0(google, "/projects/capri_runs/log/")
+    
+    cat(batchdir)
+    fortran <- list.files(batchdir, pattern = paste0(logf, ".*"))
+  }
+  
+  if(is.null(savepath)) {
+    savepath <- paste0(dp, "/log/")
+    if(dp=="google") savepath <- paste0(google, "/projects/capri_runs/log/")
+  }
+  
+  setglob <- lapply(1:length(fortran), function(x) {
+    #setglob <- lapply(1:3, function(x) {
+    
+    curf <- paste0(batchdir, "/", fortran[x])
+    cat("\n", curf)
+    con <- file(curf, open = "r")
+    setglobal <- readLines(con)
+    setglobal <- setglobal[grepl("setglobal|time and date", setglobal, ignore.case=TRUE)]
+    setglobal <- setglobal[! grepl("Rexe|Trollexe|gamsArg|procSpeed|JAVA|CMD|GAMSexe|gamsPath", setglobal)]
+    setglobal <- setglobal[! grepl("regcge_scenario|countries|result_type_underScores|lst2|fst[24]", setglobal)]
+    setglobal <- setglobal[! grepl("regLevel|initialLUfile_|tradeMatrixInputFileName_", setglobal)]
+    setglobal <- setglobal[! grepl("policy_blocks|modArmington|explicit_NTM|tagg_module|yani_m|REGCGE", setglobal)]
+    setglobal <- setglobal[! grepl("altLicense|NET_MIGR|FIX_BUDGET_FAC_SUBS|Supply|abMob|closure_|solpringSupply|limrow|limcol", setglobal)]
+    setglobal <- c(setglobal, paste0("$SETGLOBAL batchfolder ", batchdir))
+    setglobal <- gsub("\\*   Time and date   :", "$SETGLOBAL Time", setglobal)
+    
+    #only NOW
+    setglobal <- setglobal[! grepl("curCCscen", setglobal)]
+    
+    close(con)
+    
+    
+    
+    setx <- as.data.table(Reduce(rbind, lapply(1:length(setglobal), function(y) {
+      a <- strsplit(setglobal[y], " ")[[1]]
+      a <- c(a[2], paste(a[3:length(a)], collapse=" "))
+      return(a)
+      
+    })))
+  }
+  )
+  setglobals <- setglob[[1]]
+  curn <- names(setglobals)
+  setglobals$n <- 1:nrow(setglobals)
+  setglobals <- setglobals[,c("n", curn), with=FALSE]
+  #for (i in 2:4){
+  for (i in 2:length(fortran)){
+    #cat("\n - ", i)
+    setglobals <- merge(setglobals, setglob[[i]], by = "V1")
+    setnames(setglobals, colnames(setglobals), c("V1", "n", paste0("r", seq(1:i))))
+    
+    # In case it is easier to have blanks where the same value is as in the first column
+    # set keepsameasfirstempty to 1
+    keepsameasfirstempty <- 0
+    if(keepsameasfirstempty==1){
+      setglobals[get(paste0("r", i))==r1, paste0("r", i)] <- ""
+    }
+    
+  }
+  setglobals<-setglobals[order(setglobals$n)]
+  tt <- gsub(" ","_",gsub("-|:","",setglobals[V1=="Time",r1]))
+  rt <- setglobals[V1=="GamsStartNo", 3:ncol(setglobals)]
+  ort <- paste0("r", sort(as.numeric(rt)))
+  #print(ort)
+  newnames <- c("setglobal", "n", paste0("r", rt))
+  setnames(setglobals, colnames(setglobals), newnames)
+  setglobals <- setglobals[, c("setglobal", "n", ort), with=FALSE]
+  #View(setglobals)
+  #cat("\nWrite file ", paste0(savepath, "/", tt, "globals.csv"))
+  write.csv(setglobals, file=paste0(savepath, "/", tt, "globals.csv"))
+  if(xlsok) write.xlsx(setglobals, file = paste0(savepath, "/", tt, "global.xlsx"), sheetName = "setglobals", col.names=TRUE, row.names=FALSE)
+  cat("\n", paste0(batchdir, "/batch.html"))
+  cat("\n", paste0(savepath, "/", tt, "batchout.html"))
+  file.copy(paste0(batchdir, "/batch.html"), paste0(savepath, "/", tt, "batchout.html"))
+  return(setglobals)
+}
+
 
 
 opendata<-function(scope,

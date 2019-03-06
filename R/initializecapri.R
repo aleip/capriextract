@@ -274,7 +274,7 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   
   require(gdxrrw)
   if(gdxrrw::igdx() == FALSE){
-    gdxrrw::igdx(dirname(Sys.which('gams.exe')))
+    gdxrrw::igdx(cenv$gamsdir)
   }
   
   # Reset sets2retrieve

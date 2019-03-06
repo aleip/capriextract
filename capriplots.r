@@ -378,8 +378,6 @@ setuppage <- function(x, plotname='', filen=NULL, ddebug=0,
   w<-11.7
   w<-20
   save(list=objects(), file=paste0(datapath, 'test3.rdata'))
-  cat("\n", pdfname)
-  cat("\n", rname)
   if(ddebug==1) cat("numscen=", numscen, scendesc)
   if (numscen > 0){
     # Adjust scales
@@ -395,6 +393,15 @@ setuppage <- function(x, plotname='', filen=NULL, ddebug=0,
   ####### temporary because Java does not work ###### 
   if(plotdef[,'t2plot']=='omit') omitplots <- TRUE
   cat("\nNow make unique")
+  pdfname <- datapath
+  pdfname <- paste0(pdfname, filen, "SSPs", plotname,"_")
+  scenname <- paste(scendesc, collapse="-")
+  if(nchar(scenname)>20){scenname <- paste0(numscen, "scens")}  
+  pdfname <- paste0(pdfname, scenname)
+  pdfname <- paste0(pdfname, ".pdf")
+  rname <- gsub("pdf", "rdata", pdfname)
+  cat("\n", pdfname)
+  cat("\n", rname)
   x <- x[! duplicated(x[,1:6])]
   xdcast <- dcast.data.table(x, rall + y + scen ~ cols + rows, value.var="value")
   write.csv(xdcast, file = gsub("rdata", "csv", rname))
@@ -408,13 +415,6 @@ setuppage <- function(x, plotname='', filen=NULL, ddebug=0,
   #colbar[3] is a named vector with color map (with crops)
   if(! omitplots){
     #nplots<-5;ncol<-1
-    pdfname <- datapath
-    pdfname <- paste0(pdfname, filen, "SSPs", plotname,"_")
-    scenname <- paste(scendesc, collapse="-")
-    if(nchar(scenname)>20){scenname <- paste0(numscen, "scens")}  
-    pdfname <- paste0(pdfname, scenname)
-    pdfname <- paste0(pdfname, ".pdf")
-    rname <- gsub("pdf", "rdata", pdfname)
     pdf(file = pdfname, 
         onefile = TRUE,
         width = w, 
