@@ -1,5 +1,5 @@
 
-checkflparts<-function(i, x){
+checkflparts<-function(i, x, flparts, nref){
   #cat("\n", flparts[[x]][i], "=", flparts[[1]][i])
   if(i > length(flparts[[x]])){
     xok <- FALSE
@@ -56,7 +56,7 @@ ExtractShortCommonName <- function(fls, reference = NULL){
   for (i in 1:flsnparts){
     
     #cat(" ", i)
-    ok <- Reduce(prod, lapply(1:nfls, function(x) checkflparts(i, x)))
+    ok <- Reduce(prod, lapply(1:nfls, function(x) checkflparts(i, x, flparts, nref)))
     if(ok==0){
       
       ndiff<-ndiff+1
@@ -86,6 +86,7 @@ ExtractShortCommonName <- function(fls, reference = NULL){
 }
 ExtractShortName <- function(fls, reference = NULL){
   scenshort <- ExtractShortCommonName(fls, reference=NULL)[[1]]
+  return(scenshort)
 }
 ExtractCommonName <- function(fls, reference = NULL){
   scenshort <- ExtractShortCommonName(fls, reference=NULL)[[2]]
@@ -222,120 +223,6 @@ loadmultipleglobal <- function(savepath = NULL,
   for(f in fls){a<-f; x <- loadglobalsfrombatch(batchdir=a)}
   
 }
-
-loadglobalsfrombatch <- function(savepath = NULL,
-                                 dp = cenv$resdir,
-                                 batchf = paste0(cenv$resdir, "/../batchout"),
-                                 batchdir = NULL,
-                                 logf = NULL){
-  
-  # logf -> indicate logf if the settings are to be retrieve from a file that is written to %results_out%/log
-  #         in the special case that this is copied to google drive (AL) use flag 'google' for the dp
-  
-  
-  xlsok <- require(xlsx)
-  if(is.null(logf)){
-    
-    # Retrieve fortran.gms from the batch output
-    # Missing information: name of file
-    
-    cat("\n batchf=", batchf, "\n", dp, "\n", cenv$resdir)
-    if(is.null(batchdir)) {
-      batchdirs <- file.info(list.files(batchf, full.names=TRUE))
-      batchdirs <- batchdirs[with(batchdirs, order(as.POSIXct(ctime),decreasing=TRUE)), ]
-      batchdir <- rownames(batchdirs)[1]
-    }else{
-      batchdir <- paste0(batchf, "/", batchdir)
-    }
-    
-    cat(batchdir)
-    # Check fortra_X files
-    fortran <- list.files(batchdir, pattern = "fortra_[0-9]*.gms")
-  }else{
-    
-    # Retrieve fortran.gms from log-folder
-    batchdir <- paste0(dp, "/log/")
-    
-    # Specific setting (AL) - logfiles copied to google drive
-    if(dp=="google") batchdir <- paste0(google, "/projects/capri_runs/log/")
-    
-    cat(batchdir)
-    fortran <- list.files(batchdir, pattern = paste0(logf, ".*"))
-  }
-  
-  if(is.null(savepath)) {
-    savepath <- paste0(dp, "/log/")
-    if(dp=="google") savepath <- paste0(google, "/projects/capri_runs/log/")
-  }
-  
-  setglob <- lapply(1:length(fortran), function(x) {
-    #setglob <- lapply(1:3, function(x) {
-    
-    curf <- paste0(batchdir, "/", fortran[x])
-    cat("\n", curf)
-    con <- file(curf, open = "r")
-    setglobal <- readLines(con)
-    setglobal <- setglobal[grepl("setglobal|time and date", setglobal, ignore.case=TRUE)]
-    setglobal <- setglobal[! grepl("Rexe|Trollexe|gamsArg|procSpeed|JAVA|CMD|GAMSexe|gamsPath", setglobal)]
-    setglobal <- setglobal[! grepl("regcge_scenario|countries|result_type_underScores|lst2|fst[24]", setglobal)]
-    setglobal <- setglobal[! grepl("regLevel|initialLUfile_|tradeMatrixInputFileName_", setglobal)]
-    setglobal <- setglobal[! grepl("policy_blocks|modArmington|explicit_NTM|tagg_module|yani_m|REGCGE", setglobal)]
-    setglobal <- setglobal[! grepl("altLicense|NET_MIGR|FIX_BUDGET_FAC_SUBS|Supply|abMob|closure_|solpringSupply|limrow|limcol", setglobal)]
-    setglobal <- c(setglobal, paste0("$SETGLOBAL batchfolder ", batchdir))
-    setglobal <- gsub("\\*   Time and date   :", "$SETGLOBAL Time", setglobal)
-    
-    #only NOW
-    setglobal <- setglobal[! grepl("curCCscen", setglobal)]
-    
-    close(con)
-    
-    
-    
-    setx <- as.data.table(Reduce(rbind, lapply(1:length(setglobal), function(y) {
-      a <- strsplit(setglobal[y], " ")[[1]]
-      a <- c(a[2], paste(a[3:length(a)], collapse=" "))
-      return(a)
-      
-    })))
-  }
-  )
-  setglobals <- setglob[[1]]
-  curn <- names(setglobals)
-  setglobals$n <- 1:nrow(setglobals)
-  setglobals <- setglobals[,c("n", curn), with=FALSE]
-  #for (i in 2:4){
-  for (i in 2:length(fortran)){
-    #cat("\n - ", i)
-    setglobals <- merge(setglobals, setglob[[i]], by = "V1")
-    setnames(setglobals, colnames(setglobals), c("V1", "n", paste0("r", seq(1:i))))
-    
-    # In case it is easier to have blanks where the same value is as in the first column
-    # set keepsameasfirstempty to 1
-    keepsameasfirstempty <- 0
-    if(keepsameasfirstempty==1){
-      setglobals[get(paste0("r", i))==r1, paste0("r", i)] <- ""
-    }
-    
-  }
-  setglobals<-setglobals[order(setglobals$n)]
-  tt <- gsub(" ","_",gsub("-|:","",setglobals[V1=="Time",r1]))
-  rt <- setglobals[V1=="GamsStartNo", 3:ncol(setglobals)]
-  ort <- paste0("r", sort(as.numeric(rt)))
-  #print(ort)
-  newnames <- c("setglobal", "n", paste0("r", rt))
-  setnames(setglobals, colnames(setglobals), newnames)
-  setglobals <- setglobals[, c("setglobal", "n", ort), with=FALSE]
-  #View(setglobals)
-  #cat("\nWrite file ", paste0(savepath, "/", tt, "globals.csv"))
-  write.csv(setglobals, file=paste0(savepath, "/", tt, "globals.csv"))
-  if(xlsok) write.xlsx(setglobals, file = paste0(savepath, "/", tt, "global.xlsx"), sheetName = "setglobals", col.names=TRUE, row.names=FALSE)
-  cat("\n", paste0(batchdir, "/batch.html"))
-  cat("\n", paste0(savepath, "/", tt, "batchout.html"))
-  file.copy(paste0(batchdir, "/batch.html"), paste0(savepath, "/", tt, "batchout.html"))
-  return(setglobals)
-}
-
-
 
 opendata<-function(scope,
                    curcountry,
@@ -485,7 +372,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
     capridat<-capridat[[1]]
   }
   capridat<-as.data.table(capridat)
-  View(capridat)
+  #View(capridat)
   
   fattr$filterCOLS<-paste(cols, collapse="-")
   fattr$filterROWS<-paste(rows, collapse='-')
@@ -552,15 +439,22 @@ filtermultiple<-function(scope,
                          cols=curcols, rows=currows, ydim="Y", curdim5=NULL, regi, 
                          curcountries, curyears="08", baseyear='08', curscens='', curscensshort='',
                          resultfile=NULL){
-  cat("\n", length(curcountries), curcountries)
   nfiles<-length(curcountries)*length(curscens)*length(curyears)
+  cat("\n", length(curcountries), curcountries, length(curscens), length(curyears), nfiles)
+
+  # for(x in 1:max(1,length(curyears))){
+  #   for(y in max(1,1:length(curcountries))){
+  #     for(z in 1:max(1,length(curscens))){
+  #       cat("\n", x,curyears[x], y,curcountries[y], z,curscens[z])
+  #     }}}
+  # return()
   cdat<-list()
   #fdat<-data.frame(nrow=1)
   fdat<-data.frame(nrow=0)
   n<-0
-  for(x in 1:length(curyears)){
-    for(y in 1:length(curcountries)){
-      for(z in 1:length(curscens)){
+  for(x in 1:max(1,length(curyears))){
+    for(y in max(1,1:length(curcountries))){
+      for(z in 1:max(1,length(curscens))){
         n<-n+1
         capridat<- filteropen(scope, 
                                reload=1, 

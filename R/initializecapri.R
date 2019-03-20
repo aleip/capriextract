@@ -501,5 +501,6 @@ startextract<-function(scope){
   source("capriplotcolors.r")
   source("capriplottexts.r")
   source("capriplots.r")
+  source("loadglobalsfrombatch.r")
   
 }
