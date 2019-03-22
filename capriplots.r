@@ -141,7 +141,7 @@ fillscale <- function(a, emb, plotdef, colbar=NULL, colbar_args, col_map){
   return(t)
 }
 
-exportdata <- function(x = NULL, refdesc = 'ref', flag=''){
+exportdata <- function(x = NULL, refdesc = 'ref', datapath = NULL, flag=''){
   
   cat("\nExporting data ...")
   # refdesc: required if one certain run shall be used as the reference.
@@ -229,7 +229,9 @@ exportdata <- function(x = NULL, refdesc = 'ref', flag=''){
     if(plotdef$arr == 'rcw') z2 <- dcast.data.table(z1, form2rcw, value.var = "value") 
     if(curcol == 'YILD') z2 <- dcast.data.table(z1, form2yild, value.var="value")
     
-    if(! grepl("//$", cenv$datapath)) datapath <- paste0(cenv$datapath, "/")
+    if(is.null(datapath)){
+      if(! grepl("//$", cenv$datapath)) datapath <- paste0(cenv$datapath, "/")
+    }
     con <- file(paste0(datapath, flag, "SSPs", plotdef$Plotname, 
                        substr(commonname,1,10), "_", xcomm, "-",curcol, ".csv"), open = "wt")
     cat("# ", file = con)
@@ -273,7 +275,7 @@ calcstats<-function(x = capri, plotname){
   
 }
 
-setuppage <- function(x, plotname='', filen=NULL, ddebug=0,   
+setuppage <- function(x, plotname='', datapath=NULL, filen=NULL, ddebug=0,   
                       omitplots = FALSE){
   
   # Include required functions
@@ -286,7 +288,7 @@ setuppage <- function(x, plotname='', filen=NULL, ddebug=0,
   # Read plot characteristics
   plotdef<-read.table("capriplotdefaults.txt", header = TRUE)
   #ddebug <<- ddebug
-  datapath <- cenv$datapath
+  if(is.null(datapath)) datapath <- cenv$datapath
   if(is.null(datapath)) datapath <- cenv$resdir
   if(is.null(datapath)) datapath <- "."
   datapath <- paste0(datapath, "/")
@@ -309,6 +311,11 @@ setuppage <- function(x, plotname='', filen=NULL, ddebug=0,
   if(substr(plotdef$arr,3,3)=='r') plotdef$onz <- 'rall'
   if(substr(plotdef$arr,3,3)=='c') plotdef$onz <- 'cols'
   if(substr(plotdef$arr,3,3)=='w') plotdef$onz <- 'rows'
+  
+  if(! grepl("e", plotdef$arr)){
+    # Dimension 'empty' is not used
+    x <- x[empty == '']
+  }
   
   ### Filter data - the sets are given under 'rall' (rall), 'acts' (cols), and 'prod' (rows) 
   print(plotdef)
@@ -492,7 +499,7 @@ setuppage <- function(x, plotname='', filen=NULL, ddebug=0,
   ## Give 'x' back to global environment for further checks
   lastdataplotted <<- x
   plotdef <<- plotdef
-  exportdata(lastdataplotted, flag=filen)
+  exportdata(lastdataplotted, datapath=datapath, flag=filen)
   return(p)
 }
 

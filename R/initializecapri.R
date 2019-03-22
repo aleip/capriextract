@@ -78,6 +78,10 @@ InitCapriEnv <- function(capri.runfile = NULL,
   
   # Push updated c into the global environnment
   cenv <<- cenv
+  if(gdxrrw::igdx() == FALSE){
+    gdxrrw::igdx(cenv$gamsdir)
+  }
+  
   StoreCapriInit()
   invisible()
   
@@ -502,5 +506,6 @@ startextract<-function(scope){
   source("capriplottexts.r")
   source("capriplots.r")
   source("loadglobalsfrombatch.r")
+  source("openfiltermultiple.r")
   
 }
