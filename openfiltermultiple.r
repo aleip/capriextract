@@ -160,6 +160,8 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
       yrs <- unique(capridat$y)
       capridat$ssp <- ssp
       capridat$scen <- paste0(curscenshort, ssp, "_", yrs)
+    }else{
+      capridat$ssp <- ""
     }
     if(grepl("run", scope)){
       # If the keyword 'run' is given in the scope, then the files vary in a certain 
@@ -188,7 +190,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
       cat("\n", paste0(curscenshort, ssp, "_", yrs, "_", run))
     }
   }
-return(list(capridat, fattr))
+  return(list(capridat, fattr))
 }
 
 opendata<-function(scope,
@@ -325,5 +327,41 @@ opendata<-function(scope,
   }
   
   return(list(capridat,fattr))
+}
+
+
+selectcolelements <- function(reffilename = NULL,#if NULL use default file 
+                              reload = FALSE,    #if TRUE, reload even if file exists
+                              keepcols = NULL    #if NULL use default selection
+                              ){
+  # Obtain a capmod-result file that can be used to check dimensions
+  
+  if(is.null(reffilename)) {
+    reffilename <- "res_2_0830mtr_rd_ref_endManAvail"
+  }
+  reffil <- paste0(cenv$resdir, "/capmod/", reffilename, ".rdata")
+  if(reload | (! file.exists(reffil))){
+    #            ... in case capmode is already included in resin
+    filgdx <- paste0(gsub("\\/capmod\\/", "", cenv$resin), "/capmod/", reffilename, ".gdx")
+    dim5 <- c("rall", "empty", "cols", "rows", "y", "value")
+    reffile <- as.data.table(rgdx.param(filgdx, "dataOut", names=dim5))
+    save(reffile, file=reffil)
+  }else{
+    load(file=reffil)
+  }
+  capcols <- unique(reffile$cols)
+  
+  if(is.null(keepcols)){
+    keepcols <- c(s$mbal, "INDM", "HCON", "PROC", "IMPORTS", "EXPORTS", "INHA", "INCE", "INDMsh", 
+                  # MQPOS_SET
+                  "FOOD", "SHARE", "CRPI", "FATSVAL", "PROTVAL", "Corr", "PPRI", "CPRI",
+                  as.character(capcols[grepl("LOS", capcols)]), 
+                  as.character(capcols[grepl("N_", capcols)]),
+                  #as.character(capcols[grepl("VIT_", capcols)]),
+                  s$nbalsoil, s$nbil, s$mpact, 
+                  as.character(capcols[grepl("Impact", capcols)]), "mitiEff"
+    )
+  }
+  
 }
 

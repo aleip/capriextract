@@ -281,6 +281,11 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
     gdxrrw::igdx(cenv$gamsdir)
   }
   
+  if(is.null(setfile))(
+    return(paste0("You must indicate a gdx-file containing the sets (setfile).",
+                  "you might try with ", cenv$resout, "/sets/sets_after_setsgms.gdx"))
+  )
+  
   # Reset sets2retrieve
   sets2get.eles <- vector()
   sets2get.name <- vector()
@@ -315,6 +320,11 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   
   sets2get.name <- c(sets2get.name, "Aggregated aninam production activities")
   sets2get.eles <- c(sets2get.eles, "daact")
+  
+  sets2get.name <- c(sets2get.name, "Field N in and outputs (GNB) as set-up in emiscalc")
+  sets2get.eles <- c(sets2get.eles, "NflowsC")
+  
+  
 
   #lapmactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact")
   #lapmact_fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact_fssact")
@@ -426,6 +436,7 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
     return(e)
   }))
   
+  cat("\n", length(maps2get.eles), setfile, "setfile")
   m <- Reduce(rbind, lapply(1 : length(maps2get.eles), function(x) {
     e <- rgdx.set(gdxName = setfile, 
                   te = TRUE,           # Include the associated text for each set element
@@ -452,6 +463,8 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   s$oseco <- c(s$fco, s$ico, s$animo, s$seco)
   s$mbal <- c("GROF", "HCOM", "FEDM", "IMPT", "EXPT", "INDM", "PRCM")
   s$nbalsoil <- c("SURSOI", "SURTOT", "MINFER", "MANAPP", "MANGRA", "BIOFIX", "ATMOSD", "CRESID")
+  s$nflowslca <- c(s$nflowsc, "NH3MAN", "NH3APP", "NH3GRA", "NH3SYN", 
+                   "NOXMAN", "NOXAPP", "NOXGRA", "NOXSYN", "inpAPP", "NMAN")
   
   s$nuts2 <- substr(s$srnuts2,1,4)
   s$regi  <- c(s$nuts0, s$srnuts2)
