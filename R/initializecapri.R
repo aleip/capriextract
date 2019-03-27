@@ -520,5 +520,6 @@ startextract<-function(scope){
   source("capriplots.r")
   source("loadglobalsfrombatch.r")
   source("openfiltermultiple.r")
+  source("plotrelem.r")
   
 }

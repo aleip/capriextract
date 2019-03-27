@@ -255,7 +255,11 @@ opendata<-function(scope,
     # Check if subfolde
     
     if(pathincluded == 0) datafile<-paste0("capmod/res_2_", baseyear, curyear,curscen,".gdx")
-    datafile<-paste0(datapath, datafile)
+    if(exists("datapath")){
+      datafile <-paste0(datapath, datafile)
+    }else{
+      datafile <- paste0(cenv$resdir, "/")
+    }
     #datafile<-paste0(datapath,"/", datafile)
     dataparm<-"dataout"
     datanames<-c("rall","empty","cols","rows","y","value")

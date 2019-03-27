@@ -16,7 +16,7 @@ roundO <- function(a){
   
 }
 
-plotrelem <- function(x = NULL,
+plotrelem <- function(x = NULL,             # Passes data table. If NULL, the file filen is loaded
                       filen = "",
                       curfoc = "",
                       refrun = NULL,
@@ -126,7 +126,13 @@ plotrelem <- function(x = NULL,
   # Exchange one color with black (baseline)
   #my.cols <- brewer.pal(length(unique(y$run)), "Blues")
   my.cols <- heat.colors(n = length(unique(y$run)), alpha = 0.8)
-  my.cols <- rainbow(n=length(allruns), s=1, v = 1, start=0.5)
+  cat("\nlenght(allruns)=", length(allruns))
+  if(length(allruns)<=2){
+    my.cols <- "blue"
+  }else{
+    my.cols <- rainbow(n=length(allruns), s=1, v = 1, start=0.5)
+  }
+  
   #my.cols[1] <- "#000000"
   
   #View(y)
@@ -150,7 +156,7 @@ plotrelem <- function(x = NULL,
                     position = position_dodge(), stat='identity', 
                     width = 0.8, alpha = 0.8, show.legend = TRUE) 
   b <- b + scale_fill_manual(values = my.cols)
-  b <- b + ylab(expression("Emissions relative to reference [fraction]"))
+  b <- b + ylab(expression("Value relative to reference [fraction]"))
   b <- b + xlab("")
   
   #b <- b + xlab("Countries") 
