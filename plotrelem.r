@@ -26,13 +26,20 @@ plotrelem <- function(x = NULL,             # Passes data table. If NULL, the fi
                       keepruns = NULL,
                       par2plot="GCH4",
                       tit=NULL,
-                      punit=NULL){
+                      punit=NULL,
+                      add2filename=""){
   
   library(RColorBrewer)
   require(ggplot2)
-  filename <- f(curfoc = curfoc, filen = filen, nscens = nscens)
-  cat("\n", filename)
-  if(is.null(x)) load(filename)
+  
+  #clean up 
+  if(exists("b")) rm(b)
+  
+  if(is.null(x)){
+    filename <- f(curfoc = curfoc, filen = filen, nscens = nscens)
+    cat("\n", filename)
+    load(filename)
+  }
   if(swapcols) setnames(x, c("cols", "rows"), c("rows", "cols"))
   #View(x)
   
@@ -49,7 +56,6 @@ plotrelem <- function(x = NULL,             # Passes data table. If NULL, the fi
     x <- xx[, .SD, .SDcols = xxn]
   }
   save(list=objects(), file="x1.rdata")
-  
   # See http://sape.inf.usi.ch/quick-reference/ggplot2/shape
   #     for using characters as shape
   # See https://stackoverflow.com/questions/31315112/add-points-to-grouped-bar-plot-ggplot2
@@ -64,21 +70,16 @@ plotrelem <- function(x = NULL,             # Passes data table. If NULL, the fi
   
   # Adding columns for character and position of 'points'
   y[, value := round(value, 0)]
-  #y[, valhalf := value/2]
+
   # The characters 50 ff indicate the numbers 1ff
   y[, sspn := sum(49, as.numeric(substr(ssp, 4, 4)), na.rm=TRUE), by=.(ssp)]
   
   
   # Problems with 2030 - SSP5
   y <- y[ssp != "SSP5" | y != 2030]
+  print(y)
   
   #
-  #jpgfile <- paste0(deparse(substitute(data2plot)), par2plot, ".jpg")
-  jpgfile <- paste0(par2plot, ".jpg")
-  cat("\n", jpgfile)
-  jpeg(filename = jpgfile, width = 1150, height = 700, res = 130);
-  
-  
   allruns <- unique(y$run)
   if(! 'baseline' %in% allruns){
     
@@ -116,12 +117,13 @@ plotrelem <- function(x = NULL,             # Passes data table. If NULL, the fi
     yfac <- bquote(paste(""))
   )
   ybas <- round(ybas/ydiv, yrnd) 
+  if(! exists("nscens")) nscens <- ""
   write.csv(dcast.data.table(y, y ~ ssp + run, value.var = "valreg"),
             file = gsub("rdata", "csv", f(curfoc = curfoc, filen = filen, nscens = nscens)))
   
   #Correct the values to the order of magnitude
   y[, value := round(value/ydiv, yrnd)]
-  
+  print(y)
   
   # Exchange one color with black (baseline)
   #my.cols <- brewer.pal(length(unique(y$run)), "Blues")
@@ -148,38 +150,30 @@ plotrelem <- function(x = NULL,             # Passes data table. If NULL, the fi
     y$run <- factor(y$run, levels = keepruns)
   }
   y <- y[! is.na(run)]
+  print(y)
   save(list=objects(), file="x3.rdata")
   
   b<-ggplot(y, aes_string(x="y", fill = "run"))
-  #b <- b + geom_bar(position = 'stack', stat='identity', width = 0.8) 
   b <- b + geom_bar(aes_string(y="valreg", fill = "run"),
-                    position = position_dodge(), stat='identity', 
-                    width = 0.8, alpha = 0.8, show.legend = TRUE) 
+                    position = position_dodge(), stat='identity',
+                    width = 0.8, alpha = 0.8, show.legend = TRUE)
   b <- b + scale_fill_manual(values = my.cols)
   b <- b + ylab(expression("Value relative to reference [fraction]"))
   b <- b + xlab("")
-  
-  #b <- b + xlab("Countries") 
-  
+
+  #b <- b + xlab("Countries")
+
   if(is.null(punit)){
     punit <- ""
   }
-  
-  b <- b + ggtitle(bquote(paste("Relative Changes of total ", .(tit))), 
-                   #expression("Baseline value = " ~ ybas ~ ""^3 ~ punit))
+
+  b <- b + ggtitle(bquote(paste("Relative Changes of total ", .(tit))),
                    bquote(paste("Reference = ", .(ybas),
                                 " [", .(yfac), .(punit), "]")))
-  b <- b + theme(plot.title=element_text(hjust = 0.5), 
+  b <- b + theme(plot.title=element_text(hjust = 0.5),
                  plot.subtitle=element_text(hjust = 0.5))
-  
-  
-  #b <- b + facet_grid(. ~ ssp, scales = "free_y", space = "free")
-  #b <- b + facet_wrap(. ~ ssp, scales = "free")
   b <- b + facet_wrap(. ~ ssp)
-  
-  #b + geom_point(y, mapping = aes_string(y="valhalf"),
-  #               position=position_dodge(width = 0.8), shape = y$sspn)
-  #b <- b + scale_y_continuous(limits = c(0,valregmax+0.2))
+
   valregmax <- max(1.5, y[run!="baseline", valreg])
   b <- b + scale_y_continuous(limits = c(0, valregmax), breaks = seq(0, valregmax, 0.2))
   b <- b + geom_hline(yintercept = c(0.5, 1), color = "red")
@@ -189,10 +183,14 @@ plotrelem <- function(x = NULL,             # Passes data table. If NULL, the fi
     size=3, color = "black",
     position=position_dodge(width=0.8))
   
+  #jpgfile <- paste0(deparse(substitute(data2plot)), par2plot, ".jpg")
+  jpgfile <- paste0(par2plot, add2filename, ".jpg")
+  cat("\n", jpgfile)
+  jpeg(filename = jpgfile, width = 1150, height = 700, res = 130);
   print(b)
   dev.off()
   
-  return(b)
+  #return(c)
   
   
 }
