@@ -139,6 +139,7 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
   print(flsn)
   
   for (i in 1:nruns){
+  #for (i in 1:1){
     if(i == 1) iter_chgtable <- data.table()
     if(i == 1) iter_chgmax <- data.table()
     if(i == 1) iter_chgmxmx <- data.table()
@@ -150,6 +151,15 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
       setnames(step, paste0(".i", 1:5), c("RALL", "COLS", "ROWS", "Y", "STEP"))
       
       iter_chg <- step[COLS == 'iter_chg']
+      time <- step[COLS == 'TIME']
+      timesteps <- unique(time$STEP)
+      haslast <- "LST" %in% timesteps
+      laststep <- if(haslast){"LST"}else{timesteps[max(which(grepl("^S", timesteps)))]}
+      tottime <- if(haslast){
+        time[STEP == "LST" & ROWS == "TOTSTEP"]$stepOutput/3600
+      }else{
+        sum(time[STEP %in% timesteps[which(grepl("^S", timesteps))] & ROWS == "TOTSTEP"]$stepOutput)/3600
+      }
       if(nrow(iter_chg)>0){
         iter_chg$SCEN <- i
         
@@ -162,6 +172,9 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
         iter2 <- iter_chg[ROWS == 'MAX']
         iter2 <- iter2[,max:=max(.SD), .SDcols = "stepOutput", by = .(STEP)]
         iter3 <- iter2[stepOutput == max]
+        iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "TIME", tottime, i, ""))
+        iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "STOP", as.logical(haslast), i, ""))
+        
         iter_chgmax <- rbind(iter_chgmax, iter2)
         iter_chgmxmx <- rbind(iter_chgmxmx, iter3)
       }
@@ -175,7 +188,7 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
     iter_chgmax <- dcast.data.table(iter_chgmax, STEP + SCEN ~ RALL, value.var="stepOutput")
     iter_chgmxmx <- dcast.data.table(iter_chgmxmx, STEP + RALL ~ SCEN, value.var="stepOutput")
     iter_chgmxmxtot <- iter_chgmxmx[RALL == "TOT"]
-    View(iter_chgmxmxtot, commonname)
+    View(iter_chgmxmxtot, paste0(commonname, format(Sys.time(), "%H%M")))
   }
   
   
