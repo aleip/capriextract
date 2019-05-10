@@ -176,7 +176,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
       runfocus <- gsub(".*run-", "", scope)
       runfocus <- strsplit(runfocus, ",")[[1]]
       checkfocus <- gsub(paste0(".*", runfocus[1]), runfocus[1], basename(curscen))
-      cat("\n", checkfocus)
+      cat("\nfunfocus=", runfocus, "checkfocus=", checkfocus)
       if(checkfocus != basename(curscen)){
         run <- substr(checkfocus, 1, nchar(runfocus[1])+as.numeric(runfocus[2]))
       }else{
@@ -184,8 +184,8 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
       }
       if(length(runfocus) == 3){
         run <- gsub(paste0(runfocus[3], ".*"), "", run)
-        capridat$run <- run
       }
+      capridat$run <- run
       capridat$scen <- paste0(curscenshort, ssp, "_", yrs, "_", run)
       cat("\n", paste0(curscenshort, ssp, "_", yrs, "_", run))
     }

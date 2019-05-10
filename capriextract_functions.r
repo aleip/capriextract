@@ -183,17 +183,21 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
   # iter_chgtable <- dcast.data.table(iter_chgtable, RALL + SCEN + ROWS ~ STEP, value.var="stepOutput")
   # iter_chgmax <- dcast.data.table(iter_chgmax, RALL + SCEN ~ STEP, value.var="stepOutput")
   # iter_chgmxmx <- dcast.data.table(iter_chgmxmx, SCEN + RALL ~ STEP, value.var="stepOutput")
+  commonname <- paste0(conpath, commonname)
   if(length(iter_chgtable)>0){
     iter_chgtable <- dcast.data.table(iter_chgtable, STEP + RALL + SCEN ~ ROWS, value.var="stepOutput")
     iter_chgmax <- dcast.data.table(iter_chgmax, STEP + SCEN ~ RALL, value.var="stepOutput")
     iter_chgmxmx <- dcast.data.table(iter_chgmxmx, STEP + RALL ~ SCEN, value.var="stepOutput")
     iter_chgmxmxtot <- iter_chgmxmx[RALL == "TOT"]
+    iter_chgmxmxtot <- rbind(iter_chgmxmxtot[grepl("^S[1-9]", iter_chgmxmxtot$STEP)], 
+                             iter_chgmxmxtot[!grepl("^S[1-9]", iter_chgmxmxtot$STEP)])
+    cat("\nSave file ", paste0(commonname, "_stepreport.rdata"))
+    save(iter_chgtable, iter_chgmax, iter_chgmxmx, iter_chgmxmxtot, file=paste0(commonname, "_stepreport.rdata"))
     View(iter_chgmxmxtot, paste0(commonname, format(Sys.time(), "%H%M")))
   }
   
   
   # 
-  commonname <- paste0(conpath, commonname)
   con <- file(paste0(commonname, "_iterchngtable", ".csv"), open = "wt")
   cat("# ", file = con)
   cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
@@ -222,7 +226,6 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
   write.csv(iter_chgmxmxtot, row.names = FALSE, quote = FALSE, na="", file=con)
   close(con)
   
-  save(iter_chgtable, iter_chgmax, iter_chgmxmx, file=paste0(commonname, "_stepreport.rdata"))
   cat("\nSaved to ", conpath)
 }
 
@@ -448,76 +451,76 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
   return(list(capridat, fattr))
 }
 
-filtermultiple<-function(scope, 
-                         cols=curcols, rows=currows, ydim="Y", curdim5=NULL, regi, 
-                         curcountries, curyears="08", baseyear='08', curscens='', curscensshort='',
-                         resultfile=NULL){
-  nfiles<-length(curcountries)*length(curscens)*length(curyears)
-  cat("\n", length(curcountries), curcountries, length(curscens), length(curyears), nfiles)
-
-  # for(x in 1:max(1,length(curyears))){
-  #   for(y in max(1,1:length(curcountries))){
-  #     for(z in 1:max(1,length(curscens))){
-  #       cat("\n", x,curyears[x], y,curcountries[y], z,curscens[z])
-  #     }}}
-  # return()
-  cdat<-list()
-  #fdat<-data.frame(nrow=1)
-  fdat<-data.frame(nrow=0)
-  n<-0
-  for(x in 1:max(1,length(curyears))){
-    for(y in max(1,1:length(curcountries))){
-      for(z in 1:max(1,length(curscens))){
-        n<-n+1
-        capridat<- filteropen(scope, 
-                               reload=1, 
-                               # Filtering options
-                               cols=cols, 
-                               rows=rows,
-                               ydim=ydim, 
-                               curdim5=curdim5,
-                               regi=regi,
-                               # Opening options
-                               curcountry = curcountries[y], 
-                               curyear = curyears[x],
-                               baseyear = baseyear,
-                               curscen = curscens[z],
-                               curscenshort = curscensshort[z]
-        )
-        cdat[[n]]<-capridat[[1]]
-        #View(cdat[[n]], as.character(n))
-        #cdat[[n]]<-capridat   #xavi20190122: filteropen no longer produces a list (commit d327009bdb2319d3ee3e20c3eec2f1ed143b4d6b)
-                               #xavi20190122_2: at the end, it keeps returning a list (see comment in L184)
-        #print(str(capridat[[1]]))
-        #cat("print from filter")
-        #print(capridat[[2]])
-        if(length(capridat)>1){
-          if(n==1){
-            fdat<-capridat[[2]]
-          }else{
-            fdat<-rbind(fdat, capridat[[2]])
-          }
-        }else{
-          n <- n-1
-        }
-      }
-    }
-  }
-  
-  if(! exists("commonname")) commonname <- ""
-  if(! exists("flag")) flag <- paste0("temp_", paste(curcountries, collapse = ""), scope)
-  capridat<-Reduce(rbind, cdat)
-  #print(capridat)
-  info <<- fdat
-  caprid <<- capridat
-
-  if(! is.null(resultfile)) {
-    cat("\nSave to ", resultfile)
-    save(caprid, info, file=paste0(resultfile, ".rdata"))
-  }
-  
-  return(list(capridat, fdat))
-}
+# filtermultiple<-function(scope, 
+#                          cols=curcols, rows=currows, ydim="Y", curdim5=NULL, regi, 
+#                          curcountries, curyears="08", baseyear='08', curscens='', curscensshort='',
+#                          resultfile=NULL){
+#   nfiles<-length(curcountries)*length(curscens)*length(curyears)
+#   cat("\n", length(curcountries), curcountries, length(curscens), length(curyears), nfiles)
+# 
+#   # for(x in 1:max(1,length(curyears))){
+#   #   for(y in max(1,1:length(curcountries))){
+#   #     for(z in 1:max(1,length(curscens))){
+#   #       cat("\n", x,curyears[x], y,curcountries[y], z,curscens[z])
+#   #     }}}
+#   # return()
+#   cdat<-list()
+#   #fdat<-data.frame(nrow=1)
+#   fdat<-data.frame(nrow=0)
+#   n<-0
+#   for(x in 1:max(1,length(curyears))){
+#     for(y in max(1,1:length(curcountries))){
+#       for(z in 1:max(1,length(curscens))){
+#         n<-n+1
+#         capridat<- filteropen(scope, 
+#                                reload=1, 
+#                                # Filtering options
+#                                cols=cols, 
+#                                rows=rows,
+#                                ydim=ydim, 
+#                                curdim5=curdim5,
+#                                regi=regi,
+#                                # Opening options
+#                                curcountry = curcountries[y], 
+#                                curyear = curyears[x],
+#                                baseyear = baseyear,
+#                                curscen = curscens[z],
+#                                curscenshort = curscensshort[z]
+#         )
+#         cdat[[n]]<-capridat[[1]]
+#         #View(cdat[[n]], as.character(n))
+#         #cdat[[n]]<-capridat   #xavi20190122: filteropen no longer produces a list (commit d327009bdb2319d3ee3e20c3eec2f1ed143b4d6b)
+#                                #xavi20190122_2: at the end, it keeps returning a list (see comment in L184)
+#         #print(str(capridat[[1]]))
+#         #cat("print from filter")
+#         #print(capridat[[2]])
+#         if(length(capridat)>1){
+#           if(n==1){
+#             fdat<-capridat[[2]]
+#           }else{
+#             fdat<-rbind(fdat, capridat[[2]])
+#           }
+#         }else{
+#           n <- n-1
+#         }
+#       }
+#     }
+#   }
+#   
+#   if(! exists("commonname")) commonname <- ""
+#   if(! exists("flag")) flag <- paste0("temp_", paste(curcountries, collapse = ""), scope)
+#   capridat<-Reduce(rbind, cdat)
+#   #print(capridat)
+#   info <<- fdat
+#   caprid <<- capridat
+# 
+#   if(! is.null(resultfile)) {
+#     cat("\nSave to ", resultfile)
+#     save(caprid, info, file=paste0(resultfile, ".rdata"))
+#   }
+#   
+#   return(list(capridat, fdat))
+# }
 
 convertarguments2values<-function(...){
     # Function that helps debugging - converts all arguments into values
