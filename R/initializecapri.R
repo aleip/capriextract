@@ -518,7 +518,7 @@ startextract<-function(scope){
   source("capriplotcolors.r")
   source("capriplottexts.r")
   source("capriplots.r")
-  source("loadglobalsfrombatch.r")
+  source("capmod_checkbatchrun.r")
   source("openfiltermultiple.r")
   source("plotrelem.r")
   

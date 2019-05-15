@@ -23,14 +23,14 @@ getfilesfromfolder<-function(curfol = datapath, pattern='res.*.gdx$', flag = "",
   flag <- paste0(flag, format(Sys.time(), "%Y%m%d"))
   
   fls <- list.files(path=curfol, 
-             pattern=pattern, 
-             recursive=FALSE, 
-             full.names = TRUE)
+                    pattern=pattern, 
+                    recursive=FALSE, 
+                    full.names = TRUE)
   
   flsn <- list.files(path=curfol, 
-             pattern=pattern, 
-             recursive=FALSE, 
-             full.names = FALSE)
+                     pattern=pattern, 
+                     recursive=FALSE, 
+                     full.names = FALSE)
   # Specific changes due to "_" in name elements
   flsn <- gsub("globiom_eu_2018\\+REFERENCE\\+REFERENCE", "globiomeu2018", flsn)
   
@@ -93,152 +93,6 @@ ExtractCommonName <- function(fls, reference = NULL){
   return(scenshort)
 }
 
-checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir, 
-                             outpath=cenv$resout, commonname = NULL){
-  
-  require(gdxrrw)
-  if(gdxrrw::igdx() == FALSE){
-    gdxrrw::igdx(cenv$gamsdir)
-  }
-  
-  if(is.null(tpath)){
-    message("Please indicate a folder used by CAPRI as 'scrdir'. ",
-            "\nTried to get it from the CAPRI environment cenv$scrdir but found nothing.")
-    invsible(0)
-  }
-  if(is.null(outpath)){
-    message("Please indicate a folder used by CAPRI as 'resout'. ",
-            "\nTried to get it from the CAPRI environment cenv$scrdir but found nothing.")
-    invsible(0)
-  }else{
-    conpath <- outpath
-    if(! grepl("/$", conpath)) conpath <- paste0(conpath, "/")
-  }
-  if(! exists("commonname")){
-    commonname <- format(Sys.time(), "%Y%m%d%H%M")
-  }
-  
-  if(runasbatch == 1){
-    if(is.null(nruns)) {
-      flsn <- list.files(path=tpath, 
-                         pattern="^[0-9]*$", 
-                         recursive=FALSE, 
-                         full.names = FALSE)
-      flsn <- flsn[order(as.numeric(flsn))]
-    }else{
-      
-      flsn <- as.character(nruns)
-      
-    }
-    nruns <- length(flsn)
-  }else{
-    
-    message("So far used only for batch runs")
-    
-  }
-  print(flsn)
-  
-  for (i in 1:nruns){
-  #for (i in 1:1){
-    if(i == 1) iter_chgtable <- data.table()
-    if(i == 1) iter_chgmax <- data.table()
-    if(i == 1) iter_chgmxmx <- data.table()
-    stepfile <- paste0(tpath, "/", flsn[i], "/stepOutput.gdx")
-    cat("\n", stepfile)
-    if(file.exists(stepfile)){
-      step<-rgdx.param(stepfile, "stepOutput")
-      step<-as.data.table(step)
-      setnames(step, paste0(".i", 1:5), c("RALL", "COLS", "ROWS", "Y", "STEP"))
-      
-      iter_chg <- step[COLS == 'iter_chg']
-      time <- step[COLS == 'TIME']
-      timesteps <- unique(time$STEP)
-      haslast <- "LST" %in% timesteps
-      laststep <- if(haslast){"LST"}else{timesteps[max(which(grepl("^S", timesteps)))]}
-      tottime <- if(haslast){
-        time[STEP == "LST" & ROWS == "TOTSTEP"]$stepOutput/3600
-      }else{
-        sum(time[STEP %in% timesteps[which(grepl("^S", timesteps))] & ROWS == "TOTSTEP"]$stepOutput)/3600
-      }
-      if(nrow(iter_chg)>0){
-        iter_chg$SCEN <- i
-        
-        # Keep only the maximum changes per country and step
-        iter1 <- iter_chg[, max:= max(.SD), .SDcols = "stepOutput", by = .(RALL, STEP)]
-        iter1 <- iter1[stepOutput == max]
-        iter_chgtable <- rbind(iter_chgtable, iter1)
-        
-        
-        iter2 <- iter_chg[ROWS == 'MAX']
-        iter2 <- iter2[,max:=max(.SD), .SDcols = "stepOutput", by = .(STEP)]
-        iter3 <- iter2[stepOutput == max]
-        iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "TIME", tottime, i, ""))
-        iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "STOP", as.logical(haslast), i, ""))
-        
-        iter_chgmax <- rbind(iter_chgmax, iter2)
-        iter_chgmxmx <- rbind(iter_chgmxmx, iter3)
-      }
-    }
-  }
-  # iter_chgtable <- dcast.data.table(iter_chgtable, RALL + SCEN + ROWS ~ STEP, value.var="stepOutput")
-  # iter_chgmax <- dcast.data.table(iter_chgmax, RALL + SCEN ~ STEP, value.var="stepOutput")
-  # iter_chgmxmx <- dcast.data.table(iter_chgmxmx, SCEN + RALL ~ STEP, value.var="stepOutput")
-  commonname <- paste0(conpath, commonname)
-  if(length(iter_chgtable)>0){
-    iter_chgtable <- dcast.data.table(iter_chgtable, STEP + RALL + SCEN ~ ROWS, value.var="stepOutput")
-    iter_chgmax <- dcast.data.table(iter_chgmax, STEP + SCEN ~ RALL, value.var="stepOutput")
-    iter_chgmxmx <- dcast.data.table(iter_chgmxmx, STEP + RALL ~ SCEN, value.var="stepOutput")
-    iter_chgmxmxtot <- iter_chgmxmx[RALL == "TOT"]
-    iter_chgmxmxtot <- rbind(iter_chgmxmxtot[grepl("^S[1-9]", iter_chgmxmxtot$STEP)], 
-                             iter_chgmxmxtot[!grepl("^S[1-9]", iter_chgmxmxtot$STEP)])
-    cat("\nSave file ", paste0(commonname, "_stepreport.rdata"))
-    save(iter_chgtable, iter_chgmax, iter_chgmxmx, iter_chgmxmxtot, file=paste0(commonname, "_stepreport.rdata"))
-    View(iter_chgmxmxtot, paste0(commonname, format(Sys.time(), "%H%M")))
-  }
-  
-  
-  # 
-  con <- file(paste0(commonname, "_iterchngtable", ".csv"), open = "wt")
-  cat("# ", file = con)
-  cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
-  cat("\n", file = con)
-  write.csv(iter_chgtable, row.names = FALSE, quote = FALSE, na="", file=con)
-  close(con)
-  
-  con <- file(paste0(commonname, "_iterchngmax", ".csv"), open = "wt")
-  cat("# ", file = con)
-  cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
-  cat("\n", file = con)
-  write.csv(iter_chgmax, row.names = FALSE, quote = FALSE, na="", file=con)
-  close(con)
-  
-  con <- file(paste0(commonname, "_iterchngmxmx", ".csv"), open = "wt")
-  cat("# ", file = con)
-  cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
-  cat("\n", file = con)
-  write.csv(iter_chgmxmx, row.names = FALSE, quote = FALSE, na="", file=con)
-  close(con)
-
-  con <- file(paste0(commonname, "_iterchngmxmxtot", ".csv"), open = "wt")
-  cat("# ", file = con)
-  cat("# Step reports, filtered for iter_chg and focusing on maximum changes ", file = con)
-  cat("\n", file = con)
-  write.csv(iter_chgmxmxtot, row.names = FALSE, quote = FALSE, na="", file=con)
-  close(con)
-  
-  cat("\nSaved to ", conpath)
-}
-
-loadmultipleglobal <- function(savepath = NULL,
-                               dp = cenv$resdir,
-                               batchf = paste0(cenv$resdir, "/../batchout"),
-                               pattern = NULL,
-                               batchdir = NULL,
-                               logf = NULL){
-  fls <- list.files(paste0(cenv$resdir, "/../batchout"), pattern = pattern)
-  for(f in fls){a<-f; x <- loadglobalsfrombatch(batchdir=a)}
-  
-}
 
 opendata<-function(scope,
                    curcountry,
@@ -246,35 +100,35 @@ opendata<-function(scope,
                    baseyear='12',  # Required for scope capdistime and capmod
                    curscen=''      # Required for capmod
                    , curscenshort=''
-                   ){
-#' Open a Capri data file
-#' @description This function opens a Capri gdx data file also called a xobs file. 
-#' Depending on the scope parameter, conditional statements change the bahaviour of the opendata function. 
-#' @param scope character variable used to adapt the behaviour of the function to different input file formats and locations.
-#' The following 'scope's are currently defined:
-#' - feed_marketbal
-#' - activities
-#' - nbalance
-#' - tseries
-#' - nlca
-#' - lapm
-#' - capdisreg
-#' - capdistime: Timeseries for disaggregated data. 
-#'               curyear needs to be full year (e.g. 2012)
-#'               Requires 'baseyear' as additional parameter defined in the global environment (e.g. 12)
-#' 
-#' @param curcountry character iso2 country code
-#' @param curyear numeric year
-#' @return data frame
-#' @export
-#' 
+){
+  #' Open a Capri data file
+  #' @description This function opens a Capri gdx data file also called a xobs file. 
+  #' Depending on the scope parameter, conditional statements change the bahaviour of the opendata function. 
+  #' @param scope character variable used to adapt the behaviour of the function to different input file formats and locations.
+  #' The following 'scope's are currently defined:
+  #' - feed_marketbal
+  #' - activities
+  #' - nbalance
+  #' - tseries
+  #' - nlca
+  #' - lapm
+  #' - capdisreg
+  #' - capdistime: Timeseries for disaggregated data. 
+  #'               curyear needs to be full year (e.g. 2012)
+  #'               Requires 'baseyear' as additional parameter defined in the global environment (e.g. 12)
+  #' 
+  #' @param curcountry character iso2 country code
+  #' @param curyear numeric year
+  #' @return data frame
+  #' @export
+  #' 
   # Check if datafile contains already a path
   if(grepl(":", curscen) | grepl("jrciprap246p", curscen)) {
     pathincluded <- 1
     datapath <- ""
     datafile <- curscen
   }else{pathincluded <- 0}
-
+  
   if(scope%in%c("feed_marketbal","activities") | grepl("baseyear",scope)){
     datafile<-paste0("res_",curyear)
     datafile<-paste0(datafile,curcountry,".gdx")
@@ -376,80 +230,80 @@ opendata<-function(scope,
   return(list(capridat,fattr))
 }
 
-filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols, 
-                     rows=currows, ydim="Y", curdim5=NULL,regi, 
-                     curcountry, curyear="08", baseyear='08', 
-                     curscen='', curscenshort=''){
-  
-  if(reload==1){
-    capridat<-opendata(scope,curcountry,curyear,baseyear, curscen, curscenshort)
-    fattr<-capridat[[2]]
-    if(fattr[1] == 0) return(0)
-    capridat<-capridat[[1]]
-  }
-  capridat<-as.data.table(capridat)
-  #View(capridat)
-  
-  fattr$filterCOLS<-paste(cols, collapse="-")
-  fattr$filterROWS<-paste(rows, collapse='-')
-  fattr$filterCountry<-paste(curcountry, collapse="-")
-  fattr$filterRegi<-paste(regi, collapse="-")
-  
-  #COLS (activities, variables for products)
-  if(!is.null(cols)) capridat<-capridat[capridat$cols%in%cols,]
-  
-  #ROWS (products, variables for activities)
-  if(!is.null(rows)) capridat<-capridat[capridat$rows%in%rows,]
-  
-  #Filter regional level 
-  if(!is.null(regi)){
-    if(length(regi)==1){  
-      if(regi=="HSU"){
-        capridat<-capridat[grepl("U[1-9]",capridat$rall),]   
-        capridat<-capridat[! grepl("HU[1-9]",capridat$rall),]   
-      }
-    }else{
-      capridat<-capridat[capridat$rall%in%regi,]
-    }
-  }
-  
-  #Filter time dimension only if 
-  if(!scope%in%c("capdistimes","capmod", "tseriesGHG", "lapm")){
-    if(ncol(capridat)>4){
-      if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
-      if(curyear!=""){
-        if(!grepl("^20",curyear)){curyear<-paste0("20",curyear)}
-        capridat$Y<-curyear
-      }
-    }
-  }
-  
-  if(scope%in%c("tseriesGHG")){
-    capridat<-capridat[capridat$y%in%as.character(curyear)]
-  }
-  #capridat<-capridat[,setdiff(names(capridat),c("Y"))]
-  if(!is.null(curdim5)){
-    #print("select curdim5")
-    if(curdim5[1]=="nonempty"){
-        capridat<-capridat[capridat$empty!='',]
-      }else{
-        capridat<-capridat[capridat$empty%in%curdim5,]
-      }
-  }
-  if(grepl("capmod", scope)){
-    capridat$scen<-curscenshort
-  }
-  #print(attributes(capridat))
-  #cat("-->")
-  #print(fattr)
-  # Return of information fattr does work over list as this disturbs the 'Reduce' function
-  #return(capridat)  #xavi20190122: I cannot see where the limitation of returning a list is.
-  #                                 It works perfectly, at least for mbal plots.
-  #                                 In case it's absolutely necessary to return only capridat, 
-  #                                 it needs to be addapted 'filtermultiple' (and maybe others)
-  #                                 in order to avoid trying to read 'fattr' 
-  return(list(capridat, fattr))
-}
+# filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols, 
+#                      rows=currows, ydim="Y", curdim5=NULL,regi, 
+#                      curcountry, curyear="08", baseyear='08', 
+#                      curscen='', curscenshort=''){
+#   
+#   if(reload==1){
+#     capridat<-opendata(scope,curcountry,curyear,baseyear, curscen, curscenshort)
+#     fattr<-capridat[[2]]
+#     if(fattr[1] == 0) return(0)
+#     capridat<-capridat[[1]]
+#   }
+#   capridat<-as.data.table(capridat)
+#   #View(capridat)
+#   
+#   fattr$filterCOLS<-paste(cols, collapse="-")
+#   fattr$filterROWS<-paste(rows, collapse='-')
+#   fattr$filterCountry<-paste(curcountry, collapse="-")
+#   fattr$filterRegi<-paste(regi, collapse="-")
+#   
+#   #COLS (activities, variables for products)
+#   if(!is.null(cols)) capridat<-capridat[capridat$cols%in%cols,]
+#   
+#   #ROWS (products, variables for activities)
+#   if(!is.null(rows)) capridat<-capridat[capridat$rows%in%rows,]
+#   
+#   #Filter regional level 
+#   if(!is.null(regi)){
+#     if(length(regi)==1){  
+#       if(regi=="HSU"){
+#         capridat<-capridat[grepl("U[1-9]",capridat$rall),]   
+#         capridat<-capridat[! grepl("HU[1-9]",capridat$rall),]   
+#       }
+#     }else{
+#       capridat<-capridat[capridat$rall%in%regi,]
+#     }
+#   }
+#   
+#   #Filter time dimension only if 
+#   if(!scope%in%c("capdistimes","capmod", "tseriesGHG", "lapm")){
+#     if(ncol(capridat)>4){
+#       if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
+#       if(curyear != ""){
+#         if(!grepl("^20",curyear)){curyear<-paste0("20",curyear)}
+#         capridat$Y<-curyear
+#       }
+#     }
+#   }
+#   
+#   if(scope%in%c("tseriesGHG")){
+#     capridat<-capridat[capridat$y%in%as.character(curyear)]
+#   }
+#   #capridat<-capridat[,setdiff(names(capridat),c("Y"))]
+#   if(!is.null(curdim5)){
+#     #print("select curdim5")
+#     if(curdim5[1]=="nonempty"){
+#       capridat<-capridat[capridat$empty!='',]
+#     }else{
+#       capridat<-capridat[capridat$empty%in%curdim5,]
+#     }
+#   }
+#   if(grepl("capmod", scope)){
+#     capridat$scen<-curscenshort
+#   }
+#   #print(attributes(capridat))
+#   #cat("-->")
+#   #print(fattr)
+#   # Return of information fattr does work over list as this disturbs the 'Reduce' function
+#   #return(capridat)  #xavi20190122: I cannot see where the limitation of returning a list is.
+#   #                                 It works perfectly, at least for mbal plots.
+#   #                                 In case it's absolutely necessary to return only capridat, 
+#   #                                 it needs to be addapted 'filtermultiple' (and maybe others)
+#   #                                 in order to avoid trying to read 'fattr' 
+#   return(list(capridat, fattr))
+# }
 
 # filtermultiple<-function(scope, 
 #                          cols=curcols, rows=currows, ydim="Y", curdim5=NULL, regi, 
@@ -523,30 +377,30 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=curcols,
 # }
 
 convertarguments2values<-function(...){
-    # Function that helps debugging - converts all arguments into values
-    #          in the global environment so that the function can
-    #          be checked directly line by line
-    
-    l<-as.list(match.call())
-    for (i in 2:length(l)){
-        #cat("\n", i, "Assigning ", l[[i]], " to ", paste(names(l)[i],collapse="") , "...")
-            cat("\nstart",i,":", names(l)[i])
-        n<-names(l[[i]])
-        if(! exists(n)){
-            cat("\nNo argument name given for ", l[[i]],". Tentatively set to ",l[[i]])
-            n<-l[[i]]
-        }
-        g<-eval(l[[i]])
-            cat("\n", n, " is character", l[[i]], " - ", g)
-        #if(is.character(g) & length(g)==1){
-        #    assign(names(l)[i], l[[i]], envir=.GlobalEnv)
-        #}else{
-            assign(n, g, envir=.GlobalEnv)
-            cat("\n", n, " is character", l[[i]], " - ", g)
-        #}
+  # Function that helps debugging - converts all arguments into values
+  #          in the global environment so that the function can
+  #          be checked directly line by line
+  
+  l<-as.list(match.call())
+  for (i in 2:length(l)){
+    #cat("\n", i, "Assigning ", l[[i]], " to ", paste(names(l)[i],collapse="") , "...")
+    cat("\nstart",i,":", names(l)[i])
+    n<-names(l[[i]])
+    if(! exists(n)){
+      cat("\nNo argument name given for ", l[[i]],". Tentatively set to ",l[[i]])
+      n<-l[[i]]
     }
-    #print(as.list(match.call()))
-    return(l)
+    g<-eval(l[[i]])
+    cat("\n", n, " is character", l[[i]], " - ", g)
+    #if(is.character(g) & length(g)==1){
+    #    assign(names(l)[i], l[[i]], envir=.GlobalEnv)
+    #}else{
+    assign(n, g, envir=.GlobalEnv)
+    cat("\n", n, " is character", l[[i]], " - ", g)
+    #}
+  }
+  #print(as.list(match.call()))
+  return(l)
 }
 
 getcapriversion<-function(){
@@ -559,26 +413,26 @@ getcapriversion<-function(){
   return(capriversion)
 }
 getfedm<-function(curcountry){
+  
+  #20170708 - Extraction of feed data to send to Olga Gavrilova [oggavrilova@gmail.com]
+  #           For IPCC2019 refinement
+  
+  datafile<-"res_12"
+  datafile<-paste0(datafile,curcountry,".gdx")
+  datafile<-paste0(datapath,datafile)
+  
+  
+  if(file.exists(datafile)){
+    capridat<-rgdx.param(datafile,dataparm)
+    names(capridat)<-c("RALL","COLS","ROWS","Y","VALUE")
     
-    #20170708 - Extraction of feed data to send to Olga Gavrilova [oggavrilova@gmail.com]
-    #           For IPCC2019 refinement
-    
-    datafile<-"res_12"
-    datafile<-paste0(datafile,curcountry,".gdx")
-    datafile<-paste0(datapath,datafile)
+    #Activities: maact and daact
+    capridat<-capridat[capridat$COLS%in%c("FEDM"),]
     
     
-    if(file.exists(datafile)){
-        capridat<-rgdx.param(datafile,dataparm)
-        names(capridat)<-c("RALL","COLS","ROWS","Y","VALUE")
-        
-        #Activities: maact and daact
-        capridat<-capridat[capridat$COLS%in%c("FEDM"),]
-        
-        
-    }else{
-        cat("\nFile ",datafile," does not exist!")
-    }
+  }else{
+    cat("\nFile ",datafile," does not exist!")
+  }
 }
 
 
@@ -597,43 +451,43 @@ getmeta<-function(curcountry,curyear){
 
 
 getmarketbalance<-function(capridat,d,curyear){
-    rows<-c(as.character(frows$i),as.character(ico$i))
-    cols<-c(as.character(frmbal_cols$i),as.character(mrkbal_cols$i))
-    cols<-c(as.character(frmbal_cols$i),"FEDM")
-    capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
-    return(capridat)
+  rows<-c(as.character(frows$i),as.character(ico$i))
+  cols<-c(as.character(frmbal_cols$i),as.character(mrkbal_cols$i))
+  cols<-c(as.character(frmbal_cols$i),"FEDM")
+  capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
+  return(capridat)
 }
 
 getfeed<-function(capridat,d,curyear){
-    rows<-feed_rows
-    cols<-c(maact,daact)
-    capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
+  rows<-feed_rows
+  cols<-c(maact,daact)
+  capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
 }
 getfeed<-function(capridat,d,curyear){
-    rows<-feed_rows
-    cols<-c(maact,daact)
-    capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
+  rows<-feed_rows
+  cols<-c(maact,daact)
+  capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
 }
 getmpact<-function(capridat,d,curyear){
-    rows<-"LEVL"
-    cols<-c(mpact)
-    capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
+  rows<-"LEVL"
+  cols<-c(mpact)
+  capridat<-filteropen(capridat,cols,rows,regi,d,curyear)
 }
 getuaarlevl<-function(capridat,d){
-    cols<-"UAAR"
-    rows<-"LEVL"
-    capridat<-filteropen(capridat,cols,rows,regi,d)
+  cols<-"UAAR"
+  rows<-"LEVL"
+  capridat<-filteropen(capridat,cols,rows,regi,d)
 }
 getnbil<-function(capridat,d){
-    cols<-c(as.character(nbil$i))
-    if(scope=="nbalancemain")cols<-c("MINFER","EXCRET","ATMOSD","BIOFIX","CRESID",
-                                     "SURTOT","EXPPRD","SURSOI","GASTOT","RUNTOT")
-    rows<-"NITF"
-    capridat<-filteropen(capridat,cols,rows,regi,d)
+  cols<-c(as.character(nbil$i))
+  if(scope=="nbalancemain")cols<-c("MINFER","EXCRET","ATMOSD","BIOFIX","CRESID",
+                                   "SURTOT","EXPPRD","SURSOI","GASTOT","RUNTOT")
+  rows<-"NITF"
+  capridat<-filteropen(capridat,cols,rows,regi,d)
 }
 
 getdata<-function(scope,curcountry,curyear,curcols,currows=currows){
-        
+  
   capridat<-opendata(scope, curcountry, curyear)
   
   if(scope=="feed_marketbal"){
@@ -655,8 +509,8 @@ getdata<-function(scope,curcountry,curyear,curcols,currows=currows){
   }
   if(scope%in%c("baseyearnmin","baseyearpmin")){
     capridat<-filteropen(capridat,reload = 0,
-                                 cols = mcact,rows = currows, ydim = "Y", 
-                                 regi = srnuts2, curdim5 = NULL,curyear = curyear)
+                         cols = mcact,rows = currows, ydim = "Y", 
+                         regi = srnuts2, curdim5 = NULL,curyear = curyear)
   }
   return(capridat)
 }
@@ -664,7 +518,7 @@ getdata<-function(scope,curcountry,curyear,curcols,currows=currows){
 
 getmultipleyears<-function(scope,cntr,curyears){
   
-
+  
   if(curyears[1]==""){
     capridat<-Reduce(rbind,lapply(cntr,function(x) getdata(scope,x)))
     caprimeta<-Reduce(rbind,lapply(cntr,function(x) getmeta(x)))
@@ -684,7 +538,7 @@ getmultipleyears<-function(scope,cntr,curyears){
   }
   return(list(capridat,caprimeta))
 }
-  
+
 checkaggvsdet<-function(x, aggs, dets, listdetails="error"){
   
   # Compares N budget aggregates vs sum of detailed positions
@@ -720,12 +574,12 @@ checkaggvsdet<-function(x, aggs, dets, listdetails="error"){
       if(sumaggs!=sumdets){fail<-3}  # Mismach between aggregated flow and sum of detailed flows
     }
   }
-
+  
   if(fail==0){
     if(listdetails == "all") {
-    cat("\n ", crop, ": ", paste(aggs,collapse="+"), " = ",paste(dets,collapse="+") ," = ", sumdets)
-    if(misaggs!="") cat("\n Missing elements: ",misaggs)
-    if(misdets!="") cat("\n Missing elements: ",misdets)
+      cat("\n ", crop, ": ", paste(aggs,collapse="+"), " = ",paste(dets,collapse="+") ," = ", sumdets)
+      if(misaggs!="") cat("\n Missing elements: ",misaggs)
+      if(misdets!="") cat("\n Missing elements: ",misdets)
     }else if(listdetails != "mismatch"){
       cat(" .. OK")
     }
@@ -760,15 +614,15 @@ checkCropNbudget<-function(x, crop, output="error"){
     cat("\n Check N-budget for ", crop)
   }
   nflows_crop<-filteropen(reload=0, 
-                                  capridat=x, 
-                                  cols=crop,
-                                  rows=currows, 
-                                  curdim5 = NULL,
-                                  regi=curcountry, 
-                                  ydim = "2030"
+                          capridat=x, 
+                          cols=crop,
+                          rows=currows, 
+                          curdim5 = NULL,
+                          regi=curcountry, 
+                          ydim = "2030"
   )
   
-
+  
   capridat<-nflows_crop[,c("ROWS","VALUE")]
   #x$VALUE[grepl("N2O",x$ROWS) & !grepl("N2ON",x$ROWS)]<-28/44 * x$VALUE[grepl("N2O",x$ROWS) & !grepl("N2ON",x$ROWS)]
   
@@ -776,8 +630,8 @@ checkCropNbudget<-function(x, crop, output="error"){
   checkaggvsdet(capridat, "N2ONOTH",c("N2ONDEP", "N2ONCRO", "N2ONHIS"), output)
   checkaggvsdet(capridat, c("SURTOT", "EXPPRD"),c("IMPORT", "N2ONOTH"), output)
   checkaggvsdet(capridat, "SURTOT",c("SURSOI", "N2ONOTH",
-                             "GASMAN","GASAPP", "GASGRA", "GASMIN", 
-                             "RUNMAN","RUNAPP", "RUNGRA", "RUNMIN"), output)
+                                     "GASMAN","GASAPP", "GASGRA", "GASMIN", 
+                                     "RUNMAN","RUNAPP", "RUNGRA", "RUNMIN"), output)
   checkaggvsdet(capridat, "IMPORT", c("ATMOSD", "CRESID", "BIOFIX", "MINSAT", "MINFER", "EXCRET"), output)
   checkaggvsdet(capridat, "EXCRET", c("MANAPP", "MANGRA", "GASMAN", "RUNMAN"), output)
   checkaggvsdet(capridat, "MANGRA", c("NMANGR", "GASGRA", "RUNGRA"), output)

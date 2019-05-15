@@ -60,6 +60,7 @@ filtermultiple<-function(scope,
                               curscen = curscens[z],
                               curscenshort = curscensshort[z]
         )
+        capridat[[1]]$n <- n
         cdat[[n]]<-capridat[[1]]
         if(length(capridat)>1){
           if(n==1){
@@ -87,9 +88,6 @@ filtermultiple<-function(scope,
   
   return(list(capridat, fdat))
 }
-
-
-
 
 filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
                      ydim="Y", curdim5=NULL,regi, 
@@ -157,12 +155,12 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
     capridat$scen<-curscenshort
     if(grepl("SSP", curscen)){
       ssp <- substr(gsub(".*SSP", "SSP", curscen), 1, 4)
-      yrs <- unique(capridat$y)
-      capridat$ssp <- ssp
-      capridat$scen <- paste0(curscenshort, ssp, "_", yrs)
     }else{
-      capridat$ssp <- ""
+      ssp <- ""
     }
+    yrs <- unique(capridat$y)
+    capridat$ssp <- ssp
+    capridat$scen <- paste0(curscenshort, ssp, "_", yrs)
     if(grepl("run", scope)){
       # If the keyword 'run' is given in the scope, then the files vary in a certain 
       # parameter which must be taken up. The syntax is 
@@ -183,13 +181,15 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
         run <- runfocus[1]
       }
       if(length(runfocus) == 3){
-        run <- gsub(paste0(runfocus[3], ".*"), "", run)
+        run <- gsub(paste0(runfocus[3], ".*"), "", checkfocus)
       }
       capridat$run <- run
       capridat$scen <- paste0(curscenshort, ssp, "_", yrs, "_", run)
       cat("\n", paste0(curscenshort, ssp, "_", yrs, "_", run))
     }
   }
+  #save(list=objects(), file="test.rdata")
+  #stop()
   return(list(capridat, fattr))
 }
 
