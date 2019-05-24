@@ -146,6 +146,7 @@ loadglobalsfrombatch <- function(savepath = NULL,
   setglobals <- setglobals[, c("setglobal", "n", ort), with=FALSE]
   #View(setglobals)
   #cat("\nWrite file ", paste0(savepath, "/", tt, "globals.csv"))
+  if(! dir.exists(savepath)) dir.create(savepath)
   write.csv(setglobals, file=paste0(savepath, "/", tt, "globals.csv"))
   if(xlsok) write.xlsx(setglobals, file = paste0(savepath, "/", tt, "global.xlsx"), sheetName = "setglobals", col.names=TRUE, row.names=FALSE)
   cat("\n", paste0(batchdir, "/batch.html"))
@@ -159,6 +160,11 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
                              outpath=cenv$resout, commonname = NULL){
   
   #con <- list.files(path=spath, pattern=".*global.xlsx",recursive=FALSE, full.names = TRUE)
+  if(! is.null(commonname)) {
+    con <- paste0(outpath, "/", commonname, ".xlsx")
+  } else {
+    con <- paste0(outpath, "/stepreport.xlsx")
+  }
   require(gdxrrw)
   if(gdxrrw::igdx() == FALSE){
     gdxrrw::igdx(cenv$gamsdir)
@@ -181,6 +187,8 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
     commonname <- format(Sys.time(), "%Y%m%d%H%M")
   }
   
+  cat("\ntpath=", tpath)
+  cat("\ntpath=", tpath)
   if(runasbatch == 1){
     if(is.null(nruns)) {
       flsn <- list.files(path=tpath, 
@@ -209,6 +217,7 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
     stepfile <- paste0(tpath, "/", flsn[i], "/stepOutput.gdx")
     cat("\n", stepfile)
     if(file.exists(stepfile)){
+      #cat("\n", stepfile)
       step<-rgdx.param(stepfile, "stepOutput")
       step<-as.data.table(step)
       setnames(step, paste0(".i", 1:5), c("RALL", "COLS", "ROWS", "Y", "STEP"))
@@ -217,12 +226,18 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
       time <- step[COLS == 'TIME']
       timesteps <- unique(time$STEP)
       haslast <- "LST" %in% timesteps
-      laststep <- if(haslast){"LST"}else{timesteps[max(which(grepl("^S", timesteps)))]}
+      laststep <- if(haslast){"LST"}else if(sum(grepl("^S", timesteps))>0){timesteps[max(which(grepl("^S", timesteps)))]}
       tottime <- if(haslast){
         time[STEP == "LST" & ROWS == "TOTSTEP"]$stepOutput/3600
       }else{
         sum(time[STEP %in% timesteps[which(grepl("^S", timesteps))] & ROWS == "TOTSTEP"]$stepOutput)/3600
       }
+      save(list=objects(), file="tmp.rdata")
+      nsteps <- time[STEP %in% timesteps[which(grepl("^S", timesteps))] & ROWS=='Start']$STEP
+      lsteps <- nsteps[length(nsteps)]
+      numinfes <- time[STEP %in% timesteps[which(grepl("^S", timesteps))] & ROWS=="NUMINFES_Market" & STEP %in% nsteps]$stepOutput
+      suminfes <- time[STEP %in% timesteps[which(grepl("^S", timesteps))] & ROWS=="SUMINFES_Market" & STEP == lsteps]$stepOutput
+      curtime <- as.numeric(format(Sys.time(), "%Y%m%d%H%M"))
       if(nrow(iter_chg)>0){
         iter_chg$SCEN <- i
         
@@ -236,7 +251,12 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
         iter2 <- iter2[,max:=max(.SD), .SDcols = "stepOutput", by = .(STEP)]
         iter3 <- iter2[stepOutput == max]
         iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "TIME", tottime, i, ""))
+        #iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "CURTIME", curtime, i, ""))
         iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "STOP", as.logical(haslast), i, ""))
+        for (sp in 1:length(nsteps)){
+          iter3 <- rbind(iter3, list("NUMINFES", "iter_chg", "MAX", "", nsteps[sp], numinfes[sp], i, ""))
+        }
+        #iter3 <- rbind(iter3, list("NUMINFES", "iter_chg", "MAX", "", "SUMINFES", suminfes, i, ""))
         
         iter_chgmax <- rbind(iter_chgmax, iter2)
         iter_chgmxmx <- rbind(iter_chgmxmx, iter3)
@@ -251,9 +271,10 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
     iter_chgtable <- dcast.data.table(iter_chgtable, STEP + RALL + SCEN ~ ROWS, value.var="stepOutput")
     iter_chgmax <- dcast.data.table(iter_chgmax, STEP + SCEN ~ RALL, value.var="stepOutput")
     iter_chgmxmx <- dcast.data.table(iter_chgmxmx, STEP + RALL ~ SCEN, value.var="stepOutput")
-    iter_chgmxmxtot <- iter_chgmxmx[RALL == "TOT"]
+    iter_chgmxmxtot <- iter_chgmxmx[RALL %in% c("TOT", "NUMINFES")]
     iter_chgmxmxtot <- rbind(iter_chgmxmxtot[grepl("^S[1-9]", iter_chgmxmxtot$STEP)], 
                              iter_chgmxmxtot[!grepl("^S[1-9]", iter_chgmxmxtot$STEP)])
+    iter_chgmxmxtot <- rbind(iter_chgmxmxtot[RALL == "TOT"], iter_chgmxmxtot[RALL == "NUMINFES"])
     cat("\nSave file ", paste0(commonname, "_stepreport.rdata"))
     save(iter_chgtable, iter_chgmax, iter_chgmxmx, iter_chgmxmxtot, file=paste0(commonname, "_stepreport.rdata"))
     #View(iter_chgmxmxtot, paste0(basename(commonname), format(Sys.time(), "%H%M")))
@@ -269,13 +290,14 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
       wsn <- unlist(lapply(1:length(ws), function(x) ws[[x]]$getSheetName()))
       for(iname in c("iterchg", "iterchgmx", "iterchgmxmx", "iterchgmxmxtot")){
         if(iname %in% wsn) {
-          #cat("\n Remove Sheet ", iname)
+          cat("\n Remove Sheet ", iname, " from ", con)
           removeSheet(wb, iname)
           saveWorkbook(wb, file=con)
         }
       }
     }
     #write.xlsx(x=iter_chgtable,  file=con, sheetName="iterchg", col.names=TRUE, row.names=FALSE, showNA=FALSE, append=TRUE)
+    save(list=objects(), file="ch.rdata")
     write.xlsx(x=iter_chgmax,    file=con, sheetName="iterchgmx", col.names=TRUE, row.names=FALSE, showNA=FALSE, append=TRUE)
     write.xlsx(x=iter_chgmxmx,   file=con, sheetName="iterchgmxmx", col.names=TRUE, row.names=FALSE, showNA=FALSE, append=TRUE)
     write.xlsx(x=iter_chgmxmxtot,file=con, sheetName="iterchgmxmxtot", col.names=TRUE, row.names=FALSE, showNA=FALSE, append=TRUE)
@@ -339,11 +361,22 @@ globalsandsteps <- function(batchout, subfld, dostep=1){
   spath <- paste0(cenv$resout, "/", subfld)
   globals <- loadglobalsfrombatch(batchdir = batchout, savepath=spath)
   if(dostep == 1){
-    tmptrade <- checkstepreports(tpath=gsub(basename(cenv$scrdir), 
-                                            gettemp(globals), 
-                                            cenv$scrdir),
-                                 commonname = paste0(convbatchdate(batchout), "global"), 
+    if(substr(batchout,1,1) %in% c(1:9)){
+      # Batchout dir renamed with year at the beginning
+      commonname <- batchout
+      tpath <- paste
+    }else{
+      # Batchout dir original name
+      commonname <- paste0(convbatchdate(batchout), "global")
+      tpath <- gsub(basename(cenv$scrdir), commonname, cenv$scrdir)
+    }
+    save(list=objects(), file="t.rdata")
+    cat("\n", batchout, commonname)
+    tmptrade <- checkstepreports(tpath=tpath,
+                                 commonname = commonname, 
                                  outpath=spath)
+  }else{
+    tmptrade <- 0
   }
   return(tmptrade) 
 }
@@ -359,3 +392,14 @@ loadmultipleglobal <- function(savepath = NULL,
   
 }
 
+cpchkmagpie <- function(temp="temp", subfld=NULL, n=c(1), file="chk_kcalMAgPIE" ){
+  fxfile <- paste0(cenv$scrdir, "/../", temp, "/",i,"/", file, "fix.gdx")
+  if(file.exists(fxfile)){
+    file.copy(fxfile, paste0(cenv$resout, "/", subfld, "/", file, "fix.gdx"), overwrite=TRUE)
+  }
+  for(i in n){
+    vrfile <- paste0(cenv$scrdir, "/../", temp, "/",i,"/", file, "var.gdx")
+    file.copy(vrfile, paste0(cenv$resout, "/", subfld, "/", file, "var_", i, ".gdx"), overwrite=TRUE)
+  }
+  
+}

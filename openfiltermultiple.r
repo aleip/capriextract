@@ -48,8 +48,8 @@ filtermultiple<-function(scope,
         capridat<- filteropen(scope, 
                               reload=1, 
                               # Filtering options
-                              cols=cols, 
-                              rows=rows,
+                              curcols=cols, 
+                              currows=rows,
                               ydim=ydim, 
                               curdim5=curdim5,
                               regi=regi,
@@ -89,7 +89,7 @@ filtermultiple<-function(scope,
   return(list(capridat, fdat))
 }
 
-filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
+filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=NULL,
                      ydim="Y", curdim5=NULL,regi, 
                      curcountry, curyear="08", baseyear='08', 
                      curscen='', curscenshort=''){
@@ -103,16 +103,16 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
   capridat<-as.data.table(capridat)
   #View(capridat)
   
-  fattr$filterCOLS<-paste(cols, collapse="-")
-  fattr$filterROWS<-paste(rows, collapse='-')
+  fattr$filterCOLS<-paste(curcols, collapse="-")
+  fattr$filterROWS<-paste(currows, collapse='-')
   fattr$filterCountry<-paste(curcountry, collapse="-")
   fattr$filterRegi<-paste(regi, collapse="-")
   
   #COLS (activities, variables for products)
-  if(!is.null(cols)) capridat<-capridat[capridat$cols%in%cols,]
+  if(!is.null(cols)) capridat<-capridat[cols%in%curcols,]
   
   #ROWS (products, variables for activities)
-  if(!is.null(rows)) capridat<-capridat[capridat$rows%in%rows,]
+  if(!is.null(rows)) capridat<-capridat[rows %in% currows]
   
   #Filter regional level 
   if(!is.null(regi)){
@@ -158,7 +158,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
     }else{
       ssp <- ""
     }
-    yrs <- unique(capridat$y)
+    yrs <- unique(capridat$y)[1]
     capridat$ssp <- ssp
     capridat$scen <- paste0(curscenshort, ssp, "_", yrs)
     if(grepl("run", scope)){
@@ -173,10 +173,11 @@ filteropen<-function(scope, reload=0, capridat=capridat, cols=NULL, rows=NULL,
       #       from the 'run' flag
       runfocus <- gsub(".*run-", "", scope)
       runfocus <- strsplit(runfocus, ",")[[1]]
-      checkfocus <- gsub(paste0(".*", runfocus[1]), runfocus[1], basename(curscen))
+      checkfocus <- gsub(paste0(".*", runfocus[1]), "", basename(curscen))
       cat("\nfunfocus=", runfocus, "checkfocus=", checkfocus)
       if(checkfocus != basename(curscen)){
-        run <- substr(checkfocus, 1, nchar(runfocus[1])+as.numeric(runfocus[2]))
+        #run <- substr(checkfocus, 1, nchar(runfocus[1])+as.numeric(runfocus[2]))
+        run <- substr(checkfocus, 1, as.numeric(runfocus[2]))
       }else{
         run <- runfocus[1]
       }
