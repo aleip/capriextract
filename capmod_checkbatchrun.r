@@ -307,7 +307,7 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
         numinfes <- time[STEP %in% timesteps[which(grepl("^S", timesteps))] & ROWS=="NUMINFES_Market" & STEP %in% nsteps]$stepOutput
         numinfes[is.null(numinfes)] <- 0
         suminfes <- time[STEP %in% timesteps[which(grepl("^S", timesteps))] & ROWS=="SUMINFES_Market" & STEP == lsteps]$stepOutput
-        curtime <- as.numeric(format(Sys.time(), "%Y%m%d%H%M"))
+        curtime <- as.numeric(format(Sys.time(), "%Y%m%%H%M"))
         if(nrow(iter_chg)>0){
           iter_chg$SCEN <- i
           
@@ -323,11 +323,12 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
           iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "TIME", tottime, i, ""))
           #iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "CURTIME", curtime, i, ""))
           iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "STOP", as.logical(haslast), i, ""))
+          if(length(nsteps)>0){
           for (sp in 1:length(nsteps)){
             iter3 <- rbind(iter3, list("NUMINFES", "iter_chg", "MAX", "", nsteps[sp], numinfes[sp], i, ""))
           }
           iter3 <- rbind(iter3, list("NUMINFES", "iter_chg", "MAX", "", "SUMINFES", suminfes[1], i, ""))
-          
+          }
           iter_chgmax <- rbind(iter_chgmax, iter2)
           iter_chgmxmx <- rbind(iter_chgmxmx, iter3)
         }

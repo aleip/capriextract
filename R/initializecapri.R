@@ -118,10 +118,16 @@ StoreCapriInit <- function(){
   me <- Sys.info()[7]
   pc <- Sys.info()[4]
   
-  if(file.exists(".caprisettings.Rdata")) load(file=".caprisettings.Rdata")
-  if(!exists("caprisettingarchive")) caprisettingarchive <- list()
-  caprisettingarchive[[paste0(me, pc)]] <- cenv
-  save(caprisettingarchive, file=".caprisettings.Rdata")
+  #if(file.exists(".caprisettings.Rdata")) load(file=".caprisettings.Rdata")
+  #if(!exists("caprisettingarchive")) caprisettingarchive <- list()
+  #caprisettingarchive[[paste0(me, pc)]] <- cenv
+  #save(caprisettingarchive, file=".caprisettings.Rdata")
+  
+  cursetting <- as.data.table(unlist(as.matrix(cenv)))
+  names(cursetting) <- paste0(me, pc)
+  row.names(cursetting) <- names(cenv)
+  write.csv(cursetting, file=paste0(".init_", me[[1]], pc[[1]]))
+  
   invisible()
   
 }
@@ -211,39 +217,24 @@ RetrieveCapriInit <- function(){
   me <- Sys.info()[7]
   pc <- Sys.info()[4]
   
-  if(file.exists(".caprisettings.Rdata")) load(file=".caprisettings.Rdata")
-  if(!exists("caprisettingarchive")) caprisettingarchive <- list()
-  x <- names(caprisettingarchive)
-  if(paste0(me,pc) %in% x){
+  settingname <- paste0(".init_", me[[1]], pc[[1]])
+  if(file.exists(settingname)){
     
-    c <- caprisettingarchive[[paste0(me, pc)]] 
-
+    c <- read.csv(settingname, stringsAsFactors=FALSE)
+    cl <- as.list(c[, 2])
+    names(cl) <- c$X
+    cenv <<- cl
+    
   }else{
     
     message("The user/computer combination has not yet been archived.")
-    message("These are the combinations stored")
-    print(names(caprisettingarchive))
-    choice <- readline(prompt = "Please enter 0 to abort and choose another method\n or select the nunber of the settings you want to retrieve.")
-    if(choice !=0){
-      if(choice <= length(caprisettingarchive)){
-        cat("\nUsing settings from ", paste0(me,pc))
-        c <- caprisettingarchive[[as.numeric(choice)]]
-      }
-    }else{
-      message(paste0("Please run InitCapriEnv(capri.runfile) if you have a CAPRI runfile at hand.\n",
-                     "Otherwise Choose the option .... (to be developed)."))
-      c <- NULL
-    }
+    message("You might copy an existing settings-file and adjust manually to start it.")
+    
+    
   }
   
-  if(file.exists(".caprisets.Rdata")) {
-    GetCapriSets() 
-  }else{
-    message(paste0("CAPRI sets have not been initialized.\n",
-                   "Please run UpdateCapriSets(setfile) if you have gdx file with relevant CAPRI sets."))
-  }
   
-  cenv <<- c
+
   invisible()
 }
 
