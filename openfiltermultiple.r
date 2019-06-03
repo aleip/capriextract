@@ -37,7 +37,7 @@ filtermultiple<-function(scope,
     # They get all the name - copy to vector of length curscens
     curscensshort <- rep(curscensshort, length(curscens))
   }
-  
+  cat("\ncols=", cols)
   cdat<-list()
   fdat<-data.frame(nrow=0)
   n<-0
@@ -109,10 +109,11 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
   fattr$filterRegi<-paste(regi, collapse="-")
   
   #COLS (activities, variables for products)
-  if(!is.null(cols)) capridat<-capridat[cols%in%curcols,]
+  if(!is.null(curcols)) capridat<-capridat[cols%in%curcols,]
   
   #ROWS (products, variables for activities)
-  if(!is.null(rows)) capridat<-capridat[rows %in% currows]
+  #save(list=objects(), file="test.rdata")
+  if(!is.null(currows)) capridat<-capridat[rows %in% currows]
   
   #Filter regional level 
   if(!is.null(regi)){
