@@ -43,6 +43,7 @@
 #' }
 #' @export
 loadglobalsfrombatch <- function(savepath = NULL,
+                                 tpath = cenv$scrdir, 
                                  batchf = paste0(cenv$resdir, "/../batchout"),
                                  dp = cenv$resdir,
                                  batchdir = NULL,
@@ -79,7 +80,7 @@ loadglobalsfrombatch <- function(savepath = NULL,
     if(dp=="google") batchdir <- paste0(google, "/projects/capri_runs/log/")
     
     cat(batchdir)
-    fortran <- list.files(batchdir, pattern = paste0(logf, ".*"))
+#    fortran <- list.files(batchdir, pattern = paste0(logf, ".*"))
   }
   
   if(is.null(savepath)) {
@@ -87,9 +88,13 @@ loadglobalsfrombatch <- function(savepath = NULL,
     if(dp=="google") savepath <- paste0(google, "/projects/capri_runs/log/")
   } 
   
+  cat("\nfortran=", tpath)
+  fortran <- gettmpsubfolders(tpath=tpath)
+  cat("\nfortran=", fortran)
+  
   setglob <- lapply(1:length(fortran), function(x) {
     
-    curf <- paste0(batchdir, "/", fortran[x])
+    curf <- paste0(tpath, "/", fortran[x], "/fortran.gms")
     cat("\n", curf)
     con <- file(curf, open = "r")
     setglobal <- readLines(con)
@@ -126,7 +131,7 @@ loadglobalsfrombatch <- function(savepath = NULL,
   }
   )
   reportsummary <- unlist(lapply(1:length(fortran), function(x){
-  #reportsummary <- Reduce(rbind,unlist(lapply(19:21, function(x){
+    #reportsummary <- Reduce(rbind,unlist(lapply(19:21, function(x){
     #reportsummary <- lapply(22:22, function(x){
     
     #curf <- paste0(batchdir, "/", x, ".lst")
@@ -199,7 +204,7 @@ loadglobalsfrombatch <- function(savepath = NULL,
   newnames <- c("setglobal", "n", paste0("r", rt))
   setnames(setglobals, colnames(setglobals), newnames)
   setglobals <- setglobals[, c("setglobal", "n", ort), with=FALSE]
-
+  
   # Add information on simulation status (success - running - not started - Error message)
   save(list=objects(), file="glob.rdata")
   reportsummary<-as.data.table(t(c("status", 99, reportsummary)))
@@ -208,7 +213,7 @@ loadglobalsfrombatch <- function(savepath = NULL,
   setglobals$n <- as.numeric(setglobals$n)
   
   #View(setglobals)
-  #cat("\nWrite file ", paste0(savepath, "/", tt, "globals.csv"))
+  cat("\nWrite file ", paste0(savepath, "/", tt, "globals.csv"))
   if(! dir.exists(savepath)) dir.create(savepath)
   write.csv(setglobals, file=paste0(savepath, "/", tt, "globals.csv"))
   if(xlsok) {
@@ -307,7 +312,7 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
         numinfes <- time[STEP %in% timesteps[which(grepl("^S", timesteps))] & ROWS=="NUMINFES_Market" & STEP %in% nsteps]$stepOutput
         numinfes[is.null(numinfes)] <- 0
         suminfes <- time[STEP %in% timesteps[which(grepl("^S", timesteps))] & ROWS=="SUMINFES_Market" & STEP == lsteps]$stepOutput
-        curtime <- as.numeric(format(Sys.time(), "%Y%m%%H%M"))
+        curtime <- as.numeric(format(Sys.time(), "%Y%m%H%M"))
         if(nrow(iter_chg)>0){
           iter_chg$SCEN <- i
           
@@ -324,10 +329,10 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
           #iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "CURTIME", curtime, i, ""))
           iter3 <- rbind(iter3, list("TOT", "iter_chg", "MAX", "", "STOP", as.logical(haslast), i, ""))
           if(length(nsteps)>0){
-          for (sp in 1:length(nsteps)){
-            iter3 <- rbind(iter3, list("NUMINFES", "iter_chg", "MAX", "", nsteps[sp], numinfes[sp], i, ""))
-          }
-          iter3 <- rbind(iter3, list("NUMINFES", "iter_chg", "MAX", "", "SUMINFES", suminfes[1], i, ""))
+            for (sp in 1:length(nsteps)){
+              iter3 <- rbind(iter3, list("NUMINFES", "iter_chg", "MAX", "", nsteps[sp], numinfes[sp], i, ""))
+            }
+            iter3 <- rbind(iter3, list("NUMINFES", "iter_chg", "MAX", "", "SUMINFES", suminfes[1], i, ""))
           }
           iter_chgmax <- rbind(iter_chgmax, iter2)
           iter_chgmxmx <- rbind(iter_chgmxmx, iter3)
@@ -360,13 +365,14 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
                              iter_chgmxmxtot[! STEP %in% stepss & RALL == "NUMINFES"],
                              iter_chgmxmxtot[  STEP %in% stepss & RALL == "NUMINFES"])
     #cat("\nSave file ", paste0(commonname, "_stepreport.rdata"))
-
+    
     # Fill empty columns to 'see' gaps
     n <- as.numeric(names(iter_chgmxmx)[! names(iter_chgmxmx) %in% c("STEP", "RALL")])
-    iter_chgmxmx <- iter_chgmxmx[, as.character(1:max(n))[! (1:max(n)) %in% n] :=  ""]
+    nadd <- length(as.character(1:max(n))[! (1:max(n)) %in% n])>0
+    if(nadd){iter_chgmxmx <- iter_chgmxmx[, as.character(1:max(n))[! (1:max(n)) %in% n] :=  ""]}
     iter_chgmxmx <- iter_chgmxmx[, .SD, .SDcols = c("STEP", "RALL", as.character(1:max(n)))]
     n <- as.numeric(names(iter_chgmxmxtot)[! names(iter_chgmxmxtot) %in% c("STEP", "RALL")])
-    iter_chgmxmxtot <- iter_chgmxmxtot[, as.character(1:max(n))[! (1:max(n)) %in% n] :=  ""]
+    if(nadd){iter_chgmxmxtot <- iter_chgmxmxtot[, as.character(1:max(n))[! (1:max(n)) %in% n] :=  ""]}
     iter_chgmxmxtot <- iter_chgmxmxtot[, .SD, .SDcols = c("STEP", "RALL", as.character(1:max(n)))]
     save(iter_chgtable, iter_chgmax, iter_chgmxmx, iter_chgmxmxtot, file=gsub(".xlsx", ".rdata", con))
     #View(iter_chgmxmxtot, paste0(basename(commonname), format(Sys.time(), "%H%M")))
@@ -458,13 +464,13 @@ gettemp <- function(globals){
 
 
 globalsandsteps <- function(batchout, tmpfld=NULL, capmodsubfld, dostep=1, nruns=NULL){
-  spath <- paste0(cenv$resout, "/", capmodsubfld)
-  globals <- loadglobalsfrombatch(batchdir = batchout, savepath=spath)
+  spath <- paste0(cenv$capri, cenv$resout, "/", capmodsubfld)
+  if(is.null(tmpfld)){
+    tmpfld <- paste0(convbatchdate(batchout), "global")
+  }
+  tpath <- paste0(cenv$capri, gsub(basename(cenv$scrdir), tmpfld, cenv$scrdir))
+  globals <- loadglobalsfrombatch(batchdir = batchout, tpath=tpath, savepath=spath)
   if(dostep == 1){
-    if(is.null(tmpfld)){
-      tmpfld <- paste0(convbatchdate(batchout), "global")
-    }
-    tpath <- gsub(basename(cenv$scrdir), tmpfld, cenv$scrdir)
     save(list=objects(), file="t.rdata")
     tmptrade <- checkstepreports(tpath=tpath,
                                  commonname=capmodsubfld,
@@ -501,4 +507,34 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL, n=NULL, file="chk_kcalMA
     file.copy(vrfile, paste0(cenv$resout, "/", capmodsubfld, "/",capmodsubfld , "_", file, "var_", i, ".gdx"), overwrite=TRUE)
   }
   
+}
+
+
+gettmpsubfolders <- function(tpath=cenv$scrdir, runasbatch=1, nruns=NULL){
+  
+  if(is.null(tpath)){
+    message("Please indicate a folder used by CAPRI as 'scrdir'. ",
+            "\nTried to get it from the CAPRI environment cenv$scrdir but it is not set.")
+    invsible(0)
+  }
+  #cat("\ntpath=", tpath)
+  if(runasbatch == 1){
+    if(is.null(nruns)) {
+      flsn <- list.files(path=paste0(tpath), 
+                         pattern="^[0-9]*$", 
+                         recursive=FALSE, 
+                         full.names = FALSE)
+      flsn <- flsn[order(as.numeric(flsn))]
+    }else{
+      
+      flsn <- as.character(nruns)
+      
+    }
+    nruns <- length(flsn)
+  }else{
+    
+    message("So far used only for batch runs")
+    
+  }
+  return(flsn)
 }
