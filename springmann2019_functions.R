@@ -129,6 +129,8 @@ eatRefDiet <- function(x = p_eatintk) {
   # eatFoodGrp<- as.character(unique(eatFood2O$eatFoodGrp))
   y <- merge(x, p_refeat, by = c("rall", "rows", "n"), all=TRUE)
   y <- y[, ratio := ref / value]
+  setnames(y, "value", "INTK_gPcapday")
+  y <- y[, -"cols", with=FALSE]
   y <- ocols(y)
   return(y)
 }
@@ -155,84 +157,143 @@ getinha <- function(x = caprid) {
 getlca <- function(x = caprid) {
   # Get global LCA data for 'producction' (thus total emissions)
   curempty <- as.character(unique(x$empty))
-  lca <-
-    x[empty %in% setdiff(curempty, "") & cols %in% c("PROD", "YILD")]
-  lca <-
-    dcast.data.table(lca, rall + cols + rows + y + ssp + run ~ empty, value.var = "value")
+  lca <- x[empty %in% setdiff(curempty, "") & cols %in% c("PROD", "YILD")]
+  lca <- dcast.data.table(lca, rall + cols + rows + y + ssp + run + n~ empty, value.var = "value")
   lca[is.na(lca)] <- 0
   # Assumption: N2OAMM in Gg N2O --> convert to Gg N-N2O and --> Gg N-NH3
   # Data under 'YILD' assumed to be kg CH4/t and kg N2O/t
   # Data under 'PROD' assumed to be 1000t CH4 and 1000t N2O (or Gg CH4 and Gg N2O)
-  lca <- lca[, NH3tot := N2OAMM * 28 / 44 * 100]
-  lca <- lca[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
-  lca <- lca[, NOX := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
-  lca <- lca[, CH4 := CH4ENT + CH4MAN + CH4RIC]
-  lca <-
-    lca[, .(rall, cols, rows, y, ssp, run, NH3tot, NH3, NOX, CH4)]
-  
+  # We use YILD here as changes in production in a country (and hence total
+  # emissions) is not necessarily related to consumption pattern in the country
+  # it is therefore better to use emission factors
+  lca <- lca[, NH3_kgPt := N2OAMM * 28 / 44 * 100]
+  #NH3 emissions from EU supply models are not available in global LCA
+  #lca <- lca[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
+  lca <- lca[, NOX_kgPt := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
+  lca <- lca[, CH4_kgPt := CH4ENT + CH4MAN + CH4RIC]
+  lca <- lca[, .(rall, cols, rows, y, ssp, run, n, NH3_kgPt, NOX_kgPt, CH4_kgPt)]
+  lca <<- lca
   
   p_diet <- getintake(x)
   p_inha <- getinha(x)
   
   
-  p_diet <-
-    merge(p_diet,
-          p_inha[, .(rall, ssp, y, INHA)],
-          by = c("rall", "y", "ssp"),
-          all.x = TRUE)
-  p_diet <-
-    p_diet[, ENNE_GcalPyear := ENNE_kcalPcapday * 365 * INHA / 1000000]
+  p_diet <- merge(p_diet,
+                  p_inha[, .(rall, ssp, y, INHA)],
+                  by = c("rall", "y", "ssp"),
+                  all.x = TRUE)
+  p_diet <- p_diet[, INTK_GgPyear := INTK_gPcapday * 365 * INHA / 1000000]
+  p_diet <- p_diet[, .(rall, rows, y, ssp, run, n, INTK_GgPyear)]
   
   # Merge diets and LCA emissions and
   # convert emissions to values per total calories consumed per year in the country
-  p_dietemis <-
-    merge(p_diet, lca[cols == "PROD"], by = c("rall", "rows", "y", "ssp", "run"))
+  p_dietemis <- merge(p_diet, lca[cols == "YILD"], by = c("rall", "rows", "y", "ssp", "run"))
+  p_dietemis <- p_dietemis[, -"cols", with=FALSE]
   
-  # We assume emissions in GgPyear
-  p_dietemis <-
-    p_dietemis[, NH3totkgperkcalyear := NH3tot / ENNE_GcalPyear]
-  p_dietemis <-
-    p_dietemis[, NH3kgperkcalyear := NH3 / ENNE_GcalPyear]
-  p_dietemis <-
-    p_dietemis[, NOXkgperkcalyear := NOX / ENNE_GcalPyear]
-  p_dietemis <- p_dietemis[, CH4perkcalyear := CH4 / ENNE_GcalPyear]
-  
-  colsPtime <-
-    names(p_dietemis)[grepl("Pcap|per|Pyear", names(p_dietemis))]
-  colsAbs <- c("NH3tot", "NH3", "NOX", "CH4")
+  colsPtime <- names(p_dietemis)[grepl("Pt", names(p_dietemis))]
   idvars <- c("rows", "rall", "y", "ssp", "run", "n")
   p_dietemis <- melt.data.table(
     p_dietemis,
     id.vars = idvars,
-    measure.vars = c(colsPtime, colsAbs),
+    measure.vars = c(colsPtime, "INTK_GgPyear"),
     variable.name = "cols"
   )
   p_dietemis <- ocols(p_dietemis)
   return(p_dietemis)
 }
 
-avByEat <- function(x = p_dietemis) {
-  eatFood2O <-
-    data.table(rgdx.set(
-      gdxName = paste0(cenv$capri, cenv$resdir, '/capmod/chk_kcalEATvar.gdx'),
-      symName = "eatFood2O",
-      names = c('eatFoodGrp', 'rows')
-    ))
-  eatFood2O <- eatFood2O[eatFoodGrp=="MILC", rows := "MILK"]
-  eatFood2O <- eatFood2O[eatFoodGrp=="OILS", rows := "OILS"]
-  eatFood2O <- unique(eatFood2O)
+getLosses <- function(x=caprid){
   
-  dt <- merge(x, eatFood2O, by = "rows", all=TRUE)
+  losses <- caprid[cols %in% c("GROF", "IMPT", "HCON", "LOSMsh", "LOSCsh", "INDMsh")]
+  losses <- dcast.data.table(losses, rall + rows + y + ssp + run + n ~ cols, value.var = "value")
+  losses[is.na(losses)] <- 0
+  losses <- losses[, INTKsh := 1 - LOSMsh - INDMsh - LOSCsh]
+  # Share on consumer demand (HCON) on total supply (GROF + IMPT)
+  losses <- losses[, HCONsh := HCON / (GROF + IMPT)]
+  # Share of households on consumer demand = intake + food waste
+  losses <- losses[, HSHLsh := LOSCsh + INTKsh]
+  losses <- losses[HCONsh != 0]
+  householdshare <- losses[, .(rall, rows, y, ssp, run, n, HCON, HSHLsh)]
+  householdshare <- householdshare[, HSHL := HCON * HSHLsh]
+  eatFood2O <- geteatFood2O()
+  householdshare <- merge(householdshare, eatFood2O, by="rows")
+  hcontot <- dcast.data.table(householdshare, rall+y+ssp+run+n ~ eatFoodGrp, value.var = "HCON", sum)
+  hshltot <- dcast.data.table(householdshare, rall+y+ssp+run+n ~ eatFoodGrp, value.var = "HSHL", sum)
+  hcontot <- melt.data.table(hcontot, id.vars = c("rall", "y", "ssp", "run", "n"), variable.name = "rows")
+  hcontot <- hcontot[, cols := "HCON"]
+  hshltot <- melt.data.table(hshltot, id.vars = c("rall", "y", "ssp", "run", "n"), variable.name = "rows")
+  hshltot <- hshltot[, cols := "HSHL"]
+  householdshare <- dcast.data.table(rbind(hcontot, hshltot), rall+y+rows+ssp+run+n~ cols, value.var = 'value')
+  householdshare <- householdshare[, HSHLsh := HSHL / HCON]
+  householdshare <- householdshare[, .(rall, y, rows, ssp, run, n, HSHLsh)]
+  return(householdshare)
+}
+geteatFood2O <- function(){
+  data.table(rgdx.set(
+    gdxName = paste0(cenv$capri, cenv$resdir, '/capmod/chk_kcalEATvar.gdx'),
+    symName = "eatFood2O",
+    names = c('eatFoodGrp', 'rows')
+  ))
+eatFood2O <- eatFood2O[eatFoodGrp=="MILC", rows := "MILK"]
+eatFood2O <- eatFood2O[eatFoodGrp=="OILS", rows := "OILS"]
+eatFood2O <- unique(eatFood2O)
+}
 
+avByEat <- function(x = p_dietemis, y = p_eatintk) {
+  
+  dt <- merge(x, eatFood2O, by = "rows")
+  eatFood2O <- geteatFood2O()
   eatFoodGrp <- as.character(unique(eatFood2O$eatFoodGrp))
   
-  keepcols <- c("INTK_gPcapday", "NH3tot", "NH3", "NOX", "CH4")
-  dt <- dt[cols %in% keepcols]
-  st <-
-    dcast.data.table(dt, rall + y + ssp + run + n + eatFoodGrp ~ cols, value.var =
-                       "value", sum)
+  #keepcols <- c("INTK_GgPyear", "NH3_kgPt", "NOX_kgPt", "CH4_kgPt")
+  #dt <- dt[cols %in% keepcols]
+  st <- dcast.data.table(dt, rall + y + ssp + run + n + eatFoodGrp ~ cols, 
+                         value.var = "value", sum)
   setnames(st, "eatFoodGrp", "rows")
-  st$cols <- 'emis'
+  #st$cols <- 'emis'
   st <- ocols(st)
-  return(st)
+  
+  st <- merge(st, y, by=dims[!dims=="cols"], all=TRUE)
+  # Food products have not been aggregated
+  st <- st[!rows %in% c("ALLP", "ANIM", "CROPIN", "CROPDE")]
+  # No emissions calculated for fish products
+  st <- st[!rows %in% c("ACQU")]
+  
+  # delete country aggregates if countries exist
+  st <- st[!rall %in% c("BUR", "WBA", "EU", "EU013000", "EU028000", 
+                        "MED", "URUPAR","MER_OTH","NONEU_EU",
+                        "ASIA","AFRICA","N_AM","MS_AM","MER",
+                        "HI_INC","MID_INC","LDCACP","LDC","ACP",
+                        "NONEU","World","EU_WEST","EU_EAST","EU028000")]
+  
+  # Check missing values
+  st_na <- st[is.na(ref)]
+  cat("\nCheck if there are NAs in column ref")
+  print(st_na)
+  
+  tt <- st[, `:=` (NH3_tPy = NH3_kgPt * INTK_GgPyear,
+                   NOX_tPy = NOX_kgPt * INTK_GgPyear,
+                   CH4_tPy = CH4_kgPt * INTK_GgPyear)]
+  # Scale only shocked scenarios - the un-shocked keep their emissions
+  tt <- tt[run=='+1', `:=` (nNH3_tPy = NH3_tPy * ratio,
+                            nNOX_tPy = NOX_tPy * ratio,
+                            nCH4_tPy = CH4_tPy * ratio)]
+  tt <- tt[run=='0', `:=` (nNH3_tPy = NH3_tPy,
+                           nNOX_tPy = NOX_tPy,
+                           nCH4_tPy = CH4_tPy)]
+    
+  # Scale total emissions according to the share of household demand on total supply
+  # HSHLsh is the share of Intake + Foodwaste on total supply (GROF + IMPT)
+  # If intake changes by factor 'ratio' then so does also total household demand
+  # as we assume that food waste remains stable.
+  # HSHLsh increases therefore from x to x*ratio, but the total changes as well
+  # from 100% to (100 + ratio-1)%
+  #householdshares <- getLosses(x=caprid)
+  #tx <- merge(tt, householdshares, by =c("rall", "y", "rows", "ssp", "run", "n"))
+  
+  p_emissionshock <- tt[, `:=` (DNH3_tPy = nNH3_tPy - NH3_tPy,
+                   DNOX_tPy = nNOX_tPy - NOX_tPy,
+                   DCH4_tPy = nCH4_tPy - CH4_tPy)]
+  
+  return(p_emissionshock)
 }
