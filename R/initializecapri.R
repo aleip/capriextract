@@ -499,7 +499,7 @@ startextract<-function(scope){
   }
   
   scope <<- scope
-  
+  GetCapriSets()
   #source("capri_packages.r")
   #source("capri_dirs.r")
   #source("capri_sets.r")

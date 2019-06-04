@@ -170,20 +170,26 @@ loadglobalsfrombatch <- function(savepath = NULL,
   # cleaning
   #cat("\n", colnames(setglobals))
   #scrbase <- dirname(dirname(setglobals[V1=="scrdir", V2]))
+  save(list=objects(), file="loadglobalsfrombatch173.rdata")
   moreruns <- 2:length(fortran)
-  for (i in moreruns){
-    #cat("\n - ", i)
-    setglobals <- merge(setglobals, setglob[[i]], by = "V1")
-    setnames(setglobals, colnames(setglobals), c("V1", "n", paste0("r", seq(1:i))))
-    
-    # In case it is easier to have blanks where the same value is as in the first column
-    # set keepsameasfirstempty to 1
-    keepsameasfirstempty <- 1
-    if(keepsameasfirstempty==1){
-      setglobals[get(paste0("r", i))==r1, paste0("r", i)] <- ""
-      #setglobals[V1=="scrdir", paste0("r", i)] <- ""
+  if(length(fortran)>1){
+    for (i in moreruns){
+      #cat("\n - ", i)
+      setglobals <- merge(setglobals, setglob[[i]], by = "V1")
+      setnames(setglobals, colnames(setglobals), c("V1", "n", paste0("r", seq(1:i))))
+      
+      # In case it is easier to have blanks where the same value is as in the first column
+      # set keepsameasfirstempty to 1
+      keepsameasfirstempty <- 1
+      if(keepsameasfirstempty==1){
+        setglobals[get(paste0("r", i))==r1, paste0("r", i)] <- ""
+        #setglobals[V1=="scrdir", paste0("r", i)] <- ""
+      }
+      
     }
-    
+  }else{
+    setglobals <- setglobals[, .(V1, n, V2)]
+    setnames(setglobals, colnames(setglobals), c("V1", "n", "r1"))
   }
   #setglobals[V1=="scrdir", .SD, .SDcols=paste0("r", moreruns)] <- 
   #  basename(as.character(setglobals[V1=="scrdir", .SD, .SDcols=paste0("r", moreruns)]))
@@ -225,7 +231,7 @@ loadglobalsfrombatch <- function(savepath = NULL,
   }
   cat("\n", paste0(batchdir, "/batch.html"))
   cat("\n", paste0(savepath, "/", tt, "batchout.html"))
-  file.copy(paste0(batchdir, "/batch.html"), paste0(savepath, "/", tt, "batchout.html"))
+  file.copy(paste0(cenv$capri, batchdir, "/batch.html"), paste0(savepath, "/", tt, "batchout.html"))
   return(setglobals)
 }
 
@@ -493,18 +499,30 @@ loadmultipleglobal <- function(savepath = NULL,
   
 }
 
-cpchkmagpie <- function(temp="temp", capmodsubfld=NULL, n=NULL, file="chk_kcalMAgPIE" ){
-  tpath <- paste0(cenv$scrdir, "/../", temp)
+cpchkmagpie <- function(temp="temp", capmodsubfld=NULL, n=NULL, 
+                        file="chk_kcalMAgPIE",
+                        cpfix = TRUE, # Copy also (large) file with input data DATA, p_dataOuttemp, etc.
+                        cpstep = FALSE # Copy gdx file 'stepOutput.gdx' (full step output)
+                        ){
+  tpath <- paste0(cenv$capri, cenv$scrdir, "/../", temp)
   if(is.null(n)){
     n <- sort(as.numeric(basename(list.dirs(tpath, recursive=FALSE))))
   }
-  fxfile <- paste0(cenv$scrdir, "/../", temp, "/",1,"/", file, "fix.gdx")
-  if(file.exists(fxfile)){
-    file.copy(fxfile, paste0(cenv$resout, "/", capmodsubfld, "/", capmodsubfld, "_", file, "fix.gdx"), overwrite=TRUE)
+  if(cpfix){
+    fxfile <- paste0(cenv$capri, cenv$scrdir, "/../", temp, "/",1,"/", file, "fix.gdx")
+    if(file.exists(fxfile)){
+      file.copy(fxfile, paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/", capmodsubfld, "_", file, "fix.gdx"), overwrite=TRUE)
+    }
   }
   for(i in n){
-    vrfile <- paste0(cenv$scrdir, "/../", temp, "/",i,"/", file, "var.gdx")
-    file.copy(vrfile, paste0(cenv$resout, "/", capmodsubfld, "/",capmodsubfld , "_", file, "var_", i, ".gdx"), overwrite=TRUE)
+    vrfile <- paste0(cenv$capri, cenv$scrdir, "/../", temp, "/",i,"/", file, "var.gdx")
+    file.copy(vrfile, paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/",capmodsubfld , "_", file, "var_", i, ".gdx"), overwrite=TRUE)
+  }
+  if(cpstep){
+  for(i in n){
+    vrfile <- paste0(cenv$capri, cenv$scrdir, "/../", temp, "/",i,"/", "stepOutput.gdx")
+    file.copy(vrfile, paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/",capmodsubfld , "_", "stepOutput_", i, ".gdx"), overwrite=TRUE)
+  }
   }
   
 }
