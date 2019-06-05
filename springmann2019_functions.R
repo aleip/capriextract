@@ -5,6 +5,16 @@ dims <- c("rall", "cols", "rows", "y", "ssp", "run", "n")
 ocols <- function(x) {
   x <- x[, .SD, .SDcols = c(dims[dims %in% names(x)], names(x)[!names(x) %in% dims])]
 }
+
+dims <- function(x){
+  
+  # Determine dims that belong to the scenario description
+  dims <- c("rall", "cols", "rows", "y", "ssp", "run", "n")
+  a <- names(x)
+  dims <- dims[dims %in% a]
+  
+}
+
 getSpringmannresults <- function(subfld = NULL, flag = NULL) {
   currows <-
     c(
@@ -235,6 +245,7 @@ getLosses <- function(x=caprid){
   losses <- losses[, INTK := HCON * INTKsh]
   losses <- losses[, LOSC := HCON * LOSCsh]
   
+  eatFood2O <- geteatFood2O()
   losses <- merge(losses, eatFood2O, by="rows")
   losses <- losses[HCONsh != 0]
   
@@ -253,21 +264,23 @@ getLosses <- function(x=caprid){
   householdshare <- householdshare[, .(rall, y, rows, ssp, run, n, HSHLsh)]
   return(losses)
 }
+
 geteatFood2O <- function(){
-  data.table(rgdx.set(
+  eatFood2O <-  data.table(rgdx.set(
     gdxName = paste0(cenv$capri, cenv$resdir, '/capmod/chk_kcalEATvar.gdx'),
     symName = "eatFood2O",
     names = c('eatFoodGrp', 'rows')
   ))
-eatFood2O <- eatFood2O[eatFoodGrp=="MILC", rows := "MILK"]
-eatFood2O <- eatFood2O[eatFoodGrp=="OILS", rows := "OILS"]
-eatFood2O <- unique(eatFood2O)
+  eatFood2O <- eatFood2O[eatFoodGrp=="MILC", rows := "MILK"]
+  eatFood2O <- eatFood2O[eatFoodGrp=="OILS", rows := "OILS"]
+  eatFood2O <- unique(eatFood2O)
 }
 
 avByEat <- function(x = p_dietemis, y = p_eatintk) {
   
-  dt <- merge(x, eatFood2O, by = "rows")
+  
   eatFood2O <- geteatFood2O()
+  dt <- merge(x, eatFood2O, by = "rows")
   eatFoodGrp <- as.character(unique(eatFood2O$eatFoodGrp))
   
   #keepcols <- c("INTK_GgPyear", "NH3_kgPt", "NOX_kgPt", "CH4_kgPt")
@@ -323,23 +336,24 @@ scale4losses <- function(x=caprid, st=p_eatemis) {
   
   #Emissions linked to household demand are calculated from
   #Emissions per t of product * intake divided (scaled) to total household demand
-  tt <- tt[, `:=` (NH3_tPy = NH3_kgPt * INTK_GgPyear / INTK2HSHL,
-                   NOX_tPy = NOX_kgPt * INTK_GgPyear / INTK2HSHL,
-                   CH4_tPy = CH4_kgPt * INTK_GgPyear / INTK2HSHL)]
+  # Units: kg N/t food * Gg food/y = Mg N/y --> divide by 1000 to obtain Gg N/y
+  tt <- tt[, `:=` (NH3hshl_GgPy = 0.001 * NH3_kgPt * INTK_GgPyear / INTK2HSHL,
+                   NOXhshl_GgPy = 0.001 * NOX_kgPt * INTK_GgPyear / INTK2HSHL,
+                   CH4hshl_GgPy = 0.001 * CH4_kgPt * INTK_GgPyear / INTK2HSHL)]
   
   # Scale only shocked scenarios to the target diets from EAT
   # - the un-shocked keep their emissions
-  tt <- tt[run=='+1', `:=` (nNH3_tPy = NH3_tPy * ratio,
-                            nNOX_tPy = NOX_tPy * ratio,
-                            nCH4_tPy = CH4_tPy * ratio)]
-  tt <- tt[run=='0', `:=` (nNH3_tPy = NH3_tPy,
-                           nNOX_tPy = NOX_tPy,
-                           nCH4_tPy = CH4_tPy)]
-    
+  tt <- tt[run=='1', `:=` (NH3hshlfin_GgPy = NH3hshl_GgPy * ratio, # Note that IS scaled to target
+                           NOXhshlfin_GgPy = NOXhshl_GgPy * ratio,
+                           CH4hshlfin_GgPy = CH4hshl_GgPy * ratio)]
+  tt <- tt[run=='0', `:=` (NH3hshlfin_GgPy = NH3hshl_GgPy, # Note that this is NOT scaled to target
+                           NOXhshlfin_GgPy = NOXhshl_GgPy,
+                           CH4hshlfin_GgPy = CH4hshl_GgPy)]
   
-  p_eatemis <- tt[, `:=` (DNH3_tPy = nNH3_tPy - NH3_tPy,
-                                DNOX_tPy = nNOX_tPy - NOX_tPy,
-                                DCH4_tPy = nCH4_tPy - CH4_tPy)]
+  
+  p_eatemis <- tt[, `:=` (NH3diff_GgPy = NH3hshlfin_GgPy - NH3hshl_GgPy,
+                          NOXdiff_GgPy = NOXhshlfin_GgPy - NOXhshl_GgPy,
+                          CH4diff_GgPy = CH4hshlfin_GgPy - CH4hshl_GgPy)]
   
   return(p_eatemis)
 }
