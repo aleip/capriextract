@@ -154,7 +154,7 @@ getinha <- function(x = caprid) {
     unique(p_inha[, INHA := mean(value), by = .(rall, ssp, y)][, .(rall, ssp, y, INHA)])
 }
 
-getlca <- function(x = caprid) {
+getlca <- function(x = caprid, what="YILD") {
   # Get global LCA data for 'producction' (thus total emissions)
   curempty <- as.character(unique(x$empty))
   lca <- x[empty %in% setdiff(curempty, "") & cols %in% c("PROD", "YILD")]
@@ -166,13 +166,26 @@ getlca <- function(x = caprid) {
   # We use YILD here as changes in production in a country (and hence total
   # emissions) is not necessarily related to consumption pattern in the country
   # it is therefore better to use emission factors
-  lca <- lca[, NH3_kgPt := N2OAMM * 28 / 44 * 100]
-  #NH3 emissions from EU supply models are not available in global LCA
-  #lca <- lca[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
-  lca <- lca[, NOX_kgPt := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
-  lca <- lca[, CH4_kgPt := CH4ENT + CH4MAN + CH4RIC]
-  lca <- lca[, .(rall, cols, rows, y, ssp, run, n, NH3_kgPt, NOX_kgPt, CH4_kgPt)]
-  lca <<- lca
+  if(what=="YILD"){
+    cat("\nExtracting LCA factors in kg per ton of product")
+    lca <- lca[, NH3_kgPt := N2OAMM * 28 / 44 * 100]
+    #NH3 emissions from EU supply models are not available in global LCA
+    #lca <- lca[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
+    lca <- lca[, NOX_kgPt := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
+    lca <- lca[, CH4_kgPt := CH4ENT + CH4MAN + CH4RIC]
+    lca <- lca[, .(rall, cols, rows, y, ssp, run, n, NH3_kgPt, NOX_kgPt, CH4_kgPt)]
+    colsPtime <- names(lca)[grepl("Pt", names(lca))]
+    
+  }else if(what =="PROD"){
+    lca <- lca[, NH3_GgPy := N2OAMM * 28 / 44 * 100]
+    #NH3 emissions from EU supply models are not available in global LCA
+    #lca <- lca[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
+    lca <- lca[, NOX_GgPy := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
+    lca <- lca[, CH4_GgPy := CH4ENT + CH4MAN + CH4RIC]
+    lca <- lca[, .(rall, cols, rows, y, ssp, run, n, NH3_GgPy, NOX_GgPy, CH4_GgPy)]
+    colsPtime <- names(lca)[grepl("GgPy", names(lca))]
+    
+  }
   
   p_diet <- getintake(x)
   p_inha <- getinha(x)
@@ -187,10 +200,9 @@ getlca <- function(x = caprid) {
   
   # Merge diets and LCA emissions and
   # convert emissions to values per total calories consumed per year in the country
-  p_dietemis <- merge(p_diet, lca[cols == "YILD"], by = c("rall", "rows", "y", "ssp", "run"))
+  p_dietemis <- merge(p_diet, lca[cols == what], by = c("rall", "rows", "y", "ssp", "run", "n"))
   p_dietemis <- p_dietemis[, -"cols", with=FALSE]
   
-  colsPtime <- names(p_dietemis)[grepl("Pt", names(p_dietemis))]
   idvars <- c("rows", "rall", "y", "ssp", "run", "n")
   p_dietemis <- melt.data.table(
     p_dietemis,
@@ -199,6 +211,7 @@ getlca <- function(x = caprid) {
     variable.name = "cols"
   )
   p_dietemis <- ocols(p_dietemis)
+  
   return(p_dietemis)
 }
 
@@ -207,15 +220,27 @@ getLosses <- function(x=caprid){
   losses <- caprid[cols %in% c("GROF", "IMPT", "HCON", "LOSMsh", "LOSCsh", "INDMsh")]
   losses <- dcast.data.table(losses, rall + rows + y + ssp + run + n ~ cols, value.var = "value")
   losses[is.na(losses)] <- 0
+  
+  #INTKsh: share of INTK on total consumer demand HCON
   losses <- losses[, INTKsh := 1 - LOSMsh - INDMsh - LOSCsh]
-  # Share on consumer demand (HCON) on total supply (GROF + IMPT)
+  
+  # HCONsh: Share on consumer demand (HCON) on total supply (GROF + IMPT)
   losses <- losses[, HCONsh := HCON / (GROF + IMPT)]
-  # Share of households on consumer demand = intake + food waste
+  
+  # HSHLsh: Share of households on consumer demand = intake + food waste
   losses <- losses[, HSHLsh := LOSCsh + INTKsh]
+  
+  # INTK2HSHL: Share of intake of total household demand (INTK + LOSC)
+  losses <- losses[, INTK2HSHL := INTKsh/(INTKsh + LOSCsh)]
+  losses <- losses[, INTK := HCON * INTKsh]
+  losses <- losses[, LOSC := HCON * LOSCsh]
+  
+  losses <- merge(losses, eatFood2O, by="rows")
   losses <- losses[HCONsh != 0]
+  
+  
   householdshare <- losses[, .(rall, rows, y, ssp, run, n, HCON, HSHLsh)]
   householdshare <- householdshare[, HSHL := HCON * HSHLsh]
-  eatFood2O <- geteatFood2O()
   householdshare <- merge(householdshare, eatFood2O, by="rows")
   hcontot <- dcast.data.table(householdshare, rall+y+ssp+run+n ~ eatFoodGrp, value.var = "HCON", sum)
   hshltot <- dcast.data.table(householdshare, rall+y+ssp+run+n ~ eatFoodGrp, value.var = "HSHL", sum)
@@ -226,7 +251,7 @@ getLosses <- function(x=caprid){
   householdshare <- dcast.data.table(rbind(hcontot, hshltot), rall+y+rows+ssp+run+n~ cols, value.var = 'value')
   householdshare <- householdshare[, HSHLsh := HSHL / HCON]
   householdshare <- householdshare[, .(rall, y, rows, ssp, run, n, HSHLsh)]
-  return(householdshare)
+  return(losses)
 }
 geteatFood2O <- function(){
   data.table(rgdx.set(
@@ -270,11 +295,40 @@ avByEat <- function(x = p_dietemis, y = p_eatintk) {
   st_na <- st[is.na(ref)]
   cat("\nCheck if there are NAs in column ref")
   print(st_na)
+  return(st)
+}
+scale4losses <- function(x=caprid, st=p_eatemis) {
+  # Scale total emissions according to the share of Intake on total household demand
+  # If intake changes by factor 'ratio' then so does also total household demand
+  losses <- getLosses(x=caprid)
+  eatFood2O <- geteatFood2O()
+  a <- dcast.data.table(losses[, .(rows, rall, y, ssp, run, n, INTK, eatFoodGrp)],
+                        rall + y + ssp + run + n ~ eatFoodGrp,
+                        value.var = c("INTK"), sum)
+  a <- a[, cols:='INTK']
+  a <- melt.data.table(a, id.vars = c("rall", "cols","y", "ssp", "run", "n"), variable.name = 'rows')
+  b <- dcast.data.table(losses[, .(rows, rall, y, ssp, run, n, LOSC, eatFoodGrp)],
+                        rall + y + ssp + run + n ~ eatFoodGrp,
+                        value.var = c("LOSC"), sum)
+  b <- b[, cols:='LOSC']
+  b <- melt.data.table(b, id.vars = c("rall", "cols","y", "ssp", "run", "n"), variable.name = 'rows')
+  c <- dcast.data.table(rbind(a, b), rall + rows + y + ssp + run + n ~ cols, value.var = 'value')
+  # Share of Intake on total houshold demand (intake + food waste)
+  eastIntk2Hshl <- c[, INTK2HSHL := INTK / (INTK + LOSC)]
+
+  # as we assume that food waste remains stable.
+  # HSHLsh increases therefore from x to x*ratio, but the total changes as well
+  # from 100% to (100 + ratio-1)%
+  tt <- merge(st, eastIntk2Hshl[,.(rall, rows, y, ssp, run, n, INTK2HSHL)], by=c("rall", "rows", "y", "ssp", "run", "n"))
   
-  tt <- st[, `:=` (NH3_tPy = NH3_kgPt * INTK_GgPyear,
-                   NOX_tPy = NOX_kgPt * INTK_GgPyear,
-                   CH4_tPy = CH4_kgPt * INTK_GgPyear)]
-  # Scale only shocked scenarios - the un-shocked keep their emissions
+  #Emissions linked to household demand are calculated from
+  #Emissions per t of product * intake divided (scaled) to total household demand
+  tt <- tt[, `:=` (NH3_tPy = NH3_kgPt * INTK_GgPyear / INTK2HSHL,
+                   NOX_tPy = NOX_kgPt * INTK_GgPyear / INTK2HSHL,
+                   CH4_tPy = CH4_kgPt * INTK_GgPyear / INTK2HSHL)]
+  
+  # Scale only shocked scenarios to the target diets from EAT
+  # - the un-shocked keep their emissions
   tt <- tt[run=='+1', `:=` (nNH3_tPy = NH3_tPy * ratio,
                             nNOX_tPy = NOX_tPy * ratio,
                             nCH4_tPy = CH4_tPy * ratio)]
@@ -282,18 +336,10 @@ avByEat <- function(x = p_dietemis, y = p_eatintk) {
                            nNOX_tPy = NOX_tPy,
                            nCH4_tPy = CH4_tPy)]
     
-  # Scale total emissions according to the share of household demand on total supply
-  # HSHLsh is the share of Intake + Foodwaste on total supply (GROF + IMPT)
-  # If intake changes by factor 'ratio' then so does also total household demand
-  # as we assume that food waste remains stable.
-  # HSHLsh increases therefore from x to x*ratio, but the total changes as well
-  # from 100% to (100 + ratio-1)%
-  #householdshares <- getLosses(x=caprid)
-  #tx <- merge(tt, householdshares, by =c("rall", "y", "rows", "ssp", "run", "n"))
   
-  p_emissionshock <- tt[, `:=` (DNH3_tPy = nNH3_tPy - NH3_tPy,
-                   DNOX_tPy = nNOX_tPy - NOX_tPy,
-                   DCH4_tPy = nCH4_tPy - CH4_tPy)]
+  p_eatemis <- tt[, `:=` (DNH3_tPy = nNH3_tPy - NH3_tPy,
+                                DNOX_tPy = nNOX_tPy - NOX_tPy,
+                                DCH4_tPy = nCH4_tPy - CH4_tPy)]
   
-  return(p_emissionshock)
+  return(p_eatemis)
 }
