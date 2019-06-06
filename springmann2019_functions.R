@@ -3,7 +3,8 @@
 #
 dims <- c("rall", "cols", "rows", "y", "ssp", "run", "n")
 ocols <- function(x) {
-  x <- x[, .SD, .SDcols = c(dims[dims %in% names(x)], names(x)[!names(x) %in% dims])]
+  c <- dims(x)
+  x <- x[, .SD, .SDcols = c(c, names(x)[!names(x) %in% c])]
 }
 
 dims <- function(x){
@@ -12,6 +13,7 @@ dims <- function(x){
   dims <- c("rall", "cols", "rows", "y", "ssp", "run", "n")
   a <- names(x)
   dims <- dims[dims %in% a]
+  return(dims)
   
 }
 
@@ -164,39 +166,50 @@ getinha <- function(x = caprid) {
     unique(p_inha[, INHA := mean(value), by = .(rall, ssp, y)][, .(rall, ssp, y, INHA)])
 }
 
-getlca <- function(x = caprid, what="YILD") {
+getlca <- function(x = caprid) {
   # Get global LCA data for 'producction' (thus total emissions)
   curempty <- as.character(unique(x$empty))
-  lca <- x[empty %in% setdiff(curempty, "") & cols %in% c("PROD", "YILD")]
-  lca <- dcast.data.table(lca, rall + cols + rows + y + ssp + run + n~ empty, value.var = "value")
-  lca[is.na(lca)] <- 0
+  #lca <- x[empty != "" & cols %in% c("PROD")]
   # Assumption: N2OAMM in Gg N2O --> convert to Gg N-N2O and --> Gg N-NH3
   # Data under 'YILD' assumed to be kg CH4/t and kg N2O/t
   # Data under 'PROD' assumed to be 1000t CH4 and 1000t N2O (or Gg CH4 and Gg N2O)
   # We use YILD here as changes in production in a country (and hence total
   # emissions) is not necessarily related to consumption pattern in the country
   # it is therefore better to use emission factors
-  if(what=="YILD"){
+  #if(what=="YILD"){
     cat("\nExtracting LCA factors in kg per ton of product")
-    lca <- lca[, NH3_kgPt := N2OAMM * 28 / 44 * 100]
+    lcayild <- x[empty != "" & cols %in% c("YILD")]
+    lcayild <- dcast.data.table(lcayild, rall + cols + rows + y + ssp + run + n~ empty, value.var = "value")
+    #grof <- x[empty == "" & cols == "GROF"]
+    #grof <- grof[,.(rall, rows, y, ssp, run, n, value)]
+    #setnames(grof, "value", "GROF")
+    lcayild[is.na(lcayild)] <- 0
+    lcayild <- lcayild[, NH3_kgPt := N2OAMM * 28 / 44 * 100]
     #NH3 emissions from EU supply models are not available in global LCA
     #lca <- lca[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
-    lca <- lca[, NOX_kgPt := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
-    lca <- lca[, CH4_kgPt := CH4ENT + CH4MAN + CH4RIC]
-    lca <- lca[, .(rall, cols, rows, y, ssp, run, n, NH3_kgPt, NOX_kgPt, CH4_kgPt)]
-    colsPtime <- names(lca)[grepl("Pt", names(lca))]
+    lcayild <- lcayild[, NOX_kgPt := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
+    lcayild <- lcayild[, CH4_kgPt := CH4ENT + CH4MAN + CH4RIC]
+    lcayild <- lcayild[, .(rall, cols, rows, y, ssp, run, n, NH3_kgPt, NOX_kgPt, CH4_kgPt)]
+    colsPtime <- names(lcayild)[grepl("Pt", names(lcayild))]
     
-  }else if(what =="PROD"){
-    lca <- lca[, NH3_GgPy := N2OAMM * 28 / 44 * 100]
-    #NH3 emissions from EU supply models are not available in global LCA
-    #lca <- lca[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
-    lca <- lca[, NOX_GgPy := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
-    lca <- lca[, CH4_GgPy := CH4ENT + CH4MAN + CH4RIC]
-    lca <- lca[, .(rall, cols, rows, y, ssp, run, n, NH3_GgPy, NOX_GgPy, CH4_GgPy)]
-    colsPtime <- names(lca)[grepl("GgPy", names(lca))]
+  #}else if(what =="PROD"){
+    lcaprod <- x[empty != "" & cols %in% c("PROD")]
+    lcaprod <- dcast.data.table(lcaprod, rall + cols + rows + y + ssp + run + n~ empty, value.var = "value")
+    #grof <- x[empty == "" & cols == "GROF"]
+    #grof <- grof[,.(rall, rows, y, ssp, run, n, value)]
+    #setnames(grof, "value", "GROF")
+    lcaprod[is.na(lcaprod)] <- 0
+    lcaprod <- lcaprod[, NH3_GgPy := N2OAMM * 28 / 44 * 100]
+    #NH3 emissions from EU supply models are not available in global lcaprod
+    #lcaprod <- lcaprod[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
+    lcaprod <- lcaprod[, NOX_GgPy := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
+    lcaprod <- lcaprod[, CH4_GgPy := CH4ENT + CH4MAN + CH4RIC]
+    lcaprod <- lcaprod[, .(rall, cols, rows, y, ssp, run, n, NH3_GgPy, NOX_GgPy, CH4_GgPy)]
+    colsPtime <- names(lcaprod)[grepl("GgPy", names(lcaprod))]
     
-  }
-  
+  #}
+  lca <- merge(lcaprod[,-'cols', with=FALSE], lcayild[,-'cols', with=FALSE], by=dims(lcaprod[,-'cols', with=FALSE]))
+  lca <- lca[, GROF := 1000*NH3_GgPy/NH3_kgPt]
   p_diet <- getintake(x)
   p_inha <- getinha(x)
   
@@ -210,17 +223,17 @@ getlca <- function(x = caprid, what="YILD") {
   
   # Merge diets and LCA emissions and
   # convert emissions to values per total calories consumed per year in the country
-  p_dietemis <- merge(p_diet, lca[cols == what], by = c("rall", "rows", "y", "ssp", "run", "n"))
-  p_dietemis <- p_dietemis[, -"cols", with=FALSE]
+  p_dietemis <- merge(p_diet, lca, by = c("rall", "rows", "y", "ssp", "run", "n"))
+  #p_dietemis <- p_dietemis[, -"cols", with=FALSE]
   
-  idvars <- c("rows", "rall", "y", "ssp", "run", "n")
-  p_dietemis <- melt.data.table(
-    p_dietemis,
-    id.vars = idvars,
-    measure.vars = c(colsPtime, "INTK_GgPyear"),
-    variable.name = "cols"
-  )
-  p_dietemis <- ocols(p_dietemis)
+  # idvars <- c("rows", "rall", "y", "ssp", "run", "n")
+  # p_dietemis <- melt.data.table(
+  #   p_dietemis,
+  #   id.vars = idvars,
+  #   measure.vars = c(colsPtime, "INTK_GgPyear"),
+  #   variable.name = "cols"
+  # )
+  # p_dietemis <- ocols(p_dietemis)
   
   return(p_dietemis)
 }
@@ -271,9 +284,13 @@ geteatFood2O <- function(){
     symName = "eatFood2O",
     names = c('eatFoodGrp', 'rows')
   ))
-  eatFood2O <- eatFood2O[eatFoodGrp=="MILC", rows := "MILK"]
-  eatFood2O <- eatFood2O[eatFoodGrp=="OILS", rows := "OILS"]
-  eatFood2O <- unique(eatFood2O)
+  #eatFood2O <- eatFood2O[eatFoodGrp=="MILC", rows := "MILK"]
+  #eatFood2O <- eatFood2O[eatFoodGrp=="OILS", rows := "OILS"]
+  oils <- eatFood2O[rows=="OTHO"]
+  oils <- oils[, rows := "OILS"]
+  eatFood2O <- rbind(eatFood2O, oils)
+  return(eatFood2O)
+  #eatFood2O <- unique(eatFood2O)
 }
 
 avByEat <- function(x = p_dietemis, y = p_eatintk) {
@@ -285,13 +302,21 @@ avByEat <- function(x = p_dietemis, y = p_eatintk) {
   
   #keepcols <- c("INTK_GgPyear", "NH3_kgPt", "NOX_kgPt", "CH4_kgPt")
   #dt <- dt[cols %in% keepcols]
-  st <- dcast.data.table(dt, rall + y + ssp + run + n + eatFoodGrp ~ cols, 
-                         value.var = "value", sum)
+  # st <- dcast.data.table(dt, rall + y + ssp + run + n ~ eatFoodGrp + GROF, 
+  #                        value.var = "value", sum)
+  sumcols <- c("INTK_GgPyear", "NH3_GgPy", "NOX_GgPy", "CH4_GgPy", "NH3_kgPt", "NOX_kgPt", "CH4_kgPt", "GROF")
+  st <- dt[, lapply(.SD, sum, na.rm=TRUE), by=.(rall, y, ssp, run, n, eatFoodGrp), .SDcols = sumcols]
   setnames(st, "eatFoodGrp", "rows")
   #st$cols <- 'emis'
   st <- ocols(st)
+  st <- st[, `:=`(
+    NH3_kgPt = 1000 * NH3_GgPy/GROF,
+    NOX_kgPt = 1000 * NOX_GgPy/GROF,
+    CH4_kgPt = 1000 * CH4_GgPy/GROF
+  )]
   
-  st <- merge(st, y, by=dims[!dims=="cols"], all=TRUE)
+  
+  st <- merge(st, y, by=dims(st), all=TRUE)
   # Food products have not been aggregated
   st <- st[!rows %in% c("ALLP", "ANIM", "CROPIN", "CROPDE")]
   # No emissions calculated for fish products
@@ -351,9 +376,36 @@ scale4losses <- function(x=caprid, st=p_eatemis) {
                            CH4hshlfin_GgPy = CH4hshl_GgPy)]
   
   
-  p_eatemis <- tt[, `:=` (NH3diff_GgPy = NH3hshlfin_GgPy - NH3hshl_GgPy,
+  xx <- tt[, `:=` (NH3diff_GgPy = NH3hshlfin_GgPy - NH3hshl_GgPy,
                           NOXdiff_GgPy = NOXhshlfin_GgPy - NOXhshl_GgPy,
                           CH4diff_GgPy = CH4hshlfin_GgPy - CH4hshl_GgPy)]
   
-  return(p_eatemis)
+  xx <- xx[, `:=` (NH3adj_GgPy = ( NH3_GgPy + NH3diff_GgPy),
+                                 NOXadj_GgPy = ( NOX_GgPy + NOXdiff_GgPy),
+                                 CH4adj_GgPy = ( CH4_GgPy + CH4diff_GgPy))]
+  
+  return(xx)
 }
+
+GlobalPoolMarket <- function(x=caprid, y=){
+  
+  # Get global market balance
+  smktbal <- c("IMPORTS", "EXPORTS", "HCON", "PROD", "PROC", "FEED", "YILD")
+  mktbal <- dcast.data.table(caprid[cols %in%  smktbal & empty == ""],
+                             rall + rows + y + ssp + run ~ cols, value.var="value")
+  
+  
+  eatFood2O <- geteatFood2O()
+  mktbal <- merge(mktbal, eatFood2O, by="rows")
+  mktbal <- mktbal[, lapply(.SD, sum, na.rm=TRUE), by=.(rall, y, ssp, run, eatFoodGrp), .SDcols=smktbal]
+  setnames(mktbal, "eatFoodGrp", "rows")
+  
+  mktbal <- mktbal[, IMPTsh := IMPORTS / (IMPORTS + PROD)]
+  mktbal <- mktbal[, FEEDsh := FEED / (FEED + HCON + PROC + EXPORTS)]
+  
+  
+  
+  
+}
+
+

@@ -96,38 +96,39 @@ loadglobalsfrombatch <- function(savepath = NULL,
     
     curf <- paste0(tpath, "/", fortran[x], "/fortran.gms")
     cat("\n", curf)
-    con <- file(curf, open = "r")
-    setglobal <- readLines(con)
-    save(setglobal, file="setglobal.rdata")
-    setglobal <- setglobal[grepl("setglobal|time and date", setglobal, ignore.case=TRUE)]
-    setglobal <- setglobal[! grepl("Rexe|Trollexe|gamsArg|procSpeed|JAVA|CMD|GAMSexe|gamsPath", setglobal)]
-    setglobal <- setglobal[! grepl("regcge_scenario|countries|result_type_underScores|lst2|fst[24]", setglobal)]
-    setglobal <- setglobal[! grepl("regLevel|initialLUfile_|tradeMatrixInputFileName_", setglobal)]
-    setglobal <- setglobal[! grepl("policy_blocks|modArmington|explicit_NTM|tagg_module|yani_m|REGCGE", setglobal)]
-    setglobal <- setglobal[! grepl("altLicense|NET_MIGR|FIX_BUDGET_FAC_SUBS|Supply|abMob|closure_|solpringSupply|limrow|limcol", setglobal)]
-    setglobal <- setglobal[! grepl("irR", setglobal)]
-    setglobal <- c(setglobal, paste0("$SETGLOBAL batchfolder ", basename(batchdir)))
-    setglobal <- gsub("\\*   Time and date   :", "$SETGLOBAL Time", setglobal)
-    #only NOW
-    setglobal <- setglobal[! grepl("curCCscen", setglobal)]
-    
-    scrdirt <- strsplit(setglobal[grepl("scrdir", setglobal)], "  *")[[1]][3]
-    scrpath <- dirname(scrdirt)
-    scrdir <- gsub("'", "", basename(scrdirt))
-    setglobal <- setglobal[!grepl("scrdir", setglobal)]
-    setglobal <- c(setglobal, paste0("$SETGLOBAL scrpath ", scrpath))
-    setglobal <- c(paste0("$SETGLOBAL scrdir ", scrdir), setglobal)
-    
-    close(con)
-    
-    
-    
-    setx <- as.data.table(Reduce(rbind, lapply(1:length(setglobal), function(y) {
-      a <- strsplit(setglobal[y], " ")[[1]]
-      a <- c(a[2], paste(a[3:length(a)], collapse=" "))
-      return(a)
+      con <- file(curf, open = "r")
+      setglobal <- readLines(con)
+      save(setglobal, file="setglobal.rdata")
+      setglobal <- setglobal[grepl("setglobal|time and date", setglobal, ignore.case=TRUE)]
+      setglobal <- setglobal[! grepl("Rexe|Trollexe|gamsArg|procSpeed|JAVA|CMD|GAMSexe|gamsPath", setglobal)]
+      setglobal <- setglobal[! grepl("regcge_scenario|countries|result_type_underScores|lst2|fst[24]", setglobal)]
+      setglobal <- setglobal[! grepl("regLevel|initialLUfile_|tradeMatrixInputFileName_", setglobal)]
+      setglobal <- setglobal[! grepl("policy_blocks|modArmington|explicit_NTM|tagg_module|yani_m|REGCGE", setglobal)]
+      setglobal <- setglobal[! grepl("altLicense|NET_MIGR|FIX_BUDGET_FAC_SUBS|Supply|abMob|closure_|solpringSupply|limrow|limcol", setglobal)]
+      setglobal <- setglobal[! grepl("irR", setglobal)]
+      setglobal <- c(setglobal, paste0("$SETGLOBAL batchfolder ", basename(batchdir)))
+      setglobal <- gsub("\\*   Time and date   :", "$SETGLOBAL Time", setglobal)
+      #only NOW
+      setglobal <- setglobal[! grepl("curCCscen", setglobal)]
       
-    })))
+      scrdirt <- strsplit(setglobal[grepl("scrdir", setglobal)], "  *")[[1]][3]
+      scrpath <- dirname(scrdirt)
+      scrdir <- gsub("'", "", basename(scrdirt))
+      setglobal <- setglobal[!grepl("scrdir", setglobal)]
+      setglobal <- c(setglobal, paste0("$SETGLOBAL scrpath ", scrpath))
+      setglobal <- c(paste0("$SETGLOBAL scrdir ", scrdir), setglobal)
+      
+      close(con)
+      
+      
+      setx <- as.data.table(Reduce(rbind, lapply(1:length(setglobal), function(y) {
+        a <- strsplit(setglobal[y], " ")[[1]]
+        a <- c(a[2], paste(a[3:length(a)], collapse=" "))
+        return(a)
+        
+      }    
+      
+      )))
   }
   )
   reportsummary <- unlist(lapply(1:length(fortran), function(x){
