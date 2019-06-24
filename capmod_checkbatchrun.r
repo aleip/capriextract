@@ -91,11 +91,13 @@ loadglobalsfrombatch <- function(savepath = NULL,
   cat("\nfortran=", tpath)
   fortran <- gettmpsubfolders(tpath=tpath)
   cat("\nfortran=", fortran)
+  fortran <- fortran[file.exists(paste0(tpath, "/", fortran, "/fortran.gms"))]
   
   setglob <- lapply(1:length(fortran), function(x) {
     
     curf <- paste0(tpath, "/", fortran[x], "/fortran.gms")
     cat("\n", curf)
+#    if(file.exists(curf)){
       con <- file(curf, open = "r")
       setglobal <- readLines(con)
       save(setglobal, file="setglobal.rdata")
@@ -125,12 +127,9 @@ loadglobalsfrombatch <- function(savepath = NULL,
         a <- strsplit(setglobal[y], " ")[[1]]
         a <- c(a[2], paste(a[3:length(a)], collapse=" "))
         return(a)
-        
-      }    
-      
-      )))
-  }
-  )
+      })))
+#    }
+  })
   reportsummary <- unlist(lapply(1:length(fortran), function(x){
     #reportsummary <- Reduce(rbind,unlist(lapply(19:21, function(x){
     #reportsummary <- lapply(22:22, function(x){
@@ -445,6 +444,49 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
   cat("\nSaved to ", conpath)
   return(iter_chgmxmxtot)
 }
+
+checkinfesS50 <- function(tpath){
+  
+  fls <- list.files(tpath, pattern = "[0-9]*.lst")
+  
+  for(fl in fls){
+    curf <- paste0(tpath, "/", fl)
+    if(file.exists(curf)){
+      cat(curf, " - ")
+      a1 <- try(readLines(curf, warn=FALSE), silent=TRUE)
+      s50 <- which(grepl("LOOP.*step.*S50", a1))
+      cat(s50)
+      if(length(s50) >0){
+        a <- a1[s50[length(s50)]:length(a1)]
+        rsm <- which(grepl("\\*\\*\\*\\* REPORT SUMMARY : ", a))
+        a <- a[1:(rsm[1]+20) ]
+        a <- a[!a==""]
+        a <- a[!grepl(".*MARGINAL$", a)]
+        a <- a[!grepl("GAMS", a)]
+        a <- a[!grepl("G e n e r a l", a)]
+        a <- a[!grepl("Solution Report", a)]
+        a <- a[!grepl("     $", a)]
+        a <- a[! duplicated(a)]
+        a <- a[!grepl("     EQU", a)]
+        a <- a[!grepl("     VAR", a)]
+        infes <- which(grepl(".*INFES$", a))
+        for(i in infes){
+          a[infes] <-paste0(a[infes], a[infes-1])
+        }
+        a <- a[!grepl("^---- EQU", a)]
+        a <- a[!grepl("^---- VAR", a)]
+        
+        conopt1 <- which(grepl("CONOPT 3", a))
+        conopt2 <- which(grepl("DK-2880 Bagsvaerd", a))
+        if(length(conopt1)>0) a <- a[c(1:(conopt1-1), (conopt2+1):length(a))]
+        
+        write(a, file=paste0(cenv$capri, cenv$resdir, "/capmod/", fld, "/", fld, gsub(".lst", "infes.lst", fl)))
+      }
+    }
+  }
+}
+
+
 convbatchdate <- function(batchdate){
   m <-(strsplit(batchdate, "_")[[1]][1])
   m <- which(month.abb == m)
@@ -506,6 +548,9 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL, n=NULL,
                         cpstep = FALSE # Copy gdx file 'stepOutput.gdx' (full step output)
                         ){
   tpath <- paste0(cenv$capri, cenv$scrdir, "/../", temp)
+  if(! dir.exists(paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/"))){
+    dir.create(paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/"))
+  }
   if(is.null(n)){
     n <- sort(as.numeric(basename(list.dirs(tpath, recursive=FALSE))))
   }

@@ -387,7 +387,7 @@ scale4losses <- function(x=caprid, st=p_eatemis) {
   return(xx)
 }
 
-GlobalPoolMarket <- function(x=caprid, y=){
+GlobalPoolMarket <- function(x=caprid){
   
   # Get global market balance
   smktbal <- c("IMPORTS", "EXPORTS", "HCON", "PROD", "PROC", "FEED", "YILD")
