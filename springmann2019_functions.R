@@ -122,15 +122,28 @@ eatFoodGrp <- function(x = p_diet) {
   
 }
 eatRefDiet <- function(x = p_eatintk) {
-  resfld <-paste0(cenv$capri, cenv$resdir, "/capmod/", subfld, "/", subfld)
-  p_refeat <- Reduce(rbind, lapply(unique(x$n), function (x) {
+  
+  flstart <- subfld
+  if(subfld == "20190602_Springmann18_used4sendingdata") flstart <- "20190602_Springmann18"
+  resfld <-paste0(cenv$capri, cenv$resdir, "/capmod/", subfld, "/", flstart)
+  
+  # Attention!! the first four are from baseline
+  ns <- sort(unique(x$n))
+  if(length(ns) > 8){
+    bn <- max(ns-8)
+    ns <- 1:8
+  }
+  
+  p_refeat <- Reduce(rbind, lapply(ns, function (x) {
+    
+    
     dt <-
       data.table(rgdx.param(
         gdxName = paste0(resfld, '_chk_kcalEATvar_', x, '.gdx'),
         symName = "p_eatTargets",
         names = c('rall', 'rows', "empty")
       ))
-    dt$n <- x
+    dt$n <- x + bn
     setnames(dt, "value", "ref")
     dt <- dt[empty == "gtarget", .(rall, rows, n, ref)]
   }))
