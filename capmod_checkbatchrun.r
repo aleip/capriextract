@@ -480,7 +480,7 @@ checkinfesS50 <- function(tpath){
         conopt2 <- which(grepl("DK-2880 Bagsvaerd", a))
         if(length(conopt1)>0) a <- a[c(1:(conopt1-1), (conopt2+1):length(a))]
         
-        write(a, file=paste0(cenv$capri, cenv$resdir, "/capmod/", fld, "/", fld, gsub(".lst", "infes.lst", fl)))
+        write(a, file=paste0(cenv$capri, cenv$leipadr, cenv$resdir, "/capmod/", fld, "/", fld, gsub(".lst", "infes.lst", fl)))
       }
     }
   }
