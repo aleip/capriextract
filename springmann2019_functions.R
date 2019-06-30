@@ -102,26 +102,14 @@ eatFoodGrp <- function(x = p_diet) {
     ))
   p_eatdiet <- merge(x, eatFood2O, by = "rows")
   eatFoodGrp <- as.character(unique(p_eatdiet$eatFoodGrp))
-  p_eatdietintk <-
-    dcast.data.table(p_eatdiet, rall + y + ssp + run + n ~ eatFoodGrp, value.var = "INTK_gPcapday", sum)
-  p_eatdietintk <-
-    melt.data.table(p_eatdietintk,
-                    measure.vars = eatFoodGrp,
-                    variable.name = "rows")
-  p_eatdietintk$cols <- "INTK_gPcapday"
-  
-  p_eatdietkcal <-
-    dcast.data.table(p_eatdiet, rall + y + ssp + run + n ~ eatFoodGrp, value.var = "ENNE_kcalPcapday", sum)
-  p_eatdietkcal <-
-    melt.data.table(p_eatdietkcal,
-                    measure.vars = eatFoodGrp,
-                    variable.name = "rows")
-  p_eatdietkcal$cols <- "ENNE_kcalPcapday"
-  p_eatdiet <- rbind(p_eatdietintk, p_eatdietkcal)
-  p_eatdiet <- ocols(p_eatdiet)
+  pp <- p_eatdiet[, .(INTK_gPcapday = sum(INTK_gPcapday, na.rm=TRUE),
+                      ENNE_kcalPcapday = sum(ENNE_kcalPcapday, na.rm=TRUE)),
+                  by=c("rall", "y", "ssp", "run", "n", "eatFoodGrp")]
+  setnames(pp, "eatFoodGrp", "rows")
+  pp <- ocols(pp)
   
 }
-eatRefDiet <- function(x = p_eatintk) {
+eatRefDiet <- function(pp=p_eatdiet) {
   
   flstart <- subfld
   if(subfld == "20190602_Springmann18_used4sendingdata") flstart <- "20190602_Springmann18"
@@ -136,14 +124,13 @@ eatRefDiet <- function(x = p_eatintk) {
   
   p_refeat <- Reduce(rbind, lapply(ns, function (x) {
     
-    
     dt <-
       data.table(rgdx.param(
         gdxName = paste0(resfld, '_chk_kcalEATvar_', x, '.gdx'),
         symName = "p_eatTargets",
         names = c('rall', 'rows', "empty")
       ))
-    dt$n <- x + bn
+    dt$n <- x
     setnames(dt, "value", "ref")
     dt <- dt[empty == "gtarget", .(rall, rows, n, ref)]
   }))
@@ -152,10 +139,8 @@ eatRefDiet <- function(x = p_eatintk) {
   #                                  names = c('eatFoodGrp', 'rows')))
   #
   # eatFoodGrp<- as.character(unique(eatFood2O$eatFoodGrp))
-  y <- merge(x, p_refeat, by = c("rall", "rows", "n"), all=TRUE)
-  y <- y[, ratio := ref / value]
-  setnames(y, "value", "INTK_gPcapday")
-  y <- y[, -"cols", with=FALSE]
+  y <- merge(pp, p_refeat, by = c("rall", "rows", "n"), all=TRUE)
+  y <- y[, ratio := ref / INTK_gPcapday]
   y <- ocols(y)
   return(y)
 }
@@ -223,32 +208,40 @@ getlca <- function(x = caprid) {
   #}
   lca <- merge(lcaprod[,-'cols', with=FALSE], lcayild[,-'cols', with=FALSE], by=dims(lcaprod[,-'cols', with=FALSE]))
   lca <- lca[, GROF := 1000*NH3_GgPy/NH3_kgPt]
-  p_diet <- getintake(x)
+  return(lca)
+}
+  
+mergeLCAwithDiets <- function(x=caprid, lca=p_eatemis, y=p_eatintk){
   p_inha <- getinha(x)
   
+  lcax <- merge(lca, y, by=dims(lca))
+  lcax <- merge(lcax, p_inha, by=dims(p_inha))
   
-  p_diet <- merge(p_diet,
-                  p_inha[, .(rall, ssp, y, INHA)],
-                  by = c("rall", "y", "ssp"),
-                  all.x = TRUE)
-  p_diet <- p_diet[, INTK_GgPyear := INTK_gPcapday * 365 * INHA / 1000000]
-  p_diet <- p_diet[, .(rall, rows, y, ssp, run, n, INTK_GgPyear)]
+  lcax <- lcax[, `:=` (INTK_GgPyear = INTK_gPcapday * 365 * INHA / 1000000,
+                       ref_GgPyear = ref * 365 * INHA / 1000000)]
   
-  # Merge diets and LCA emissions and
-  # convert emissions to values per total calories consumed per year in the country
-  p_dietemis <- merge(p_diet, lca, by = c("rall", "rows", "y", "ssp", "run", "n"))
-  #p_dietemis <- p_dietemis[, -"cols", with=FALSE]
+  st <- lcax[, .(rall, y, ssp, rows, run, n, GROF, INHA, 
+               NH3_GgPy, NH3_kgPt, NOX_GgPy, NOX_kgPt, CH4_GgPy, CH4_kgPt,
+               ENNE_kcalPcapday, INTK_gPcapday, ref, ratio,
+               INTK_GgPyear, ref_GgPyear)]
   
-  # idvars <- c("rows", "rall", "y", "ssp", "run", "n")
-  # p_dietemis <- melt.data.table(
-  #   p_dietemis,
-  #   id.vars = idvars,
-  #   measure.vars = c(colsPtime, "INTK_GgPyear"),
-  #   variable.name = "cols"
-  # )
-  # p_dietemis <- ocols(p_dietemis)
+  # Food products have not been aggregated
+  st <- st[!rows %in% c("ALLP", "ANIM", "CROPIN", "CROPDE")]
+  # No emissions calculated for fish products
+  st <- st[!rows %in% c("ACQU")]
   
-  return(p_dietemis)
+  # delete country aggregates if countries exist
+  st <- st[!rall %in% c("BUR", "WBA", "EU", "EU013000", "EU028000", 
+                        "MED", "URUPAR","MER_OTH","NONEU_EU",
+                        "ASIA","AFRICA","N_AM","MS_AM","MER",
+                        "HI_INC","MID_INC","LDCACP","LDC","ACP",
+                        "NONEU","World","EU_WEST","EU_EAST","EU028000")]
+  
+  # Check missing values
+  st_na <- st[is.na(ref)]
+  cat("\nCheck if there are NAs in column ref")
+  print(st_na)
+  return(st)
 }
 
 getLosses <- function(x=caprid){
@@ -270,6 +263,7 @@ getLosses <- function(x=caprid){
   losses <- losses[, INTK2HSHL := INTKsh/(INTKsh + LOSCsh)]
   losses <- losses[, INTK := HCON * INTKsh]
   losses <- losses[, LOSC := HCON * LOSCsh]
+  losses <- losses[, HCOM := HCON * (1 - LOSCsh - INDMsh)]
   
   eatFood2O <- geteatFood2O()
   losses <- merge(losses, eatFood2O, by="rows")
@@ -306,18 +300,18 @@ geteatFood2O <- function(){
   #eatFood2O <- unique(eatFood2O)
 }
 
-avByEat <- function(x = p_dietemis, y = p_eatintk) {
+avByEat <- function(x=caprid, z = p_dietemis) {
   
   
   eatFood2O <- geteatFood2O()
-  dt <- merge(x, eatFood2O, by = "rows")
+  dt <- merge(z, eatFood2O, by = "rows")
   eatFoodGrp <- as.character(unique(eatFood2O$eatFoodGrp))
   
   #keepcols <- c("INTK_GgPyear", "NH3_kgPt", "NOX_kgPt", "CH4_kgPt")
   #dt <- dt[cols %in% keepcols]
   # st <- dcast.data.table(dt, rall + y + ssp + run + n ~ eatFoodGrp + GROF, 
   #                        value.var = "value", sum)
-  sumcols <- c("INTK_GgPyear", "NH3_GgPy", "NOX_GgPy", "CH4_GgPy", "NH3_kgPt", "NOX_kgPt", "CH4_kgPt", "GROF")
+  sumcols <- c("NH3_GgPy", "NOX_GgPy", "CH4_GgPy", "NH3_kgPt", "NOX_kgPt", "CH4_kgPt", "GROF")
   st <- dt[, lapply(.SD, sum, na.rm=TRUE), by=.(rall, y, ssp, run, n, eatFoodGrp), .SDcols = sumcols]
   setnames(st, "eatFoodGrp", "rows")
   #st$cols <- 'emis'
@@ -329,23 +323,6 @@ avByEat <- function(x = p_dietemis, y = p_eatintk) {
   )]
   
   
-  st <- merge(st, y, by=dims(st), all=TRUE)
-  # Food products have not been aggregated
-  st <- st[!rows %in% c("ALLP", "ANIM", "CROPIN", "CROPDE")]
-  # No emissions calculated for fish products
-  st <- st[!rows %in% c("ACQU")]
-  
-  # delete country aggregates if countries exist
-  st <- st[!rall %in% c("BUR", "WBA", "EU", "EU013000", "EU028000", 
-                        "MED", "URUPAR","MER_OTH","NONEU_EU",
-                        "ASIA","AFRICA","N_AM","MS_AM","MER",
-                        "HI_INC","MID_INC","LDCACP","LDC","ACP",
-                        "NONEU","World","EU_WEST","EU_EAST","EU028000")]
-  
-  # Check missing values
-  st_na <- st[is.na(ref)]
-  cat("\nCheck if there are NAs in column ref")
-  print(st_na)
   return(st)
 }
 scale4losses <- function(x=caprid, st=p_eatemis) {
@@ -371,6 +348,10 @@ scale4losses <- function(x=caprid, st=p_eatemis) {
   # HSHLsh increases therefore from x to x*ratio, but the total changes as well
   # from 100% to (100 + ratio-1)%
   tt <- merge(st, eastIntk2Hshl[,.(rall, rows, y, ssp, run, n, INTK2HSHL)], by=c("rall", "rows", "y", "ssp", "run", "n"))
+  return(tt)
+  
+  ##STOP here this function as the adjustment is not proceeded here. 
+  ##    Instead we use the emissions fields from the leakage module direclty
   
   #Emissions linked to household demand are calculated from
   #Emissions per t of product * intake divided (scaled) to total household demand
@@ -400,10 +381,12 @@ scale4losses <- function(x=caprid, st=p_eatemis) {
   return(xx)
 }
 
-GlobalPoolMarket <- function(x=caprid){
+GlobalPoolMarket <- function(x=caprid, xx = p_eatemisscaled){
   
-  # Get global market balance
-  smktbal <- c("IMPORTS", "EXPORTS", "HCON", "PROD", "PROC", "FEED", "YILD")
+  # Get global market balance.
+  # In checks theses seem to be the positions. 
+  # include BIOF
+  smktbal <- c("IMPORTS", "EXPORTS", "HCON", "PROD", "PROC", "FEED", "YILD", "BIOF")
   mktbal <- dcast.data.table(caprid[cols %in%  smktbal & empty == ""],
                              rall + rows + y + ssp + run ~ cols, value.var="value")
   
@@ -412,13 +395,304 @@ GlobalPoolMarket <- function(x=caprid){
   mktbal <- merge(mktbal, eatFood2O, by="rows")
   mktbal <- mktbal[, lapply(.SD, sum, na.rm=TRUE), by=.(rall, y, ssp, run, eatFoodGrp), .SDcols=smktbal]
   setnames(mktbal, "eatFoodGrp", "rows")
+  mktbal[is.na(mktbal)] <- 0
+  mktbal <- mktbal[, totIN := IMPORTS + PROD]
+  mktbal <- mktbal[, totEX := BIOF+HCON+PROC+FEED+EXPORTS]
   
+  # a) we have the global market balance. 
+  # for each food group we can calculate the share of import vs total supply in region r
+  # IMPTshr := IMPORTS / (IMPORTS + PROD)
   mktbal <- mktbal[, IMPTsh := IMPORTS / (IMPORTS + PROD)]
-  mktbal <- mktbal[, FEEDsh := FEED / (FEED + HCON + PROC + EXPORTS)]
+  
+  mm1 <- merge(xx, mktbal, by=c("rall", "y", "ssp", "run", "rows"))
+  
+  # b) we know domestic emissions from a food NH3_GgPy and the by 
+  # how much the consumption must be changed: 
+  # x (to go from INTK_capri -> INTK_target; xr = (INTK_target-INTK_capri)/INTK_capri)
+  
+  mm1 <- mm1[, scale_INTK := (ref - INTK_gPcapday)/INTK_gPcapday]
+  
+   
+  # c) crop products are used for hcom, feed, exports and proc. we calculate the share of HCOM and FEED
+  # HCONshr := HCON / (HCON + FEED + EXPORT + PROC)
+  # FEEDshr := FEED / (HCON + FEED + EXPORT + PROC)
+  losses <- getLosses(x)
+  losses <- losses[, c(dims(losses), "HCOM", "eatFoodGrp"), with=FALSE]
+  losses <- losses[, .(HCOM = sum(HCOM, na.rm = TRUE)), by=c("rall", "y", "ssp", "run", "eatFoodGrp", "n")]
+  setnames(losses, "eatFoodGrp", "rows")  
+   
+  mm1 <- merge(mm1, losses, by = dims(losses))
+  #mm1 <- mm1[, HCOM := HCON * (1 - LOSMsh - INDMsh)]
+  mm1 <- mm1[, HCOMsh := HCOM / totEX]
+  mm1 <- mm1[, FEEDsh := FEED / totEX]
+  
+  # c) we assume that import shares remain constant, thus we can adjust the domestic emissions
+  # so we assume that only  (1-IMPTshr) * x comes from domestic production and has an effect on domestic emissions
+  # the share of emissions to be scaled is the one relating to HCOM
+  # DELTAhcom_NH3r_GgPy = NH3_GgPy * (1-IMPTshr) * xr * HCONsh
+  
+  mm2 <- mm1[, DELTAhcom := (1-IMPTsh) * scale_INTK * HCOMsh]
+  mm2 <- mm2[scale_INTK>100, DELTAhcom := (1-IMPTsh) * ref_GgPyear/totEX ]
+  
+  # d) we sum all 'imported intake changes' globally over all regions r
+  # HCOMimpt_globalchange = SUMr (IMPTsh * scale_INTK * HCOM)
+  # HCOMtot = SUMr(HCOM)
+  
+  mm2 <- mm2[, HCOMimpt_change := IMPTsh * scale_INTK * HCOM]
+  
+  # Special treatment of cases where scale_INTK == inf 
+  # because no CAPRI intake is defined. 
+  #   scale_INTK := (ref - INTK_gPcapday)/INTK_gPcapday
+  # This is because INTK_gPcapday is zero
+  # IMPTsh can have values between [0-1] or NaN (if no production or import)
+  #   ---> All additional intake must be imported
+  #        Take relation  INTK_GgPyear/INTK_gPcapday
+  mm2 <- mm2[scale_INTK>100, HCOMimpt_change := ref_GgPyear]
   
   
+  # Sum over all countries. The result should give the total 
+  # of additional (or less) of a product that is taken
+  # from the global market pool
+  HCOMimpt_changeglob <- mm2[, .(HCOMimpt_changeglob=sum(HCOMimpt_change, na.rm=TRUE)),
+                by=c("y", "ssp", "run", "rows")]
   
+  # Sum total production 
+  PRODtot <- mm2[, .(PRODtot = sum(PROD, na.rm = TRUE)), by=c("y", "ssp", "run", "rows")]
+
+  # ... and calculate the relative change that this will cause in total production
+  # that the global market must deliver
+  # DELTA_hcomimpt = INTK_globalchange / HCOMtot
   
+  # DELTAhcomimpt give the relative changes on total production that the
+  # changing demand of imported foods imply
+  mm3 <- merge(HCOMimpt_changeglob, PRODtot, by=c("y", "ssp", "run", "rows"))[,
+               DELTAhcomimpt := HCOMimpt_changeglob / PRODtot]
+  mm3 <- merge(mm2, mm3, by=dims(mm3))
+    
+  # d) we know how much feed is used, but we don't know (globally) which feed is used for which animal product.
+  # we assume that the same IMPTsh applies also to feed, but we don't have a direct link to consumption.
+  # therefore we scale feed only globally. 
+  # to do so, we first need to have an idea of the change of demand of ALL animal products
+  # changeINTK_lvst = SUM_{r,y} (INTK_target_ry-INTK_capri_ry) / SUM_{r,y} (INTK_capri_ry)
+  # y in {red meat, poultry+eggs, milc}
+  # 
+  # Note that in particular MILC intake in CAPRI stays below the reference diets
+  # Therefore this gives overall the need for INCREAS
+
+  sum_lvst <- mm3[rows %in% c("rmea", "POUL", "MILC"), 
+                     .(sumRef_lvst = sum(ref_GgPyear, na.rm=TRUE),
+                       sumCAPRI_lvst = sum(INTK_GgPyear, na.rm=TRUE)),
+                     by=c("rows","ssp", "run", "y")]
+  
+  sum_lvstall <- sum_lvst[, .(sumRef_lvst = sum(sumRef_lvst),
+                             sumCAPRI_lvst = sum(sumCAPRI_lvst)),
+                         by=c("ssp", "run", "y")]
+  
+  # scale_lvst gives the factor with which marketable feed production must
+  # change to meet the demand for the EAT reference diets.
+  # It gives only one factor for all livestock products and feed items
+  # thus ignoring that shifts between livestock products might require
+  # different feed items. This is because we do not have (at this point)
+  # the information which feed is used for which product. 
+  # Even with this knowlege the this link would change with changing 
+  # demands through economic effects - which we ignore anyway in this
+  # post-processing.
+  sum_lvstall <- sum_lvstall[, scale_lvst := sumRef_lvst / sumCAPRI_lvst]
+
+  # e) changes in feed emissions are allocated globally assuming that 
+  # the relative contribution of countries to global feed production remains the same
+  # DELTAfeed_NH3r_GgPy = NH3r_GgPy * FEEDsh * changeINTK_lvs
+  
+  # If feed demand changes by scale_lvst, then total production must change 
+  mm4 <- merge(mm3, sum_lvstall[,.(ssp, run, y, scale_lvst)], by=c("ssp", "run", "y"))
+  mm4 <- mm4[, DELTAfeed := FEEDsh * (scale_lvst-1)]
+  # 
+  # 
+  # Adding up all DELTAS required for production
+  mm4 <- mm4[, DELTAtot := DELTAhcom + DELTAhcomimpt + DELTAfeed]
+   
+  
+  return(mm4)
+}
+adjustEmissions <- function(x = caprid, mm4 = p_eatglobm){
+  
+  # f) we adjust the emissions
+  # NH3_adjusted = NH3r_GgPy  + DELTAhcom_NH3r_GgPy  + DELTA_hcomimpt_NH3r_GgPy  + DELTAfeed_NH3r_GgPy 
+  
+  nh3cols <- names(mm4)[grepl("NH3", names(mm4))]
+  ch4cols <- names(mm4)[grepl("CH4", names(mm4))]
+  noxcols <- names(mm4)[grepl("NOX", names(mm4))]
+  emicols <- c(nh3cols, ch4cols, noxcols)
+  deltacl <- names(mm4)[grepl("DELTA", names(mm4))]
+  
+  ## Apply changes on production in the countries 
+  ## to the emissions 
+  mm4[, `:=` (NH3adj_GgPy = NH3_GgPy * ( 1 + DELTAtot),
+              NOXadj_GgPy = NOX_GgPy * ( 1 + DELTAtot),
+              CH4adj_GgPy = CH4_GgPy * ( 1 + DELTAtot))]
+  
+  nh3cols <- names(mm4)[grepl("NH3", names(mm4))]
+  ch4cols <- names(mm4)[grepl("CH4", names(mm4))]
+  noxcols <- names(mm4)[grepl("NOX", names(mm4))]
+  emicols <- c(nh3cols, ch4cols, noxcols)
+  smktbal <- c("IMPORTS", "EXPORTS", "HCON", "PROD", "PROC", "FEED", "YILD", "BIOF", "HCOM")
+  colorder <- c(dims(mm4), smktbal, "totIN", "totEX", "GROF", "INHA",  
+                names(mm4)[grepl("sh", names(mm4))], 
+                "ENNE_kcalPcapday", "INTK_gPcapday", "ref", "ratio" ,
+                "INTK_GgPyear", "ref_GgPyear",
+                "INTK2HSHL", "scale_INTK", "HCOMimpt_change", "HCOMimpt_changeglob", "scale_lvst",
+                deltacl, emicols)
+  mm4 <- mm4[, .SD, .SDcols = colorder]  
+  return(mm4)
+}
+  
+
+writeresults <- function(p_emis4fasst = p_emis4fasst,
+                         p_eatintk = p_eatintk
+                         ){
+  manuscript <- "x:/adrian/google/literature/manuscripts/springmann_costunhealthydiet/"
+ 
+  p_emis4fasstglobal <- p_eatemisfin[, .SD, .SDcols = c("rall", "rows", "y", "ssp", "run", cols2sum)]
+  p_emis4fasstglobal <- p_emis4fasstglobal[, lapply(.SD, sum, na.rm=TRUE), by=.(y, ssp, rows, run), 
+                                           .SDcols = names(p_emis4fasstglobal)[!names(p_emis4fasstglobal) %in% c("rall", "rows", "y", "ssp", "run")]]
+  write.csv(p_emis4fasstglobal, file=paste0(manuscript, "p_emis4fasstglobal", format(Sys.time(), "%Y%m%d"), ".csv"))
+  
+  p_diet4healthmodel <- dcast.data.table(p_eatintk[!is.na(run), -"ratio", with=FALSE], rall +rows + y + ssp ~ run,
+                                         value.var=c("INTK_gPcapday", "ref"))
+  p_diet4healthmodel[is.na(p_diet4healthmodel)] <- 0
+  save(p_emis4fasst, p_diet4healthmodel, p_eatintk, p_eatemisscaled, 
+       file=paste0(manuscript, "capriresults", format(Sys.time(), "%Y%m%d"), ".rdata"))
+  method <- paste0("\n#        Diets are 'shocked' by calculating intake values (g/cap/day) based on Springmann et al.(2018).",
+                   "\n#        Shocks are applied to each of 12 'EAT food groups' ",
+                   "\n#                Vegetable foods: cereals - starch crops - fruits - nuts and seeds - dry pulses - vegetables - sugar - oils",
+                   "\n#                Animal foods:    dairy - read meat - poultry meat and eggs - fish and shellfish",
+                   "\n#        The 'resulting' diets in CAPRI are not exactly matching the target diets. ",
+                   "\n#        Therefore footprints are calculated from the unshocked and shocked world",
+                   "\n#        and total emissions are assigned to the country of production",
+                   "\n#")
+  con <- file(paste0(manuscript, "capripollutants4fasst", format(Sys.time(), "%Y%m%d"), ".csv"), open="wt")
+  writeLines(paste0("#Extract of NH3 NOx and CH4 total emissions calculated on the basis of CAPRI runs with different diets",
+                    "\n#Method: Footprints are calculated with CAPRI by constraining total calories consumption to about 2100 kcal.",
+                    method,
+                    "\n# Emissions are calculated using the CAPRI 'leakage' module. Emissions remain in the country where they occur",
+                    "\n# Emissions changes are split into those that are assumed to occur domestically ",
+                    "\n# and those that are assumed to come from the 'global market' using import shares.",
+                    "\n# The 'global market' is assumed to deliver food to one 'pool market' from which all imports",
+                    "\n# are derived (approach followed in the CAPRI LCA).",
+                    "\n# Thus all productions are scaled acc to the ratio of the global trade changes to total global production.",
+                    "\n# ",
+                    "\n# Emissions from marketable feed is not included in the factors for livestock products ",
+                    "\n# but in the total emissions of the crops. The total global changes in feed demand is calculated",
+                    "\n# assuming constant share of countries to produce feed and ignoring a possible shift in share of different feeds.",
+                    "\n# Emissions are adjusted accordingly.",
+                    "\n# ",
+                    "\n# NH3_GgPy: Emissions of NH3-N [Gg NH3-N y-1]. ",
+                    "\n# NOX_GgPy: Emissions of NOx-N [Gg NOx-N y-1]. Available only for CAPRI supply models (Europe). ",
+                    "\n# CH4_GgPy: Emissions of CH4 [Gg CH4 y-1]. ",
+                    "\n#",
+                    "\n# *adj: Emissions as defined above but changes due to scaled to target diets are included.",
+                    "\n#       To this purpose the footprints from the 'shocked' runs are scaled to match the target intake values.",
+                    "\n#       The 'unshocked' data are not scaled.",
+                    "\n#",
+                    "\n# *_0: Results from un-shocked CAPRI runs only constraining total calories intake to 2100 kcal/cap/dat",
+                    "\n# *_1: Results from shocked CAPRI runs - footprints are scaled.",
+                    "\n#"
+  ), con)
+  write.csv(p_emis4fasst, con)
+  close(con)
+  con <- file(paste0(manuscript, "capridiet4healthmodel", format(Sys.time(), "%Y%m%d"), ".csv"), open="wt")
+  writeLines(paste0("#Extract of average diets calculated on the basis of CAPRI and EAT target diets",
+                    "\n#Method: Total calories consumption are constrained in all simulations to about 2100 kcal.",
+                    method,
+                    "\n# INTK_gPcapday: Intake of food group [g / cap / day] as simulated with CAPRI",
+                    "\n# ref: Intake of food group [g / cap / day] in the target diet",
+                    "\n#",
+                    "\n# *_0: Results from un-shocked CAPRI runs only constraining total calories intake to 2100 kcal/cap/dat",
+                    "\n# *_1: Results from shocked CAPRI runs - footprints are scaled.",
+                    "\n#"
+  ), con)
+  write.csv(p_diet4healthmodel, con)
+  close(con)
+  write.csv(p_eatemisfin[, .SD, .SDcols = c(dims(p_eatemisfin), 
+                                            names(p_eatemisfin)[grepl("DELTA", names(p_eatemisfin))])], 
+            file=paste0(manuscript, "p_eatemisfin_delta", format(Sys.time(), "%Y%m%d"), ".csv"))
+  
+  return(p_diet4healthmodel)
 }
 
+
+checkresults <- function(p=p_eatemisfin){
+  require(ggplot2)
+  library(RColorBrewer)
+  
+  manuscript <- "x:/adrian/google/literature/manuscripts/springmann_costunhealthydiet/"
+  p <- p[, NH3_kgPcap := NH3_GgPy/INHA * 1000 ]
+  p <- p[, NH3adj_kgPcap := NH3adj_GgPy/INHA * 1000]
+  
+  jpeg(filename=paste0(manuscript, "NH3_adjusted.vs.non-adjusted.jpg"), 
+      width = 1000, height = 1000, quality = 600)
+  plot(y=p$NH3adj_GgPinha, x=p$NH3_GgPinha)  
+  plot(y=p[run==0]$NH3adj_kgPcap, x=p[run==0]$NH3_kgPcap, pch=21, bg = "red", cex=3)  
+  points(y=p[run==1]$NH3adj_kgPcap, x=p[run==1]$NH3_kgPcap, pch=21, bg = "blue", cex=3)  
+  dev.off()
+  p <- p[, ssp_y := paste0(ssp, "-", y)]
+  p <- p[, refdiet_g_per_cap_day := ref]
+  p <- p[, CH4_kgPcap := CH4_GgPy/INHA * 1000 ]
+  p <- p[, CH4adj_kgPcap := CH4adj_GgPy/INHA * 1000]
+  jpeg(filename=paste0(manuscript, "CH4_adjusted.vs.non-adjusted.jpg"), 
+      width = 1000, height = 1000, quality = 600)
+  plot(y=p[run==0]$CH4adj_kgPcap, x=p[run==0]$CH4_kgPcap, pch=21, bg = "red", cex=3)  
+  points(y=p[run==1]$CH4adj_kgPcap, x=p[run==1]$CH4_kgPcap, pch=21, bg = "blue", cex=3)  
+  dev.off()
+  
+  
+  pdf(file=paste0(manuscript, "NH3_adjusted.vs.non-adjusted.pdf"))
+  a <- ggplot(p, aes_string(x=p$NH3_kgPcap, y="NH3adj_kgPcap"))
+  a <- a + 
+    scale_colour_manual(name="CAPRI simulation \n(non-shocked / shocked", 
+                        values = c("0"="red", "1"="blue")) +
+    scale_shape_manual(values=c(15:18))+ 
+    geom_point(alpha = 0.6,
+               aes(colour = factor(run), 
+                   fill = factor(run),
+                   size=ref, 
+                   shape = interaction(ssp,y))) 
+  print(a)
+  dev.off()
+  
+  pdf(file=paste0(manuscript, "NH3_adjusted.vs.non-adjusted_food.pdf"))
+  a <- ggplot(p, aes_string(x=p$NH3_kgPcap, y="NH3adj_kgPcap"))
+  a <- a + 
+    geom_point(alpha = 0.6,
+               aes(colour = factor(rows), 
+                   fill = factor(rows),
+                   size=ref, 
+                   shape = interaction(ssp,y)))+ 
+    #scale_fill_brewer(aesthetics = c("colour", "fill"), type = "qual") +
+    scale_shape_manual(values=c(15:18)) 
+  a
+  print(a)
+  dev.off()
+  
+  h <- p[ratio < 100]
+  a <- ggplot(h, aes_string(x=rows, y=ratio))
+  hist(p[ratio<100]$ratio, breaks = seq(0, 100, 0.5))
+  
+  e <- p[, .SD, .SDcols = c(dims(p), "NH3_GgPy", "NH3adj_GgPy")]
+  e <- e[run==1, NH3_GgPy := NH3adj_GgPy]
+  e <- dcast.data.table(e, rall + rows + y + ssp ~ run, value.var = "NH3_GgPy")  
+  e <- e[, reduction := `1` / `0`]
+  e <- e[reduction < 100]
+  e <- e[, diff := `1` - `0`]
+    
+  pe <- ggplot(e, aes_string(x=e$`0`, y="diff"))
+  pe <- pe + 
+    geom_point(alpha = 0.3,
+               aes(colour = factor(rows), 
+                   fill = factor(rows),
+                   shape = interaction(ssp,y))) 
+  pe <- pe + scale_x_log10() 
+  pe
+
+}
 
