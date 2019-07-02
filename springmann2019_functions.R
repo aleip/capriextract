@@ -116,7 +116,8 @@ eatRefDiet <- function(pp=p_eatdiet) {
   resfld <-paste0(cenv$capri, cenv$resdir, "/capmod/", subfld, "/", flstart)
   
   # Attention!! the first four are from baseline
-  ns <- sort(unique(x$n))
+  ns <- sort(unique(pp$n))
+  bn <- 0
   if(length(ns) > 8){
     bn <- max(ns-8)
     ns <- 1:8
@@ -130,7 +131,7 @@ eatRefDiet <- function(pp=p_eatdiet) {
         symName = "p_eatTargets",
         names = c('rall', 'rows', "empty")
       ))
-    dt$n <- x
+    dt$n <- x + bn
     setnames(dt, "value", "ref")
     dt <- dt[empty == "gtarget", .(rall, rows, n, ref)]
   }))
