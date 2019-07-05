@@ -44,7 +44,7 @@
 #' @export
 loadglobalsfrombatch <- function(savepath = NULL,
                                  tpath = cenv$scrdir, 
-                                 batchf = paste0(cenv$resdir, "/../batchout"),
+                                 batchf = paste0(cenv$leipadr, cenv$resdir, "/", "batchout"),
                                  dp = cenv$resdir,
                                  batchdir = NULL,
                                  logf = NULL){
@@ -513,7 +513,7 @@ gettemp <- function(globals){
 
 
 globalsandsteps <- function(batchout, tmpfld=NULL, capmodsubfld, dostep=1, nruns=NULL){
-  spath <- paste0(cenv$capri, cenv$resout, "/", capmodsubfld)
+  spath <- paste0(cenv$capri, cenv$leipadr, cenv$resout, "/capmod/", capmodsubfld)
   if(is.null(tmpfld)){
     tmpfld <- paste0(convbatchdate(batchout), "global")
   }
@@ -548,7 +548,7 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL, n=NULL,
                         cpstep = FALSE # Copy gdx file 'stepOutput.gdx' (full step output)
                         ){
   tpath <- paste0(cenv$capri, cenv$scrdir, "/../", temp)
-  if(! dir.exists(paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/"))){
+  if(! dir.exists(paste0(cenv$capri, cenv$leipadr, cenv$resout, "/", capmodsubfld, "/"))){
     dir.create(paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/"))
   }
   if(is.null(n)){
