@@ -449,6 +449,7 @@ checkinfesS50 <- function(tpath){
   
   fls <- list.files(tpath, pattern = "[0-9]*.lst")
   
+  allinfes <- list()
   for(fl in fls){
     curf <- paste0(tpath, "/", fl)
     if(file.exists(curf)){
@@ -470,20 +471,40 @@ checkinfesS50 <- function(tpath){
         a <- a[!grepl("     EQU", a)]
         a <- a[!grepl("     VAR", a)]
         infes <- which(grepl(".*INFES$", a))
-        for(i in infes){
-          a[infes] <-paste0(a[infes], a[infes-1])
+        manyinfes <- 0
+        if(length(infes)>100){
+          manyinfes <- length(infes)
+          infes <- infes[1:100]
         }
-        a <- a[!grepl("^---- EQU", a)]
-        a <- a[!grepl("^---- VAR", a)]
+        equs <- a[infes-1]
+        d <- NULL
+        for(i in 1:length(infes)){
+          d[i] <- a[infes[i]]
+          if(grepl("EQU", equs[i])) {curequ <- equs[i]}
+          d[i] <- paste0(d[i], curequ)
+        }
+        
         
         conopt1 <- which(grepl("CONOPT 3", a))
         conopt2 <- which(grepl("DK-2880 Bagsvaerd", a))
-        if(length(conopt1)>0) a <- a[c(1:(conopt1-1), (conopt2+1):length(a))]
-        
-        write(a, file=paste0(cenv$capri, cenv$leipadr, cenv$resdir, "/capmod/", fld, "/", fld, gsub(".lst", "infes.lst", fl)))
+        if(length(conopt1)>0) c <- a[c(1:(conopt1-1))]
+        c <- paste(c, collapse = "\n")
+        if(manyinfes > 1){
+          c <- c(c, "##Listing of infes occurrences truncated. Number of infes: ", manyinfes)
+        }
+        c <- c(c, d)
+        allinfes[[fl]] <- c
       }
     }
   }
+  #write(allinfes, file=paste0(cenv$capri, cenv$leipadr, cenv$resdir, "/capmod/", fld, "/", fld, gsub(".lst", "infes.lst", fl)))
+  finfes <- paste0(cenv$capri, cenv$leipadr, cenv$resdir, "/capmod/", fld, "/", fld, "infex.xlsx")
+  lapply(1:length(infes), function(x) {
+    cat(x)
+    write.xlsx(infes[[x]], file="test.xlsx", sheetName=names(infes)[x], append=TRUE)
+  }
+  )
+  return(allinfes)
 }
 
 
@@ -513,11 +534,11 @@ gettemp <- function(globals){
 
 
 globalsandsteps <- function(batchout, tmpfld=NULL, capmodsubfld, dostep=1, nruns=NULL){
-  spath <- paste0(cenv$capri, cenv$leipadr, cenv$resout, "/capmod/", capmodsubfld)
+  spath <- paste0(cenv$capri, cenv$leipadr, cenv$resout, capmodsubfld)
   if(is.null(tmpfld)){
     tmpfld <- paste0(convbatchdate(batchout), "global")
   }
-  tpath <- paste0(cenv$capri, gsub(basename(cenv$scrdir), tmpfld, cenv$scrdir))
+  tpath <- paste0(cenv$capri, cenv$leipadr, gsub(basename(cenv$scrdir), tmpfld, cenv$scrdir))
   globals <- loadglobalsfrombatch(batchdir = batchout, tpath=tpath, savepath=spath)
   if(dostep == 1){
     save(list=objects(), file="t.rdata")
@@ -547,27 +568,28 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL, n=NULL,
                         cpfix = TRUE, # Copy also (large) file with input data DATA, p_dataOuttemp, etc.
                         cpstep = FALSE # Copy gdx file 'stepOutput.gdx' (full step output)
                         ){
-  tpath <- paste0(cenv$capri, cenv$scrdir, "/../", temp)
-  if(! dir.exists(paste0(cenv$capri, cenv$leipadr, cenv$resout, "/", capmodsubfld, "/"))){
-    dir.create(paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/"))
+  tpath <- paste0(cenv$capri, cenv$leipadr, cenv$scrdir, "/../", temp)
+  mpath <- paste0(cenv$capri, cenv$leipadr, cenv$resout, "/", capmodsubfld, "/")
+  if(! dir.exists(mpath)){
+    dir.create(mpath)
   }
   if(is.null(n)){
     n <- sort(as.numeric(basename(list.dirs(tpath, recursive=FALSE))))
   }
   if(cpfix){
-    fxfile <- paste0(cenv$capri, cenv$scrdir, "/../", temp, "/",1,"/", file, "fix.gdx")
+    fxfile <- paste0(tpath, "/",1,"/", file, "fix.gdx")
     if(file.exists(fxfile)){
-      file.copy(fxfile, paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/", capmodsubfld, "_", file, "fix.gdx"), overwrite=TRUE)
+      file.copy(fxfile, paste0(mpath, capmodsubfld, "_", file, "fix.gdx"), overwrite=TRUE)
     }
   }
   for(i in n){
-    vrfile <- paste0(cenv$capri, cenv$scrdir, "/../", temp, "/",i,"/", file, "var.gdx")
-    file.copy(vrfile, paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/",capmodsubfld , "_", file, "var_", i, ".gdx"), overwrite=TRUE)
+    vrfile <- paste0(tpath, "/",i,"/", file, "var.gdx")
+    file.copy(vrfile, paste0(mpath,capmodsubfld , "_", file, "var_", i, ".gdx"), overwrite=TRUE)
   }
   if(cpstep){
   for(i in n){
-    vrfile <- paste0(cenv$capri, cenv$scrdir, "/../", temp, "/",i,"/", "stepOutput.gdx")
-    file.copy(vrfile, paste0(cenv$capri, cenv$resout, "/", capmodsubfld, "/",capmodsubfld , "_", "stepOutput_", i, ".gdx"), overwrite=TRUE)
+    vrfile <- paste0(tpath, "/",i,"/", "stepOutput.gdx")
+    file.copy(vrfile, paste0(mpath,capmodsubfld , "_", "stepOutput_", i, ".gdx"), overwrite=TRUE)
   }
   }
   
