@@ -1,3 +1,11 @@
+gethsumap<-function(){
+  setfile<-paste0(getwd(),"/LAPMcapdis_END.gdx")
+  
+  mhsu<-as.data.table(rgdx.set(setfile,te=FALSE,ts = TRUE,symName = "m_srnuts2_hsu"))
+  names(mhsu) <- c("RALL", "HSU")
+  return(mhsu)
+}
+
 selecthsu<-function(reload=0, capridat=capridat, cols=curcols,
                     rows=currows, curcountry, curyear){
     if(reload==1){
