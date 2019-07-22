@@ -214,8 +214,8 @@ loadglobalsfrombatch <- function(savepath = NULL,
   # Add information on simulation status (success - running - not started - Error message)
   save(list=objects(), file="glob.rdata")
   reportsummary<-as.data.table(t(c("status", 99, reportsummary)))
-  names(reportsummary)<-names(setglobals)
-  setglobals<-rbind(setglobals, reportsummary)
+  #names(reportsummary)<-names(setglobals)
+  #setglobals<-rbind(setglobals, reportsummary)
   setglobals$n <- as.numeric(setglobals$n)
   
   #View(setglobals)
@@ -237,7 +237,8 @@ loadglobalsfrombatch <- function(savepath = NULL,
 
 
 checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir, 
-                             outpath=cenv$resout, commonname = NULL){
+                             outpath=cenv$resout, commonname = NULL,
+                             globals=NULL){
   
   #con <- list.files(path=spath, pattern=".*global.xlsx",recursive=FALSE, full.names = TRUE)
   if(! is.null(commonname)) {
@@ -393,7 +394,7 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
       ws <- getSheets(wb)
       if(! is.null(ws)) {
         wsn <- unlist(lapply(1:length(ws), function(x) ws[[x]]$getSheetName()))
-        for(iname in c("iterchg", "iterchgmx", "iterchgmxmx", "iterchgmxmxtot")){
+        for(iname in c("globals", "iterchg", "iterchgmx", "iterchgmxmx", "iterchgmxmxtot")){
           if(iname %in% wsn) {
             #cat("\n Remove Sheet ", iname, " from ", con)
             removeSheet(wb, iname)
@@ -406,6 +407,9 @@ checkstepreports <- function(runasbatch=1, nruns=NULL, tpath=cenv$scrdir,
     save(list=objects(), file="ch.rdata")
     if(length(iter_chgmax)>0){
       #write.xlsx(x=iter_chgmax,    file=con, sheetName="iterchgmx", col.names=TRUE, row.names=FALSE, showNA=FALSE, append=TRUE)
+      if(!is.null(globals)){
+        write.xlsx(x=globals,   file=con, sheetName="globals", col.names=TRUE, row.names=FALSE, showNA=FALSE, append=TRUE)
+      }
       write.xlsx(x=iter_chgmxmx,   file=con, sheetName="iterchgmxmx", col.names=TRUE, row.names=FALSE, showNA=FALSE, append=TRUE)
       write.xlsx(x=iter_chgmxmxtot,file=con, sheetName="iterchgmxmxtot", col.names=TRUE, row.names=FALSE, showNA=FALSE, append=TRUE)
     }else{
@@ -453,7 +457,7 @@ checkinfesS50 <- function(tpath){
   for(fl in fls){
     curf <- paste0(tpath, "/", fl)
     if(file.exists(curf)){
-      cat(curf, " - ")
+      cat("\n", curf, " - ")
       a1 <- try(readLines(curf, warn=FALSE), silent=TRUE)
       s50 <- which(grepl("LOOP.*step.*S50", a1))
       cat(s50)
@@ -493,17 +497,19 @@ checkinfesS50 <- function(tpath){
           c <- c(c, "##Listing of infes occurrences truncated. Number of infes: ", manyinfes)
         }
         c <- c(c, d)
+        cat("fl")
         allinfes[[fl]] <- c
       }
     }
   }
   #write(allinfes, file=paste0(cenv$capri, cenv$leipadr, cenv$resdir, "/capmod/", fld, "/", fld, gsub(".lst", "infes.lst", fl)))
-  finfes <- paste0(cenv$capri, cenv$leipadr, cenv$resdir, "/capmod/", fld, "/", fld, "infex.xlsx")
-  lapply(1:length(infes), function(x) {
-    cat(x)
-    write.xlsx(infes[[x]], file="test.xlsx", sheetName=names(infes)[x], append=TRUE)
-  }
-  )
+  # finfes <- paste0(cenv$capri, cenv$leipadr, cenv$resdir, "/capmod/", fld, "/", fld, "infes.xlsx")
+  # write.xlsx(allinfes[[1]], file=finfes, sheetName=names(infes)[1])
+  # lapply(2:length(allinfes), function(x) {
+  #   cat(x)
+  #   write.xlsx(allinfes[[x]], file=finfes, sheetName=names(infes)[x], append=TRUE)
+  # }
+  # )
   return(allinfes)
 }
 
@@ -545,7 +551,8 @@ globalsandsteps <- function(batchout, tmpfld=NULL, capmodsubfld, dostep=1, nruns
     tmptrade <- checkstepreports(tpath=tpath,
                                  commonname=capmodsubfld,
                                  outpath=spath,
-                                 nruns=nruns)
+                                 nruns=nruns,
+                                 globals=globals)
   }else{
     tmptrade <- 0
   }
@@ -563,7 +570,8 @@ loadmultipleglobal <- function(savepath = NULL,
   
 }
 
-cpchkmagpie <- function(temp="temp", capmodsubfld=NULL, n=NULL, 
+cpchkmagpie <- function(temp="temp", capmodsubfld=NULL, 
+                        n=NULL, 
                         file="chk_kcalMAgPIE",
                         cpfix = TRUE, # Copy also (large) file with input data DATA, p_dataOuttemp, etc.
                         cpstep = FALSE # Copy gdx file 'stepOutput.gdx' (full step output)
@@ -582,9 +590,33 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL, n=NULL,
       file.copy(fxfile, paste0(mpath, capmodsubfld, "_", file, "fix.gdx"), overwrite=TRUE)
     }
   }
+  
+  fglobals <- list.files(path=mpath, pattern=".*globals.csv")
+  useglobals <- 0
+  if(file.exists(paste0(mpath, "/", fglobals))){
+    useglobals <- 1
+    globals <- read.csv(paste0(mpath, "/", fglobals), stringsAsFactors=FALSE)
+    simulationyear <- globals[globals$setglobal=="simulationyear", "r1"]
+    ssp <- globals[globals$setglobal=="curSSP", "r1"]
+    cat ("\n", ssp, simulationyear)
+  }
+  
   for(i in n){
+    if(useglobals==1){
+      iyear <- globals[globals$setglobal=="simulationyear", paste0("r",i)]
+      cat("\niyear=", iyear)
+      if(is.null(iyear)) iyear=simulationyear
+      if(iyear=="") iyear=simulationyear
+      issp <- globals[globals$setglobal=="curSSP", paste0("r",i)]
+      if(issp=="") issp=ssp
+      cat ("\n", iyear, " ", issp)
+      vrgoal <- paste0(mpath,capmodsubfld , "_", file, "var_", issp, "_", iyear, ".gdx")
+      
+    }else{
+      vrgoal <- paste0(mpath,capmodsubfld , "_", file, "var_", i, ".gdx")
+    }
     vrfile <- paste0(tpath, "/",i,"/", file, "var.gdx")
-    file.copy(vrfile, paste0(mpath,capmodsubfld , "_", file, "var_", i, ".gdx"), overwrite=TRUE)
+    file.copy(vrfile, vrgoal, overwrite=TRUE)
   }
   if(cpstep){
   for(i in n){
