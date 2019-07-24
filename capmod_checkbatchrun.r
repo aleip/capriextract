@@ -593,37 +593,92 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL,
   
   fglobals <- list.files(path=mpath, pattern=".*globals.csv")
   useglobals <- 0
-  if(file.exists(paste0(mpath, "/", fglobals))){
+  if(file.exists(paste0(mpath, "/", fglobals[length(fglobals)]))){
     useglobals <- 1
-    globals <- read.csv(paste0(mpath, "/", fglobals), stringsAsFactors=FALSE)
+    globals <- read.csv(paste0(mpath, "/", fglobals[length(fglobals)]), stringsAsFactors=FALSE)
     simulationyear <- globals[globals$setglobal=="simulationyear", "r1"]
     ssp <- globals[globals$setglobal=="curSSP", "r1"]
-    cat ("\n", ssp, simulationyear)
+    dim1 <- globals[globals$setglobal=="ScenDim1Value", "r1"]
+    dim2 <- globals[globals$setglobal=="ScenDim2Value", "r1"]
   }
   
+  copydone <- FALSE
   for(i in n){
     if(useglobals==1){
       iyear <- globals[globals$setglobal=="simulationyear", paste0("r",i)]
-      cat("\niyear=", iyear)
       if(is.null(iyear)) iyear=simulationyear
       if(iyear=="") iyear=simulationyear
       issp <- globals[globals$setglobal=="curSSP", paste0("r",i)]
-      if(issp=="") issp=ssp
-      cat ("\n", iyear, " ", issp)
-      vrgoal <- paste0(mpath,capmodsubfld , "_", file, "var_", issp, "_", iyear, ".gdx")
+      if(is.null(issp)) {issp=ssp}else{if(issp=="") issp=ssp}
+      if(is.null(issp)) issp=""
+
+      idim1 <- globals[globals$setglobal=="ScenDim1Value", paste0("r",i)]
+      if(is.null(idim1)) {idim1=dim1}else{if(idim1=="") idim1=dim1}
+      #if(! is.null(idim1)){if(idim1!=""){idim1<-paste0("_", idim1)}}
+      idim2 <- globals[globals$setglobal=="ScenDim2Value", paste0("r",i)]
+      if(is.null(idim2)) {idim2=dim2}else{if(idim2=="") idim2=dim2}
+      #if(! is.null(idim2)){if(idim2!=""){idim2<-paste0("_", idim2)}}
       
+      vrgoal <- paste0(mpath,capmodsubfld , "_", file, "var_", issp, "_", iyear, "_", idim1, "_", idim2, ".gdx")
     }else{
       vrgoal <- paste0(mpath,capmodsubfld , "_", file, "var_", i, ".gdx")
     }
     vrfile <- paste0(tpath, "/",i,"/", file, "var.gdx")
-    file.copy(vrfile, vrgoal, overwrite=TRUE)
+    if(file=="envind_end"){vrfile <- paste0(tpath, "/",i,"/", file, ".gdx")}
+    if(! copydone){
+      copydone <- file.copy(vrfile, vrgoal, overwrite=TRUE)
+      if(file%in%c("chk_kcalMAgPIE", "envind_end")){
+        xxx <- list()
+        if(file=="chk_kcalMAgPIE"){extract <- c("p_diet", "p_MAgPIE_diet")}
+        if(file=="envind_end"){extract <- c("p_envConst", "p_nMaxPerHa"
+                                            #, "p_envEnf"
+                                            )}
+        doextr <- function(j 
+                           #extract=extract, vrfile=vrfile, issp=issp, iyear=iyear, 
+                           #idim1=idim1, idim2=idim2, temp=temp
+                           ){
+          xx <- as.data.table(rgdx.param(vrfile, extract[j]))
+          if(is.null(issp))issp <- ""
+          if(is.null(iyear))iyear <- ""
+          if(is.null(idim1))idim1 <- ""
+          if(is.null(idim2))idim2 <- ""
+          xx$ssp <- issp
+          xx$y <- iyear
+          xx$dim1 <- idim1
+          xx$dim2 <- idim2
+          xx$date <- capmodsubfld
+          return(xx)
+        }
+        for(j in 1:length(extract)) {xxx[[j]] <- doextr(j)}
+        save(list=objects(), file="t.rdata")
+      }
+    }else{
+      cat("\n", file, extract)
+      for(j in 1:length(extract)) {
+        #save(list=objects(), file=paste0("t", i, "_", j,  ".rdata"))
+        save(list=objects(), file="t.rdata")
+        xxx[[j]] <- rbind(xxx[[j]],doextr(j))
+        }
+    }
   }
+  for(j in 1:length(extract)) {
+    assign(extract[j],xxx[[j]])
+    save(list=extract[j], file=paste0(mpath,capmodsubfld , "_", extract[j], ".rdata"))
+  }
+  
   if(cpstep){
   for(i in n){
     vrfile <- paste0(tpath, "/",i,"/", "stepOutput.gdx")
     file.copy(vrfile, paste0(mpath,capmodsubfld , "_", "stepOutput_", i, ".gdx"), overwrite=TRUE)
   }
   }
+  return(list=extract)  
+}
+
+extractMAgPIE <- function(mpath, fn="chk_kcalMAgPIEvar", x="p_diet"){
+  
+  lfiles <- list.files(mpath, pattern=paste0("*", fn, "*"))
+  xx <- as.data.table(rgdx.param((paste0(mpath, "/", lfiles[1])), x))
   
 }
 
