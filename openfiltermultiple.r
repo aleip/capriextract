@@ -153,6 +153,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
     }
   }
   if(grepl("capmod", scope)){
+    cat("\ncurscenshort", curscenshort)
     capridat$scen<-curscenshort
     if(grepl("SSP", curscen)){
       ssp <- substr(gsub(".*SSP", "SSP", curscen), 1, 4)
@@ -190,7 +191,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
       cat("\n", paste0(curscenshort, ssp, "_", yrs, "_", run))
     }
   }
-  #save(list=objects(), file="test.rdata")
+  save(list=objects(), file="test.rdata")
   #stop()
   return(list(capridat, fattr))
 }
@@ -345,10 +346,11 @@ selectcolelements <- function(reffilename = NULL,#if NULL use default file
   if(is.null(reffilename)) {
     reffilename <- "res_2_0830mtr_rd_ref_endManAvail"
   }
-  reffil <- paste0(cenv$resdir, "/capmod/", reffilename, ".rdata")
+  reffil <- paste0(cenv$capri, cenv$leipadr, cenv$resdir, "/capmod/", reffilename, ".rdata")
   if(reload | (! file.exists(reffil))){
     #            ... in case capmode is already included in resin
     filgdx <- paste0(gsub("\\/capmod\\/", "", cenv$resin), "/capmod/", reffilename, ".gdx")
+    filgdx <- gsub("rdata", "gdx", reffil)
     dim5 <- c("rall", "empty", "cols", "rows", "y", "value")
     reffile <- as.data.table(rgdx.param(filgdx, "dataOut", names=dim5))
     save(reffile, file=reffil)
@@ -360,7 +362,7 @@ selectcolelements <- function(reffilename = NULL,#if NULL use default file
   if(is.null(keepcols)){
     keepcols <- c(s$mbal, "INDM", "HCON", "PROC", "IMPORTS", "EXPORTS", "INHA", "INCE", "INDMsh", 
                   # MQPOS_SET
-                  "FOOD", "SHARE", "CRPI", "FATSVAL", "PROTVAL", "Corr", "PPRI", "CPRI",
+                  "FOOD", "SHARE", "FATSVAL", "PROTVAL", "Corr", "PPRI", "CPRI",
                   as.character(capcols[grepl("LOS", capcols)]), 
                   as.character(capcols[grepl("N_", capcols)]),
                   #as.character(capcols[grepl("VIT_", capcols)]),
@@ -369,5 +371,6 @@ selectcolelements <- function(reffilename = NULL,#if NULL use default file
     )
   }
   
+  return(keepcols)
 }
 
