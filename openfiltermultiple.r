@@ -360,17 +360,31 @@ selectcolelements <- function(reffilename = NULL,#if NULL use default file
   capcols <- unique(reffile$cols)
   
   if(is.null(keepcols)){
-    keepcols <- c(s$mbal, "INDM", "HCON", "PROC", "IMPORTS", "EXPORTS", "INHA", "INCE", "INDMsh", 
+    keepcols <- c(s$mbal, "INDM", "HCON", "PROC", "IMPORTS", "EXPORTS", "INHA", "INCE", "INDMsh", "DEMD", 
                   # MQPOS_SET
                   "FOOD", "SHARE", "FATSVAL", "PROTVAL", "Corr", "PPRI", "CPRI",
                   as.character(capcols[grepl("LOS", capcols)]), 
                   as.character(capcols[grepl("N_", capcols)]),
                   #as.character(capcols[grepl("VIT_", capcols)]),
                   s$nbalsoil, s$nbil, s$mpact, 
-                  as.character(capcols[grepl("Impact", capcols)]), "mitiEff"
+                  as.character(capcols[grepl("Impact", capcols)]), 
+                  "mitiEff", "mitiNetC",
+                  "GWPA", "GWPT", "GLUC", 
+                  "PROD", "PROD_LO", "PROD_UP", 
+                  "YILD", "YILD_LO", "YILD_UP",
+                  s$set_act_agg, "UAAR",
+                  "WELFARE", "FEOG"
+
     )
   }
   
-  return(keepcols)
+  caprall <-   unique(reffile$rall)
+  caprall <- caprall[! grepl("0000", caprall)]
+  caprall <- caprall[! grepl("NO0", caprall)]
+  caprall <- caprall[! caprall %in% c("EU027000", "EU27yr19",   "EU025000",   "EU013000",   "EU012000")]
+  caprall <- union(s$nuts0, caprall)
+
+  
+  return(list(keepcols, caprall))
 }
 
