@@ -272,10 +272,11 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
     gdxrrw::igdx(cenv$gamsdir)
   }
   
-  if(is.null(setfile))(
-    return(paste0("You must indicate a gdx-file containing the sets (setfile).",
-                  "you might try with ", cenv$resout, "/sets/sets_after_setsgms.gdx"))
-  )
+  if(is.null(setfile)){
+    setfile <- paste0(cenv$capri, cenv$leipadr, cenv$resdir, "sets/sets_after_setsgms.gdx")
+    #return(paste0("You must indicate a gdx-file containing the sets (setfile).",
+    #              "you might try with ", cenv$resout, "/sets/sets_after_setsgms.gdx"))
+  }
   
   # Reset sets2retrieve
   sets2get.eles <- vector()
@@ -308,6 +309,9 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   
   sets2get.name <- c(sets2get.name, "Production activities in supply model")
   sets2get.eles <- c(sets2get.eles, "mpact")
+  
+  sets2get.name <- c(sets2get.name, "Activity aggregates")
+  sets2get.eles <- c(sets2get.eles, "SET_ACT_AGG")
   
   sets2get.name <- c(sets2get.name, "Aggregated aninam production activities")
   sets2get.eles <- c(sets2get.eles, "daact")
@@ -343,6 +347,9 @@ UpdateCapriSets <- function(setfile = NULL  # gdx file with required sets
   
   sets2get.name <- c(sets2get.name, "Final crop outputs")
   sets2get.eles <- c(sets2get.eles, "FCO")
+  
+  sets2get.name <- c(sets2get.name, "Output aggregates including ALLP")
+  sets2get.eles <- c(sets2get.eles, "OAGG")
   
   sets2get.name <- c(sets2get.name, "Activies as in the FSS data base")
   sets2get.eles <- c(sets2get.eles, "fssacts")
