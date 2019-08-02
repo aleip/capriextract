@@ -40,8 +40,10 @@ if(scope%in%c("feed_marketbal","activities")){
 
 setfile<-paste0(getwd(),"/LAPMcapdis_END.gdx")
 setfile<-"x:\\adrian\\models\\capri\\dndc\\results\\20110722\\nitrogen\\nitrogenlca_sets.gdx"
-setfile<-paste0(ecampa3res,"capdis\\CAPREGcapdis_END.gdx")
-setfile<-paste0(ecampa3res,"capdis\\LAPMcapdis_END.gdx")
+#setfile<-paste0(ecampa3res,"capdis\\CAPREGcapdis_END.gdx")
+#setfile<-paste0(ecampa3res,"capdis\\LAPMcapdis_END.gdx")
+setfile <- paste0(cenv$capri, cenv$leipadr, cenv$resdir, "sets/dump_epnf_scenarios_391.gdx")
+
 if(scope%in%c("nlca")){
   setfilen<-paste0(ecampa3res,"sets/sets_nitrogen.gdx")
 }   
@@ -65,8 +67,13 @@ maactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "MAACT")
 maact<-as.character(maactexp[,1])
 daactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "DAACT")
 daact<-as.character(daactexp[,1])
-fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fssact")
-fssact<-as.character(fssactexp[,1])
+
+#fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "fssact")
+#fssact<-as.character(fssactexp[,1])
+# lapmactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact")
+# lapmact<-as.character(lapmactexp[,1])
+# lapmact_fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact_fssact")
+# lapmact_fssact<-as.character(lapmact_fssactexp[,1])
 
 # oseco contains also non-food items - restict to
 cropexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FCO")
@@ -77,15 +84,13 @@ animoexp <- animoexp[! animoexp$i %in% oani$i,]
 animoexp <- animoexp[! animoexp$i %in% c("MANN", "MANK", "MANP"),]
 secoexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "SECO_ROWS")
 
+oaggexp <- rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "OAGG")
+oagg <- as.character(oaggexp[, 1])
 
 osecoexp<-rbind(cropexp, icoexp, animoexp, secoexp)
 oseco<-as.character(osecoexp[,1])
 
 
-lapmactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact")
-lapmact<-as.character(lapmactexp[,1])
-lapmact_fssactexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "lapmact_fssact")
-lapmact_fssact<-as.character(lapmact_fssactexp[,1])
 names(maactexp)<-c("Acronym","Description")
 names(daactexp)<-c("Acronym","Description")
 feed_rowsexp<-rgdx.set(setfile,te=TRUE,ts = TRUE,symName = "FEED_ROWS")
