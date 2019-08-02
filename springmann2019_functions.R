@@ -85,12 +85,14 @@ getenergydensities <- function() {
   #ncnc <- data.table(rgdx.param(gdxName = 'X:/dev/leipadr/results201905/capmod/chk_kcalMAgPIEfix.gdx',
   ncnc <-
     data.table(rgdx.param(
-      gdxName = paste0(cenv$capri, cenv$resdir, '/capmod/chk_kcalMAgPIEfix.gdx'),
+      gdxName = paste0(cenv$capri, cenv$leipadr, cenv$resdir, '/capmod/chk_kcalMAgPIEfix.gdx'),
       symName = "p_NCNC_CONT",
       names = c('rows', 'nutrient')
     ))
   ncnc <- dcast.data.table(ncnc, rows ~ nutrient, value.var = "value")
-  ncal <- ncnc[, .(rows, N_CAL)]
+  ncnc <- list(ncnc[, .(rows, N_CAL)], ncnc[, .(rows, N_PRO)], ncnc[, .(rows, N_FAT)])
+  names(ncnc) <- c("ncal", "npro", "nfat")
+  return(ncnc)
 }
 
 eatFoodGrp <- function(x = p_diet) {
@@ -150,11 +152,28 @@ eatRefDiet <- function(pp=p_eatdiet) {
 # N_CAL in kcal/cap/day
 getintake <- function(x = caprid) {
   p_diet <- x[cols == "N_CAL"]
-  ncal <- getenergydensities()
+  ncal <- getenergydensities()$ncal
   p_diet <- merge(p_diet, ncal, by = "rows", all.x = TRUE)
   p_diet <- p_diet[, INTK_gPcapday := value / N_CAL * 1000]
   setnames(p_diet, "value", "ENNE_kcalPcapday")
   p_diet <- ocols(p_diet)
+  
+  return(p_diet)
+}
+getNutIntake <- function(x = caprid) {
+
+  p_diet <- x[cols %in% c("N_CAL", "N_PRO", "N_FAT")]
+  ncal <- getenergydensities()$ncal
+  p_diet <- merge(p_diet, ncal, by = "rows", all.x = TRUE)
+  ncal <- getenergydensities()$npro
+  p_diet <- merge(p_diet, ncal, by = "rows", all.x = TRUE)
+  ncal <- getenergydensities()$nfat
+  p_diet <- merge(p_diet, ncal, by = "rows", all.x = TRUE)
+  
+  p_diet <- p_diet[, INTK_gPcapday := value / N_CAL * 1000]
+  setnames(p_diet, "value", "kcalORgPERcapday")
+  p_diet <- ocols(p_diet)
+  
   return(p_diet)
 }
 # Get population
