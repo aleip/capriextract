@@ -337,6 +337,18 @@ opendata<-function(scope,
 }
 
 
+selectOnlyCountries <- function(x){
+  caprall <-   unique(x$rall)
+  caprall <- caprall[! grepl("0000", caprall)]
+  caprall <- caprall[! grepl("NO0", caprall)]
+  caprall <- caprall[! caprall %in% c("EU027000", "EU27yr19",   "EU025000",   "EU013000",   "EU012000")]
+  caprall <- union(s$nuts0, caprall)
+  
+  x <- x[rall %in% caprall]
+  
+  
+}
+
 selectcolelements <- function(reffilename = NULL,#if NULL use default file 
                               reload = FALSE,    #if TRUE, reload even if file exists
                               keepcols = NULL    #if NULL use default selection
@@ -373,7 +385,7 @@ selectcolelements <- function(reffilename = NULL,#if NULL use default file
                   "PROD", "PROD_LO", "PROD_UP", 
                   "YILD", "YILD_LO", "YILD_UP",
                   s$set_act_agg, "UAAR",
-                  "WELFARE", "FEOG"
+                  "WELFARE", "FEOG", "EAAG"
 
     )
   }

@@ -197,7 +197,10 @@ getlca <- function(x = caprid) {
   #if(what=="YILD"){
     cat("\nExtracting LCA factors in kg per ton of product")
     lcayild <- x[empty != "" & cols %in% c("YILD")]
-    lcayild <- dcast.data.table(lcayild, rall + cols + rows + y + ssp + run + n~ empty, value.var = "value")
+    lefthand <- "empty"
+    righthand <- paste(setdiff(names(lcayild), c(lefthand, "value")), collapse=" + ")
+    dform <- as.formula(paste0(righthand, " ~ ", lefthand))
+    lcayild <- dcast.data.table(lcayild, dform, value.var = "value")
     #grof <- x[empty == "" & cols == "GROF"]
     #grof <- grof[,.(rall, rows, y, ssp, run, n, value)]
     #setnames(grof, "value", "GROF")
@@ -207,12 +210,16 @@ getlca <- function(x = caprid) {
     #lca <- lca[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
     lcayild <- lcayild[, NOX_kgPt := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
     lcayild <- lcayild[, CH4_kgPt := CH4ENT + CH4MAN + CH4RIC]
-    lcayild <- lcayild[, .(rall, cols, rows, y, ssp, run, n, NH3_kgPt, NOX_kgPt, CH4_kgPt)]
+    if("run" %in% righthand) {
+      lcayild <- lcayild[, .(rall, cols, rows, y, ssp, run, n, NH3_kgPt, NOX_kgPt, CH4_kgPt)]
+    }else{
+      lcayild <- lcayild[, .(rall, cols, rows, y, ssp, n, NH3_kgPt, NOX_kgPt, CH4_kgPt)]
+    }
     colsPtime <- names(lcayild)[grepl("Pt", names(lcayild))]
     
   #}else if(what =="PROD"){
     lcaprod <- x[empty != "" & cols %in% c("PROD")]
-    lcaprod <- dcast.data.table(lcaprod, rall + cols + rows + y + ssp + run + n~ empty, value.var = "value")
+    lcaprod <- dcast.data.table(lcaprod, dform, value.var = "value")
     #grof <- x[empty == "" & cols == "GROF"]
     #grof <- grof[,.(rall, rows, y, ssp, run, n, value)]
     #setnames(grof, "value", "GROF")
@@ -222,7 +229,11 @@ getlca <- function(x = caprid) {
     #lcaprod <- lcaprod[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
     lcaprod <- lcaprod[, NOX_GgPy := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
     lcaprod <- lcaprod[, CH4_GgPy := CH4ENT + CH4MAN + CH4RIC]
-    lcaprod <- lcaprod[, .(rall, cols, rows, y, ssp, run, n, NH3_GgPy, NOX_GgPy, CH4_GgPy)]
+    if("run" %in% righthand) {
+      lcaprod <- lcaprod[, .(rall, cols, rows, y, ssp, run, n, NH3_GgPy, NOX_GgPy, CH4_GgPy)]
+    }else{
+      lcaprod <- lcaprod[, .(rall, cols, rows, y, ssp, n, NH3_GgPy, NOX_GgPy, CH4_GgPy)]
+    }
     colsPtime <- names(lcaprod)[grepl("GgPy", names(lcaprod))]
     
   #}
