@@ -14,6 +14,16 @@ checkflparts<-function(i, x, flparts, nref){
   
 }
 
+dcastformula <- function(x, rh, elim=""){
+  
+  rh <- "n"
+  lh <- setdiff(names(x), c("value", rh))
+  print(names(x))
+  print(lh)
+  f <- as.formula(paste0(paste(lh, collapse = " + "), " ~ ", paste(rh, collapse = " + ")))
+  return(f)
+}
+
 getfilesfromfolder<-function(curfol = datapath, pattern='res.*.gdx$', flag = "", reference=NULL){
   
   # Change default datapath in global environment to curfol
