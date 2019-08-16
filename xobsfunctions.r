@@ -1,3 +1,14 @@
+resetxobs <- function(){
+  
+  if(Sys.info()[4] == "D01RI1600881") setwd("x:/adrian/tools/rprojects/capriextract/")
+  rm(list=setdiff(objects(), "capri")); setwd(gsub("logfiles", "capriextract", getwd())); source("R/initializecapri.R"); InitCapriEnv(scope = 'capmod')
+  source("xobsfunctions.r")
+  source("capriextract_functions_4mapping.r")
+  source("../FarmstructureSoilUnits/raster_functions.r")
+  
+  
+  
+}
 gethsumap<-function(){
   setfile<-paste0(getwd(),"/LAPMcapdis_END.gdx")
   
@@ -12,13 +23,17 @@ selecthsu<-function(reload=0, capridat=capridat, cols=curcols,
         capridat<-opendata(scope,curcountry,curyear)
     }
     
+    h <- c("rall", "empty", "cols", "rows", "y", "ssp", "run", "n", "value")  
     #COLS (activities, variables for products)
     if(!is.null(cols)) capridat<-capridat[capridat$COLS%in%cols,]
     
     #ROWS (products, variables for activities)
     if(!is.null(rows)) capridat<-capridat[capridat$ROWS%in%rows,]
     
-    capridat$Y <- curyear
+    capridat$y <- curyear
+    n <- names(capridat)
+    hn <- h[h %in% n]
+    capridat <- capridat[, hn, with=FALSE]
     
     return(capridat)
 }
@@ -28,30 +43,35 @@ openxobstimeseries<-function(cols=curcols,
                              rows=currows, curcountries, 
                              baseyear, curyears){
     
-    for(curcountry in curcountries){
-        
+  datapath <<- paste0(cenv$capri, cenv$leipadr, "results/")
+  for(curcountry in curcountries){
+    
         capridat<-opendata(scope = "capdiscapreg",curcountry = curcountry, curyear = baseyear)
-        xobscountry<-selecthsu(reload = 0, capridat, curcols, currows, curcountry, baseyear)
+        xobscountry<-selecthsu(reload = 0, capridat[[1]], cols, rows, curcountry, baseyear)
         
-        for(y in curyears){
+        if(! is.null(curyears)){if(curyears!=""){
+          
+          for(y in curyears){
             capridat<-opendata(scope = "capdistimes",curcountry = curcountry, curyear = y)
-            xobscountry<-rbind(xobscountry, selecthsu(reload = 0, capridat, curcols, currows, curcountry, y))
-        }
-        
-        xobscountry$NUTS2<-curcountry
-        xobscountry<-select(xobscountry, NUTS2, RALL, COLS, ROWS, Y, VALUE)  
+            xobscountry<-rbind(xobscountry, selecthsu(reload = 0, capridat[[1]], cols, rows, curcountry, y))
+          }
+        }}
+          
+        #xobscountry$NUTS2<-curcountry
+        #xobscountry<-select(xobscountry, NUTS2, RALL, COLS, ROWS, Y, VALUE)  
         
         if (which(curcountries==curcountry)==1){xobsa <- xobscountry}else{
-            xobsa<-rbind(xobsa, xobscountry)
+          xobsa<-rbind(xobsa, xobscountry)
         }
-    }
-    
-    xobsa<-dcast(xobsa, NUTS2 + RALL + COLS ~ Y, value.var = "VALUE")
-    xobs<-filter(xobsa, grepl("^U", RALL))
-    xobsnuts2<-filter(xobsa, ! grepl("^U", RALL))
-    return(list(xobs, xobsnuts2))
+  }
+  
+  #xobsa<-dcast.data.table(xobsa, rall + cols + rows ~ y, value.var = "value")
+  xobs<-xobsa[grepl("^F[0-9]*", rall)]
+  xobsnuts2<-xobsa[!grepl("^F[0-9]*", rall)]
+  return(list(xfsu=xobs, xnuts=xobsnuts2))
     
 }
+
 
 orderhsu<-function(x){
     x<-as.data.table(x)
