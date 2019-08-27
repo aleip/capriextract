@@ -10,10 +10,16 @@
 #' }
 #' @export
 require(data.table)
+
+
 InitCapriEnv <- function(capri.runfile = NULL,
                          scope = NULL){
   
   require(gdxrrw)
+  
+  
+  
+  
   if(! is.null(capri.runfile)){
     
     # Read the caprirunfile and retrieve relevant information

@@ -381,7 +381,7 @@ selectcolelements <- function(reffilename = NULL,#if NULL use default file
                   s$nbalsoil, s$nbil, s$mpact, 
                   as.character(capcols[grepl("Impact", capcols)]), 
                   "mitiEff", "mitiNetC",
-                  "GWPA", "GWPT", "GLUC", 
+                  "GWPA", "GWPT", "GLUC", "GWPR", 
                   "PROD", "PROD_LO", "PROD_UP", 
                   "YILD", "YILD_LO", "YILD_UP",
                   s$set_act_agg, "UAAR",

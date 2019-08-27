@@ -1,14 +1,20 @@
-loadGISenv<-function(hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
-                     n23_dir = "\\\\ies\\d5\\agrienv\\Data\\GIS_basedata\\GISCO_2010_NUTS2_3"
+loadGISenv<-function(loadHSU=FALSE, hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
+                     n23_dir = "\\\\ies\\d5\\agrienv\\Data\\FSU\\admin_units",
+                     uscie_dir = "\\\\ies\\d5\\agrienv\\Data\\uscie\\uscie_raster_FSU",
+                     fsu_dir = "\\\\ies\\d5\\agrienv\\Data\\FSU"
+                     
 ){
   #--- reading NUTS3 and NUTS2 data
-  
-  #n23_dir <- "\\\\ies\\d5\\agrienv\\Data\\GIS_basedata\\GISCO_2010_NUTS2_3"
+  require(data.table)
+  require(raster)
+  require(rgdal)
   if(!exists("nuts23")) {
     cat("\n GISCO_NUTS2_3_2010_with_attr_laea loading ...")
-    nuts23 <<- readOGR(dsn = n23_dir, layer = "GISCO_NUTS2_3_2010_with_attr_laea")
+    nuts0 <<- readOGR(dsn = n23_dir, layer = "CAPRI_NUTS_RG_01M_2016_3035_LEVL_0_plus_BA_XK_final_wfoa")
+    nuts2 <<- readOGR(dsn = n23_dir, layer = "CAPRI_NUTS_RG_01M_2016_3035_LEVL_2_plus_BA_XK_final_wfoa")
+    nuts3 <<- readOGR(dsn = n23_dir, layer = "CAPRI_NUTS_RG_01M_2016_3035_LEVL_3_plus_BA_XK_final_wfoa")
   }else{
-    cat("\n GISCO_NUTS2_3_2010_with_attr_laea already loaded")
+    #cat("\n CAPRI_NUTS_RG_01M_2016_3035_LEVL_0-2-3_plus_BA_XK_final_wfoa already loaded")
   }
   #ogrInfo(dsn = n23_dir)
   #summary(nuts23)
@@ -19,24 +25,111 @@ loadGISenv<-function(hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
   #--- reading HSU shapefile
   
   #hsu_dir <- "\\\\ies\\d5\\agrienv\\Data\\HSU"
-  if(!exists("hsu")) {
-    cat("\n hsu_eu28_CH_NO_EXYUG loading...")
-    hsu <<- readOGR(dsn = hsu_dir, layer = "hsu_eu28_CH_NO_EXYUG")
-  }else{
-    cat("\n hsu_eu28_CH_NO_EXYUG already loaded")
+  if(loadHSU){
+    if(!exists("hsu")) {
+      cat("\n hsu_eu28_CH_NO_EXYUG loading...")
+      hsu <<- readOGR(dsn = hsu_dir, layer = "hsu_eu28_CH_NO_EXYUG")
+    }else{
+      cat("\n hsu_eu28_CH_NO_EXYUG already loaded")
+    }
   }
+  
   #hsu$CAPRI_HSU <- as.numeric(gsub("U", "", hsu$CAPRI_HSU))
   #head(hsu)
   #ogrInfo(dsn = hsu_dir)
   #hsu@proj4string
+  
+  #USCIE 
+  if(! exists("uscie1km")){
+    uscie1km <- paste0(uscie_dir, "/refras_FSU_land.tif")
+    uscie1km <- raster(uscie1km)
+    uscie1km@data@names <- "uscie"
+    newr <<- uscie1km
+    uscie1km
+  }
+  if(! exists("uscie2fsu")){
+    load(paste0(fsu_dir, "/uscie2fsu.rdata"))
+    uscie2fsu <<- uscie2fsu
+    alluscies <- as.data.table(values(uscie1km))
+    alluscies <<- alluscies[, n := .I]
+    
+    load(paste0(fsu_dir, "/FSU_delin.rdata"))
+    fsu2nuts2 <- FSU_delim_aggr[, .(fsu=fsuID, CAPRINUTS2)]
+    fsu2nuts2 <<- fsu2nuts2[CAPRINUTS2!=""]
+  }
+  
   return("")    
 }
 
+prepare2raster <- function(x){
+  
+  loadGISenv()
+  
+  # x is a data table from CAPRI with colnames rall, cols, rows, y, value, ... 
+  #   It is assumed that the selection has already been done.
+  #   If there are multiple entries per FSU (rall), then they will be averaged
+  cols <- unique(x$cols)
+  rows <- unique(x$rows)
+  ys <-unique(x$y)
+  
+  uname <- paste(c(as.character(cols), as.character(rows), as.character(ys)), collapse="_")
+  
+  curx <- x[, mean(value), by="rall"]
+  
+  
+  
+  curnuts2 <- paste(substr(unique(merge(curx, fsu2nuts2, by.x="rall", by.y="fsu")$CAPRINUTS2), 1, 4), collapse="|")
+  curnuts3 <- nuts3[grepl(curnuts2, nuts3@data$NUTS3_2010), ]
+  etnt <- extent(curnuts3)
+  curr <- crop(newr, curnuts3)
+  
+  curuscies <- as.data.table(values(curr))
+  curuscies <<- curuscies[, n := .I]
+  
+  
+  curu <- merge(uscie2fsu, curx, by.x="fsuID", by.y="rall")
+  setnames(curu, "V1", "value")
+  
+  
+  curd <- merge(curuscies, curu, by.x="V1", by.y="USCIE_RC", all.x=TRUE)
+  curd <- curd[order(n)]
+  
+  values(curr) <- curd$value
+  names(curr) <- uname
+  
+  
+  return(curr)
+  
+  
+}
+
+filter4plot <- function(x, curcol=NULL, currow=NULL, cury=NULL){
+  
+  if(is.null(curcol)) curcol <- sort(as.vector(unique(x$cols)))
+  if(is.null(currow)) currow <- sort(as.vector(unique(x$rows)))
+  if(is.null(cury)) cury <- sort(as.vector(unique(x$y)))
+  
+  #cat("\n Filtering out COLS:", curcrops, ", ROWS:", variab, " and Years:", curyears, 
+  #    " and filtering out HSUs.", format(Sys.time(), "%Y%M%d %H:%M"))
+  x <- x[x$cols %in% curcol]
+  x <- x[x$rows %in% currow, ]
+  x <- x[x$y %in% cury, ]
+  
+  x <- x[grepl("^F[0-9*]", x$rall)]
+  
+  # Why need to put small values??
+  #capridat$VALUE <- capridat$VALUE + 1e-9
+  # Set values close to zero to zero
+  x[abs(value) < 1E-7 & value !=0, value:=0]
+  return(x)
+  
+}
 
 mapping <- function(scope = "capdiscapreg", 
                     dt_set = NULL,
                     #baseyear = "12", Not needed if data are not loaded
-                    curcountries = NULL, by_country = "No", 
+                    curcountries = NULL, 
+                    by_country = FALSE, 
                     curyears = "12", 
                     curcrops = NULL, 
                     n_cuts = 6, 
@@ -46,43 +139,23 @@ mapping <- function(scope = "capdiscapreg",
                     variab = NULL,
                     flagoutliers = c(NA, NA), # c(lowthreshold, highthreshold)
                     hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
-                    n23_dir = "\\\\ies\\d5\\agrienv\\Data\\GIS_basedata\\GISCO_2010_NUTS2_3"){
+                    n23_dir = "\\\\ies\\d5\\agrienv\\Data\\FSU\\admin_units"){
   
   
   cat("\n Load GIS environment")
   loadGISenv(hsu_dir=hsu_dir, n23_dir=n23_dir)
   
-  #--- reading CAPRI data for plotting
-  # if(is.null(capridat)){
-  #   cat("\nLoading capridat", Sys.time())
-  #   capridat<-Reduce(rbind, lapply(1:length(curyears), function(x)
-  #     Reduce(rbind, lapply(1:length(curcountries), function(y)
-  #       opendata(scope = scope,curcountry = curcountries[y], curyear = curyears[x]))
-  #     )
-  #   )
-  #   )
-  # }
   
-  head(dt_set)
-  capridat <- as.data.table(dt_set)
+  
+  #head(dt_set)
+  capri4map <- as.data.table(dt_set)
   rm(dt_set) ; gc()
+  capri4map <- filter4plot(capri4map, curcol=curcrops, currow=variab, cury=curyears)
   
-  if(is.null(curcrops)) curcrops <- sort(as.vector(unique(capridat$COLS)))
-  
-  cat("\n Filtering out COLS:", curcrops, ", ROWS:", variab, " and Years:", curyears, 
-      " and filtering out HSUs.", format(Sys.time(), "%Y%M%d %H:%M"))
-  capridat <- capridat[capridat$COLS %in% curcrops, ]
-  capridat <- capridat[capridat$ROWS %in% variab, ]
-  capridat <- capridat[capridat$Y %in% curyears, ]
-  
-  capridat <- capridat[grepl("^U", capridat$RALL), ]
-  
-  capridat$VALUE <- capridat$VALUE + 1e-9
-  capri4map <- capridat
   
   cat("\n Calculating number of panels to plot\n")
   cat(" 1. Regions ")                                                      
-  rallinuse<-unique(capridat[,"RALL", with=FALSE])
+  rallinuse<-unique(capridat$rall)
   # merge hsuinuse with shapefile to extract regions and countries
   rallshape <- merge(hsu, rallinuse, by.x = "CAPRI_HSU", by.y = "RALL", all.x = FALSE)
   rallshape$nuts2 <- substr(rallshape$EEZ_R, 1, 4)
@@ -93,10 +166,10 @@ mapping <- function(scope = "capdiscapreg",
   #head(capridat)
   
   
-  if (by_country %in% c("Y", "Yes")){       #plot country by country
+  if (by_country){       #plot country by country
     rallinuse <- curcountries
     nrall <- length(rallinuse)
-  }else if (by_country %in% c("No", "N")){       # plot all Europe (default)
+  }else if (!by_country){       # plot all Europe (default) OR what is contained in the data
     rallinuse<-"Europe"
     nrall <- 1
   }else if (is.null(by_country)){      # plot NUTS2 by NUTS2
@@ -104,7 +177,7 @@ mapping <- function(scope = "capdiscapreg",
     rallinuse <- as.data.frame(as.data.frame(rallshape@data[, sel_cols_n3]) %>% group_by(nuts2) %>% summarise_all(funs(sum_nas)))
     nrall <- sum(rallinuse[, -1])
   }else{
-    stop("You must define by_country: 'NULL', 'Yes', 'No' (default)")
+    stop("You must define by_country: 'NULL', 'TRUE', 'FALSE' (default)")
   }
   
   cat(" 2. Activities (crops, ...) ")
@@ -293,7 +366,7 @@ mapping <- function(scope = "capdiscapreg",
           lev_0 <- levels(cut(as.numeric(unlist(capri4map[crps_0])), cuts))
           
         }
-
+        
         
       }else{
         if(cuts_const %in% c("Y", "Yes") & page == 1){
@@ -303,21 +376,21 @@ mapping <- function(scope = "capdiscapreg",
           cuts <- stats::quantile(capridat_dcst[crps][capridat_dcst[crps] > 0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
           lev_0 <- levels(cut(as.numeric(unlist(capridat_dcst[crps])), cuts))
           
-         
+          
         }else if(cuts_const %in% c("Y", "Yes") & page > 1){
           
           cuts <- cuts
           lev_0 <- lev_0
-
+          
         }else{
-        
-        #cuts <- stats::quantile(preds_hsu@data[crps], probs = seq(0, 1, 1/n_cuts), na.rm = T)
-        cuts <- stats::quantile(capri4map[crps][capri4map[crps] > 0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
-        lev_0 <- levels(cut(as.numeric(unlist(capri4map[crps])), cuts))
+          
+          #cuts <- stats::quantile(preds_hsu@data[crps], probs = seq(0, 1, 1/n_cuts), na.rm = T)
+          cuts <- stats::quantile(capri4map[crps][capri4map[crps] > 0], probs = seq(0, 1, 1/n_cuts), na.rm = T)
+          lev_0 <- levels(cut(as.numeric(unlist(capri4map[crps])), cuts))
         }
         
       }
-    #}else if(cuts_hard != 1){
+      #}else if(cuts_hard != 1){
     }else {
       cuts <- round(cuts_hard, 2)
       lev_0 <- c()

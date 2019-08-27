@@ -1,3 +1,14 @@
+checkwd <- function(){
+  # Check working directory and set it to the capriextract folder
+  curwd <- 
+  curMachine <<- Sys.info()[4]
+  curUser <<- Sys.info()[8]
+  
+  if(! grepl("capriextract", getwd())){
+    if(Sys.info()[4] == "D01RI1600881") setwd("x:/adrian/tools/rprojects/capriextract/")
+  }
+  
+}  
 
 checkflparts<-function(i, x, flparts, nref){
   #cat("\n", flparts[[x]][i], "=", flparts[[1]][i])
@@ -189,31 +200,32 @@ opendata<-function(scope,
     }
   }
   if(grepl("capdis",scope)){
-    if(scope=="capdis") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
-    if(scope=="capdiscapreg") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
-    if(scope=="capdistimes") datafile<-paste0("xobs_2_",curcountry,"_",baseyear,curyear)
+    if(scope=="capdis")       dataf<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
+    if(scope=="capdiscapreg") dataf<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
+    if(scope=="capdistimes")  dataf<-paste0("xobs_2_",curcountry,"_",baseyear,curyear)
     #if(scope=="capdistimes") datapath<-paste0(d5space, "capdis_results/20181121_timeseries/")
-    if(scope=="capdistimes") datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
-    datafile<-paste0(datapath,datafile,".gdx")
+    if(scope=="capdistimes")  dataf<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
+    datafile<-paste0(datapath,dataf,".gdx")
     dataparm<-"xobs"
     ydim<-""
-    datanames<-data3dim
+    datanames<-c("rall", "cols", "rows", "value")
+    data4dim <- c("rall", "cols", "rows", "y", "value")
   }
   if(file.exists(datafile)){
     cat("\n ",datafile)
     #d<-list(datafile,dataparm,datanames,ydim)
     #Wrap a 'try' around in case there is a problem with the gdx file
     capridat <- NULL
-    try(capridat<-rgdx.param(datafile,dataparm), silent = TRUE)
+    try(capridat<-as.data.table(rgdx.param(datafile,dataparm)), silent = TRUE)
     if(! is.null(capridat)){
       names(capridat)<-datanames
       if(scope=="capdistimes") {
-        capridat$Y <- curyear
-        capridat<-capridat[,data4dim]
+        capridat$y <- curyear
+        capridat<-capridat[,data4dim, with=FALSE]
       }
       if(grepl("lapm", scope)){
-        capridat$Y<-gsub("_","",curyear)
-        if(curyear=="")capridat$Y<-"2010"
+        capridat$y<-gsub("_","",curyear)
+        if(curyear=="")capridat$y<-"2010"
         #capridat$NUTS2<-curcountry
         if(curyear=="preds"){
           capridat$ROWS<-"LEVL"
@@ -386,30 +398,34 @@ opendata<-function(scope,
 #   return(list(capridat, fdat))
 # }
 
-convertarguments2values<-function(...){
+convertarguments2values<-function(f=NULL, ...){
   # Function that helps debugging - converts all arguments into values
   #          in the global environment so that the function can
   #          be checked directly line by line
   
   l<-as.list(match.call())
+  save(l, file="l.rdata")
   for (i in 2:length(l)){
     #cat("\n", i, "Assigning ", l[[i]], " to ", paste(names(l)[i],collapse="") , "...")
     cat("\nstart",i,":", names(l)[i])
-    n<-names(l[[i]])
-    if(! exists(n)){
+    n<-names(l)[i]
+    if(! exists("n")){
       cat("\nNo argument name given for ", l[[i]],". Tentatively set to ",l[[i]])
       n<-l[[i]]
     }
     g<-eval(l[[i]])
-    cat("\n", n, " is character", l[[i]], " - ", g)
-    #if(is.character(g) & length(g)==1){
-    #    assign(names(l)[i], l[[i]], envir=.GlobalEnv)
-    #}else{
+    cat(". ", n, " is character", g)
     assign(n, g, envir=.GlobalEnv)
-    cat("\n", n, " is character", l[[i]], " - ", g)
-    #}
   }
   #print(as.list(match.call()))
+  # Get all arguments requested and their default values
+  if(! is.null(f)) {
+    a <- formals(f)
+    na <- names(a)
+    va <- as.character(unlist(a))
+    
+  }
+  
   return(l)
 }
 

@@ -80,7 +80,7 @@ loadglobalsfrombatch <- function(savepath = NULL,
     if(dp=="google") batchdir <- paste0(google, "/projects/capri_runs/log/")
     
     cat(batchdir)
-#    fortran <- list.files(batchdir, pattern = paste0(logf, ".*"))
+    #    fortran <- list.files(batchdir, pattern = paste0(logf, ".*"))
   }
   
   if(is.null(savepath)) {
@@ -97,38 +97,38 @@ loadglobalsfrombatch <- function(savepath = NULL,
     
     curf <- paste0(tpath, "/", fortran[x], "/fortran.gms")
     cat("\n", curf)
-#    if(file.exists(curf)){
-      con <- file(curf, open = "r")
-      setglobal <- readLines(con)
-      save(setglobal, file="setglobal.rdata")
-      setglobal <- setglobal[grepl("setglobal|time and date", setglobal, ignore.case=TRUE)]
-      setglobal <- setglobal[! grepl("Rexe|Trollexe|gamsArg|procSpeed|JAVA|CMD|GAMSexe|gamsPath", setglobal)]
-      setglobal <- setglobal[! grepl("regcge_scenario|countries|result_type_underScores|lst2|fst[24]", setglobal)]
-      setglobal <- setglobal[! grepl("regLevel|initialLUfile_|tradeMatrixInputFileName_", setglobal)]
-      setglobal <- setglobal[! grepl("policy_blocks|modArmington|explicit_NTM|tagg_module|yani_m|REGCGE", setglobal)]
-      setglobal <- setglobal[! grepl("altLicense|NET_MIGR|FIX_BUDGET_FAC_SUBS|Supply|abMob|closure_|solpringSupply|limrow|limcol", setglobal)]
-      setglobal <- setglobal[! grepl("irR", setglobal)]
-      setglobal <- c(setglobal, paste0("$SETGLOBAL batchfolder ", basename(batchdir)))
-      setglobal <- gsub("\\*   Time and date   :", "$SETGLOBAL Time", setglobal)
-      #only NOW
-      setglobal <- setglobal[! grepl("curCCscen", setglobal)]
-      
-      scrdirt <- strsplit(setglobal[grepl("scrdir", setglobal)], "  *")[[1]][3]
-      scrpath <- dirname(scrdirt)
-      scrdir <- gsub("'", "", basename(scrdirt))
-      setglobal <- setglobal[!grepl("scrdir", setglobal)]
-      setglobal <- c(setglobal, paste0("$SETGLOBAL scrpath ", scrpath))
-      setglobal <- c(paste0("$SETGLOBAL scrdir ", scrdir), setglobal)
-      
-      close(con)
-      
-      
-      setx <- as.data.table(Reduce(rbind, lapply(1:length(setglobal), function(y) {
-        a <- strsplit(setglobal[y], " ")[[1]]
-        a <- c(a[2], paste(a[3:length(a)], collapse=" "))
-        return(a)
-      })))
-#    }
+    #    if(file.exists(curf)){
+    con <- file(curf, open = "r")
+    setglobal <- readLines(con)
+    save(setglobal, file="setglobal.rdata")
+    setglobal <- setglobal[grepl("setglobal|time and date", setglobal, ignore.case=TRUE)]
+    setglobal <- setglobal[! grepl("Rexe|Trollexe|gamsArg|procSpeed|JAVA|CMD|GAMSexe|gamsPath", setglobal)]
+    setglobal <- setglobal[! grepl("regcge_scenario|countries|result_type_underScores|lst2|fst[24]", setglobal)]
+    setglobal <- setglobal[! grepl("regLevel|initialLUfile_|tradeMatrixInputFileName_", setglobal)]
+    setglobal <- setglobal[! grepl("policy_blocks|modArmington|explicit_NTM|tagg_module|yani_m|REGCGE", setglobal)]
+    setglobal <- setglobal[! grepl("altLicense|NET_MIGR|FIX_BUDGET_FAC_SUBS|Supply|abMob|closure_|solpringSupply|limrow|limcol", setglobal)]
+    setglobal <- setglobal[! grepl("irR", setglobal)]
+    setglobal <- c(setglobal, paste0("$SETGLOBAL batchfolder ", basename(batchdir)))
+    setglobal <- gsub("\\*   Time and date   :", "$SETGLOBAL Time", setglobal)
+    #only NOW
+    setglobal <- setglobal[! grepl("curCCscen", setglobal)]
+    
+    scrdirt <- strsplit(setglobal[grepl("scrdir", setglobal)], "  *")[[1]][3]
+    scrpath <- dirname(scrdirt)
+    scrdir <- gsub("'", "", basename(scrdirt))
+    setglobal <- setglobal[!grepl("scrdir", setglobal)]
+    setglobal <- c(setglobal, paste0("$SETGLOBAL scrpath ", scrpath))
+    setglobal <- c(paste0("$SETGLOBAL scrdir ", scrdir), setglobal)
+    
+    close(con)
+    
+    
+    setx <- as.data.table(Reduce(rbind, lapply(1:length(setglobal), function(y) {
+      a <- strsplit(setglobal[y], " ")[[1]]
+      a <- c(a[2], paste(a[3:length(a)], collapse=" "))
+      return(a)
+    })))
+    #    }
   })
   reportsummary <- unlist(lapply(1:length(fortran), function(x){
     #reportsummary <- Reduce(rbind,unlist(lapply(19:21, function(x){
@@ -513,7 +513,44 @@ checkinfesS50 <- function(tpath){
   return(allinfes)
 }
 
-
+gdxdiffFiles <- function(
+  mode = "folder", #Compare files with the same name from different folders
+  dift = "",      #Vector of with different folders
+  dfil = "",     #Name of file or flag 'all' for all files with 'pattern'
+  dname = NULL   #Name for the difference
+){
+  if(mode=="folder"){
+    fld1 <- dift[1]
+    fld2 <- dift[2]
+  }
+  
+  f <- dfil[1]
+  if(f == "all"){
+    
+    # Select all files with pattern from fld1
+    if(length(dfil)==2){p <- dfil[2]}
+    fls <- list.files(fld1, p)
+    fls1 <- fls
+    fls2 <- fls
+    
+  }
+  
+  for(i in 1:length(fls1)){
+    
+    ifile <- paste0(fld1, "/", fls1[i])
+    ofile <- paste0(fld2, "/", fls2[i])
+    
+    if(! file.exists(ifile)) message("File ", ifile, "does not exist!")
+    if(! file.exists(ofile)) message("File ", ofile, "does not exist!")
+    
+    dfile <- paste0(fld1, "/", gsub(".gdx", "", fls1[i]), "_diff", dname, ".gdx")
+    
+    system(paste0("gdxdiff ", ifile, " ", ofile, " ", dfile, " RelEps = 0.1"), intern=TRUE)
+    
+    
+  }
+  
+}
 convbatchdate <- function(batchdate){
   m <-(strsplit(batchdate, "_")[[1]][1])
   m <- which(month.abb == m)
@@ -575,7 +612,7 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL,
                         file="chk_kcalMAgPIE",
                         cpfix = TRUE, # Copy also (large) file with input data DATA, p_dataOuttemp, etc.
                         cpstep = FALSE # Copy gdx file 'stepOutput.gdx' (full step output)
-                        ){
+){
   tpath <- paste0(cenv$capri, cenv$leipadr, cenv$scrdir, "/../", temp)
   mpath <- paste0(cenv$capri, cenv$leipadr, cenv$resout, "/", capmodsubfld, "/")
   if(! dir.exists(mpath)){
@@ -611,7 +648,7 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL,
       issp <- globals[globals$setglobal=="curSSP", paste0("r",i)]
       if(is.null(issp)) {issp=ssp}else{if(issp=="") issp=ssp}
       if(is.null(issp)) issp=""
-
+      
       idim1 <- globals[globals$setglobal=="ScenDim1Value", paste0("r",i)]
       if(is.null(idim1)) {idim1=dim1}else{if(idim1=="") idim1=dim1}
       #if(! is.null(idim1)){if(idim1!=""){idim1<-paste0("_", idim1)}}
@@ -632,11 +669,11 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL,
         if(file=="chk_kcalMAgPIE"){extract <- c("p_diet", "p_MAgPIE_diet")}
         if(file=="envind_end"){extract <- c("p_envConst", "p_nMaxPerHa"
                                             #, "p_envEnf"
-                                            )}
+        )}
         doextr <- function(j 
                            #extract=extract, vrfile=vrfile, issp=issp, iyear=iyear, 
                            #idim1=idim1, idim2=idim2, temp=temp
-                           ){
+        ){
           xx <- as.data.table(rgdx.param(vrfile, extract[j]))
           if(is.null(issp))issp <- ""
           if(is.null(iyear))iyear <- ""
@@ -658,7 +695,7 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL,
         #save(list=objects(), file=paste0("t", i, "_", j,  ".rdata"))
         save(list=objects(), file="t.rdata")
         xxx[[j]] <- rbind(xxx[[j]],doextr(j))
-        }
+      }
     }
   }
   for(j in 1:length(extract)) {
@@ -667,10 +704,10 @@ cpchkmagpie <- function(temp="temp", capmodsubfld=NULL,
   }
   
   if(cpstep){
-  for(i in n){
-    vrfile <- paste0(tpath, "/",i,"/", "stepOutput.gdx")
-    file.copy(vrfile, paste0(mpath,capmodsubfld , "_", "stepOutput_", i, ".gdx"), overwrite=TRUE)
-  }
+    for(i in n){
+      vrfile <- paste0(tpath, "/",i,"/", "stepOutput.gdx")
+      file.copy(vrfile, paste0(mpath,capmodsubfld , "_", "stepOutput_", i, ".gdx"), overwrite=TRUE)
+    }
   }
   return(list=extract)  
 }
