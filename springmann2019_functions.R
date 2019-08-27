@@ -296,7 +296,8 @@ getLosses <- function(x=caprid){
   losses <- losses[, LOSC := HCON * LOSCsh]
   losses <- losses[, HCOM := HCON * (1 - LOSCsh - INDMsh)]
   
-  eatFood2O <- geteatFood2O()
+  #eatFood2O <- geteatFood2O()
+  eatFood2O <- fread(paste0(manuscript, "eatFood2O.csv"), header = TRUE)
   losses <- merge(losses, eatFood2O, by="rows")
   losses <- losses[HCONsh != 0]
   
@@ -422,7 +423,8 @@ GlobalPoolMarket <- function(x=caprid, xx = p_eatemisscaled){
                              rall + rows + y + ssp + run ~ cols, value.var="value")
   
   
-  eatFood2O <- geteatFood2O()
+  #eatFood2O <- geteatFood2O()
+  eatFood2O <- fread(paste0(manuscript, "eatFood2O.csv"), header = TRUE)
   mktbal <- merge(mktbal, eatFood2O, by="rows")
   mktbal <- mktbal[, lapply(.SD, sum, na.rm=TRUE), by=.(rall, y, ssp, run, eatFoodGrp), .SDcols=smktbal]
   setnames(mktbal, "eatFoodGrp", "rows")
@@ -560,13 +562,16 @@ adjustEmissions <- function(x = caprid, mm4 = p_eatglobm){
   ## to the emissions 
   mm4[, `:=` (NH3adj_GgPy = NH3_GgPy * ( 1 + DELTAtot),
               NOXadj_GgPy = NOX_GgPy * ( 1 + DELTAtot),
-              CH4adj_GgPy = CH4_GgPy * ( 1 + DELTAtot))]
+              CH4adj_GgPy = CH4_GgPy * ( 1 + DELTAtot),
+              PRODadj_kt  = PROD     * ( 1 + DELTAtot))]
   
   nh3cols <- names(mm4)[grepl("NH3", names(mm4))]
   ch4cols <- names(mm4)[grepl("CH4", names(mm4))]
   noxcols <- names(mm4)[grepl("NOX", names(mm4))]
   emicols <- c(nh3cols, ch4cols, noxcols)
-  smktbal <- c("IMPORTS", "EXPORTS", "HCON", "PROD", "PROC", "FEED", "YILD", "BIOF", "HCOM")
+  smktbal <- c("IMPORTS", "EXPORTS", "HCON", 
+               "PROD", "PRODadj_kt", 
+               "PROC", "FEED", "YILD", "BIOF", "HCOM")
   colorder <- c(dims(mm4), smktbal, "totIN", "totEX", "GROF", "INHA",  
                 names(mm4)[grepl("sh", names(mm4))], 
                 "ENNE_kcalPcapday", "INTK_gPcapday", "ref", "ratio" ,
@@ -577,6 +582,64 @@ adjustEmissions <- function(x = caprid, mm4 = p_eatglobm){
   return(mm4)
 }
   
+getheader <- function(){
+  
+  method1a <- paste0("#Extract of NH3 NOx and CH4 total emissions calculated on the basis of CAPRI runs with different diets",
+                    "\n#Method: Footprints are calculated with CAPRI by constraining total calories consumption to about 2100 kcal."
+  )
+  method1b <- paste0("#Extract of average diets calculated on the basis of CAPRI and EAT target diets",
+                    "\n#Method: Total calories consumption are constrained in all simulations to about 2100 kcal."
+                    )
+  method <- paste0("\n\n#        Diets are 'shocked' by calculating intake values (g/cap/day) based on Springmann et al.(2018).",
+                   "\n#        Shocks are applied to each of 12 'EAT food groups' ",
+                   "\n#                Vegetable foods: cereals - starch crops - fruits - nuts and seeds - dry pulses - vegetables - sugar - oils",
+                   "\n#                Animal foods:    dairy - read meat - poultry meat and eggs - fish and shellfish",
+                   "\n#        The 'resulting' diets in CAPRI are not exactly matching the target diets. ",
+                   "\n#        Therefore footprints are calculated from the unshocked and shocked world",
+                   "\n#        and total emissions are assigned to the country of production",
+                   "\n#",
+                   "\n# Emissions are calculated using the CAPRI 'leakage' module. Emissions remain in the country where they occur",
+                   "\n# Emissions changes are split into those that are assumed to occur domestically ",
+                   "\n# and those that are assumed to come from the 'global market' using import shares.",
+                   "\n# The 'global market' is assumed to deliver food to one 'pool market' from which all imports",
+                   "\n# are derived (approach followed in the CAPRI LCA).",
+                   "\n# Thus all productions are scaled acc to the ratio of the global trade changes to total global production.",
+                   "\n# ",
+                   "\n# Emissions from marketable feed is not included in the factors for livestock products ",
+                   "\n# but in the total emissions of the crops. The total global changes in feed demand is calculated",
+                   "\n# assuming constant share of countries to produce feed and ignoring a possible shift in share of different feeds.",
+                   "\n# Emissions are adjusted accordingly.",
+                   "\n# ",
+                   "\n# NH3_GgPy: Emissions of NH3-N [Gg NH3-N y-1]. ",
+                   "\n# NOX_GgPy: Emissions of NOx-N [Gg NOx-N y-1]. Available only for CAPRI supply models (Europe). ",
+                   "\n# CH4_GgPy: Emissions of CH4 [Gg CH4 y-1]. ",
+                   "\n#",
+                   "\n# NH3_kgPt: NH3 Footprint [kg NH3-N (t food fresh weight)-1]. ",
+                   "\n# NOX_kgPt: NOx Footprint [kg NOx-N (t food fresh weight)-1]. Available only for CAPRI supply models (Europe). ",
+                   "\n# CH4_kgPt: CH4 Footprint [kg CH4 (t food fresh weight)-1]. ",
+                   "\n#",
+                   "\n# INTK_gPcapday: Intake of food group [g / cap / day] as simulated with CAPRI",
+                   "\n# ENNE_kcalPcapday: Energy intake per capita and day [kcal / cap / day] as simulated with CAPRI",
+                   "\n# ref: Intake of food group [g / cap / day] in the target diet.",
+                   "\n#      NOTE!! The adjusted 'healthy' emissions are consistent with these reference diets.",
+                   "\n# ratio: ratio of target diet to diet in CAPRI results.",
+                   "\n#      a value > 1 means that the target 'healthy' diet requires more of that food",
+                   "\n#      a value < 1 menns that food intake needs to be reduced for a healthy diet acc to the reference diet calculated.",
+                   "\n#",
+                   "\n#",
+                   "\n# *_0: Results from un-shocked CAPRI runs only constraining total calories intake to 2100 kcal/cap/dat",
+                   "\n# *_1: Results from shocked CAPRI runs - footprints are scaled.",
+                   "\n#",
+                   "\n# *adj: Emissions as defined above but changes due to scaled to target diets are included.",
+                   "\n#       To this purpose the footprints from the 'shocked' runs are scaled to match the target intake values.",
+                   "\n#       The 'unshocked' data are not scaled.",
+                   "\n#"
+  )
+  
+  return(list(method=method, 
+              introEmis=method1a,
+              introHealth=method1b))
+}
 
 writeresults <- function(p_emis4fasst = p_emis4fasst,
                          p_eatintk = p_eatintk
@@ -593,55 +656,14 @@ writeresults <- function(p_emis4fasst = p_emis4fasst,
   p_diet4healthmodel[is.na(p_diet4healthmodel)] <- 0
   save(p_emis4fasst, p_diet4healthmodel, p_eatintk, p_eatemisscaled, 
        file=paste0(manuscript, "capriresults", format(Sys.time(), "%Y%m%d"), ".rdata"))
-  method <- paste0("\n#        Diets are 'shocked' by calculating intake values (g/cap/day) based on Springmann et al.(2018).",
-                   "\n#        Shocks are applied to each of 12 'EAT food groups' ",
-                   "\n#                Vegetable foods: cereals - starch crops - fruits - nuts and seeds - dry pulses - vegetables - sugar - oils",
-                   "\n#                Animal foods:    dairy - read meat - poultry meat and eggs - fish and shellfish",
-                   "\n#        The 'resulting' diets in CAPRI are not exactly matching the target diets. ",
-                   "\n#        Therefore footprints are calculated from the unshocked and shocked world",
-                   "\n#        and total emissions are assigned to the country of production",
-                   "\n#")
   con <- file(paste0(manuscript, "capripollutants4fasst", format(Sys.time(), "%Y%m%d"), ".csv"), open="wt")
-  writeLines(paste0("#Extract of NH3 NOx and CH4 total emissions calculated on the basis of CAPRI runs with different diets",
-                    "\n#Method: Footprints are calculated with CAPRI by constraining total calories consumption to about 2100 kcal.",
-                    method,
-                    "\n# Emissions are calculated using the CAPRI 'leakage' module. Emissions remain in the country where they occur",
-                    "\n# Emissions changes are split into those that are assumed to occur domestically ",
-                    "\n# and those that are assumed to come from the 'global market' using import shares.",
-                    "\n# The 'global market' is assumed to deliver food to one 'pool market' from which all imports",
-                    "\n# are derived (approach followed in the CAPRI LCA).",
-                    "\n# Thus all productions are scaled acc to the ratio of the global trade changes to total global production.",
-                    "\n# ",
-                    "\n# Emissions from marketable feed is not included in the factors for livestock products ",
-                    "\n# but in the total emissions of the crops. The total global changes in feed demand is calculated",
-                    "\n# assuming constant share of countries to produce feed and ignoring a possible shift in share of different feeds.",
-                    "\n# Emissions are adjusted accordingly.",
-                    "\n# ",
-                    "\n# NH3_GgPy: Emissions of NH3-N [Gg NH3-N y-1]. ",
-                    "\n# NOX_GgPy: Emissions of NOx-N [Gg NOx-N y-1]. Available only for CAPRI supply models (Europe). ",
-                    "\n# CH4_GgPy: Emissions of CH4 [Gg CH4 y-1]. ",
-                    "\n#",
-                    "\n# *adj: Emissions as defined above but changes due to scaled to target diets are included.",
-                    "\n#       To this purpose the footprints from the 'shocked' runs are scaled to match the target intake values.",
-                    "\n#       The 'unshocked' data are not scaled.",
-                    "\n#",
-                    "\n# *_0: Results from un-shocked CAPRI runs only constraining total calories intake to 2100 kcal/cap/dat",
-                    "\n# *_1: Results from shocked CAPRI runs - footprints are scaled.",
-                    "\n#"
-  ), con)
+  writeLines(getheader()$introEmis , con)
+  writeLines(getheader()$method , con)
   write.csv(p_emis4fasst, con)
   close(con)
   con <- file(paste0(manuscript, "capridiet4healthmodel", format(Sys.time(), "%Y%m%d"), ".csv"), open="wt")
-  writeLines(paste0("#Extract of average diets calculated on the basis of CAPRI and EAT target diets",
-                    "\n#Method: Total calories consumption are constrained in all simulations to about 2100 kcal.",
-                    method,
-                    "\n# INTK_gPcapday: Intake of food group [g / cap / day] as simulated with CAPRI",
-                    "\n# ref: Intake of food group [g / cap / day] in the target diet",
-                    "\n#",
-                    "\n# *_0: Results from un-shocked CAPRI runs only constraining total calories intake to 2100 kcal/cap/dat",
-                    "\n# *_1: Results from shocked CAPRI runs - footprints are scaled.",
-                    "\n#"
-  ), con)
+  writeLines(getheader()$introHealth , con)
+  writeLines(getheader()$method , con)
   write.csv(p_diet4healthmodel, con)
   close(con)
   write.csv(p_eatemisfin[, .SD, .SDcols = c(dims(p_eatemisfin), 
