@@ -42,7 +42,7 @@ filtermultiple<-function(scope,
   fdat<-data.frame(nrow=0)
   n<-0
   for(x in 1:max(1,length(curyears))){
-    for(y in max(1,1:length(curcountries))){
+    for(y in 1:max(1,1:length(curcountries))){
       for(z in 1:max(1,length(curscens))){
         n<-n+1
         capridat<- filteropen(scope, 
@@ -287,13 +287,13 @@ opendata<-function(scope,
   if(grepl("capdis",scope)){
     if(scope=="capdis") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
     if(scope=="capdiscapreg") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
-    if(scope=="capdistimes") datafile<-paste0("xobs_2_",curcountry,"_",baseyear,curyear)
     #if(scope=="capdistimes") datapath<-paste0(d5space, "capdis_results/20181121_timeseries/")
+    if(scope=="capdistimes") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear,curyear)
     if(scope=="capdistimes") datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
     datafile<-paste0(datapath,datafile,".gdx")
     dataparm<-"xobs"
     ydim<-""
-    datanames<-data3dim
+    datanames<-c("rall", "cols", "rows", "value")
   }
   if(file.exists(datafile)){
     cat("\n ",datafile)
@@ -304,8 +304,8 @@ opendata<-function(scope,
     if(! is.null(capridat)){
       names(capridat)<-datanames
       if(scope=="capdistimes") {
-        capridat$Y <- curyear
-        capridat<-capridat[,data4dim]
+        capridat$y <- curyear
+        capridat<-capridat[,c("rall", "cols", "rows", "y", "value")]
       }
       if(grepl("lapm", scope)){
         capridat$Y<-gsub("_","",curyear)
