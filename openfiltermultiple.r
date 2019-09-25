@@ -102,6 +102,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
   }
   capridat<-as.data.table(capridat)
   #View(capridat)
+  save(list=objects(), file="test105.rdata")
   
   fattr$filterCOLS<-paste(curcols, collapse="-")
   fattr$filterROWS<-paste(currows, collapse='-')
@@ -128,7 +129,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
   }
   
   #Filter time dimension only if 
-  if(! scope%in%c("capdistimes","capmod", "tseriesGHG", "lapm")){
+  if(! scope%in%c("capdistimes","capdistimesLU","capmod", "tseriesGHG", "lapm")){
     if(! grepl("capmod", scope)){
       if(ncol(capridat)>4){
         if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
@@ -289,11 +290,15 @@ opendata<-function(scope,
     if(scope=="capdiscapreg") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
     #if(scope=="capdistimes") datapath<-paste0(d5space, "capdis_results/20181121_timeseries/")
     if(scope=="capdistimes") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear,curyear)
-    if(scope=="capdistimes") datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
+    if(grepl("capdistimes", scope)) datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
     datafile<-paste0(datapath,datafile,".gdx")
     dataparm<-"xobs"
     ydim<-""
     datanames<-c("rall", "cols", "rows", "value")
+    if(scope=="capdistimesLU"){
+      dataparm <- "p_livestock"
+      datanames<-c("rall", "cols", "type", "rows", "value")
+    }
   }
   if(file.exists(datafile)){
     cat("\n ",datafile)
@@ -306,6 +311,10 @@ opendata<-function(scope,
       if(scope=="capdistimes") {
         capridat$y <- curyear
         capridat<-capridat[,c("rall", "cols", "rows", "y", "value")]
+      }
+      if(scope=="capdistimesLU"){
+        capridat$y <- curyear
+        capridat<-capridat[,c("rall", "cols", "type", "rows", "y", "value")]
       }
       if(grepl("lapm", scope)){
         capridat$Y<-gsub("_","",curyear)
