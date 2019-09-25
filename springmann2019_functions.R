@@ -83,13 +83,19 @@ getSpringmannresults <- function(subfld = NULL, flag = NULL) {
 # Get energy densities
 getenergydensities <- function() {
   #ncnc <- data.table(rgdx.param(gdxName = 'X:/dev/leipadr/results201905/capmod/chk_kcalMAgPIEfix.gdx',
-  ncnc <-
-    data.table(rgdx.param(
-      gdxName = paste0(cenv$capri, cenv$leipadr, cenv$resdir, '/capmod/chk_kcalMAgPIEfix.gdx'),
-      symName = "p_NCNC_CONT",
-      names = c('rows', 'nutrient')
-    ))
-  ncnc <- dcast.data.table(ncnc, rows ~ nutrient, value.var = "value")
+  loadfromgdx <- FALSE
+  if(loadfromgdx){
+    ncnc <-
+      data.table(rgdx.param(
+        gdxName = paste0(cenv$capri, cenv$leipadr, cenv$resdir, '/capmod/chk_kcalMAgPIEfix.gdx'),
+        symName = "p_NCNC_CONT",
+        names = c('rows', 'nutrient')
+      ))
+    ncnc <- dcast.data.table(ncnc, rows ~ nutrient, value.var = "value")
+  }else{
+    ncnc <- fread(paste0(manuscript, "p_NCNC_CONT.csv"))
+    setnames(ncnc, "V1", "rows")
+  }
   ncnc <- list(ncnc[, .(rows, N_CAL)], ncnc[, .(rows, N_PRO)], ncnc[, .(rows, N_FAT)])
   names(ncnc) <- c("ncal", "npro", "nfat")
   return(ncnc)
