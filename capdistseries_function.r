@@ -64,15 +64,6 @@ startextract <- function(){
   datapath <<- paste0(cenv$capri, "epnfresults/")
   
 }
-test <- function(){
-  a <- c("scope", "reginame", "cols", "ydim", "regi", "curcountries", "rows",
-         "curyears", "baseyear", "curscens", "curscenshort", 
-         "savepath", "datapath", "svnpath", "capriversion", "mcactuaar",
-         "s", "cenv", "sursoi", "soilemissions", "mmsemissions", 
-         "levlyild", "xobsname", "reginame")
-  b <- 12:20
-  return(b)
-}
 
 ccclean <- function(){
   #all <- objects()
@@ -190,6 +181,89 @@ extractall <- function(scope=scope, reginame="EU27",
   
   
 }
+
+combinedate4kipinca <- function(date2load = ""){
+  
+  if(date2load!=""){date2load <- paste0("_", date2load)}
+  date2save <- paste0("_", format(Sys.time(), "%Y%m%d"))
+  
+  # Calculate total for syn and manemissions
+  cat("\nLoad",paste0(curfile, "SOILEMISSIONS", date2load, ".rdata"))
+  load(paste0(curfile, "SOILEMISSIONS", date2load, ".rdata"))
+  
+  synemissions<-soilemissionsfsu[grepl("SYN|MIN", rows)]
+  synemissionstot<-synemissions[, sum(value),by=list(rall, cols, y)]
+  synemissionstot$rows <- 'MINLOSSES'
+  manemissions<-soilemissionsfsu[grepl("APP|GRA", rows)]
+  manemissionstot<-manemissions[, sum(value),by=list(rall, cols, y)]
+  manemissionstot$rows <- 'MANLOSSES'
+  setnames(manemissionstot, "V1", "value")
+  setnames(synemissionstot, "V1", "value")
+  manemissionstot <- manemissionstot[,.(rall, cols, rows, y, value)]
+  synemissionstot <- synemissionstot[,.(rall, cols, rows, y, value)]
+  symmanemissionstot <- rbind(synemissionstot, manemissionstot)
+  rm(synemissionstot, manemissionstot, manemissions, synemissions, soilemissionsfsu)
+  #save(symmanemissionstot, file=paste0(curfile, "SYNMANLOSTOT", date2save, ".rdata"))
+  
+  
+  # Calculate total from manure management systems
+  cat("\nLoad",paste0(curfile, "MMSEMISSIONS", date2load, ".rdata"))
+  load(paste0(curfile, "MMSEMISSIONS", date2load, ".rdata"))
+  mmsrows <- unique(mmsemissionsfsu$rows)
+  mmsrows <- mmsrows[grepl("HOU|STO", mmsrows)]
+  mmsfsutot <-mmsemissionsfsu[rows %in% mmsrows, sum(value),by=list(rall, cols, y)]
+  mmsfsutot$rows <- 'MMSLOSSES'
+  setnames(mmsfsutot, "V1", "value")
+  mmsfsutot <- mmsfsutot[,.(rall, cols, rows, y, value)]
+  synmanmmstot <- rbind(symmanemissionstot, mmsfsutot)
+  rm(symmanemissionstot, mmsfsutot, mmsemissionsfsu)
+  #save(synmanmmstot, file=paste0(curfile, "SYNMANMMSLOSTOT_20190925", date2save, ".rdata"))
+  
+  # Add to sursoi
+  cat("\nLoad",paste0(curfile, "SURSOI", date2load, ".rdata"))
+  load(paste0(curfile, "SURSOI", date2load, ".rdata"))
+  sursoifsu <- rbind(sursoifsu, synmanmmstot)
+  rm(synmanmmstot)
+  save(sursoifsu, file=paste0(curfile, "NBUDGET", date2save, ".rdata"))
+  
+ }
+
+
+cleandate4kipinca <- function(){
+  
+  # clean data for high SURSOI
+  clean4sursoi <- function(x, limit = 400){
+    
+    ms <- as.character(unique(x$rows))
+    xs <- x[rows=="SURSOI" & value > limit, .(rall, cols, y, value)]
+    
+    xhigh <- merge(xs[, .(rall, cols, y)], x, by = c("rall", "cols", "y"))
+    if(nrow(xhigh)>0){
+      write.csv(dcast.data.table(xhigh, rall + cols + y ~ rows, value.var="value"),
+                paste0(savepath, "/" , "capridisagg4kipinca_SURSOI_GT_", limit, "~", format(Sys.time(), "%Y%m%d"),".csv"),
+                row.names=FALSE, quote=FALSE, na="")
+      xd <- x[rows=="SURSOI" & value > limit, value := 400]
+    }else{
+      xd <- x
+    }
+    
+    return(xd)
+  }
+  sursoifsu <- clean4sursoi(x=sursoifsu, limit=400)
+  sursoifsu <- sursoifsu[rows %in% sursoi]
+  
+  # Eliminate data with very low level
+  sursoismall <- sursoifsu[rows=="LEVL" & value < 0.0001] 
+  combis2rem <- sursoismall[, .(rall, cols, y)]
+  save(sursoismall, file=paste0(curfile, "LEVL_LT_0.0001", ".rdata"))
+  save(sursoifsu, file=paste0(curfile, "SURSOI_clean400", ".rdata"))
+  
+  
+  
+  
+  
+}
+
 
 replaceEUfilesbynewcountry <- function(reginame="FI", lastdate=""){
   
@@ -384,56 +458,12 @@ reload_and_write <- function(reginame="EU27"){
   #wrapoverwrite(levlyildfsu)
   #rm(list=c("levlyildfsu", "levlyildnuts2"))
   
-  # Calculate total for syn and manemissions
-  cat("\nLoad",paste0(curfile, "SOILEMISSIONS", ".rdata"))
-  load(paste0(curfile, "SOILEMISSIONS", ".rdata"))
-  
-  synemissions<-soilemissionsfsu[grepl("SYN|MIN", rows)]
-  synemissionstot<-synemissions[, sum(value),by=list(rall, cols, y)]
-  synemissionstot$rows <- 'MINLOSSES'
-  manemissions<-soilemissionsfsu[grepl("APP|GRA", rows)]
-  manemissionstot<-manemissions[, sum(value),by=list(rall, cols, y)]
-  manemissionstot$rows <- 'MANLOSSES'
-  setnames(manemissionstot, "V1", "value")
-  setnames(synemissionstot, "V1", "value")
-  manemissionstot <- manemissionstot[,.(rall, cols, rows, y, value)]
-  synemissionstot <- synemissionstot[,.(rall, cols, rows, y, value)]
-  symmanemissionstot <- rbind(synemissionstot, manemissionstot)
-  save(symmanemissionstot, file=paste0(curfile, "SYNMANLOSTOT", ".rdata"))
-  rm(list=objects()[grepl("synemissions|manemissions|soilemissions", objects())])
-  
   
   # Write SURSOI
   cat("\nLoad",paste0(curfile, "SURSOI", ".rdata"))
   sursoi<-c("SURSOI","NinSOI","NMANAP","NMINSL","ATMOSD","CRESID","NRET","YILD","LEVL","BIOFIX","NMANGR")
   load(paste0(curfile, "SURSOI", ".rdata"))
   
-  # clean data for high SURSOI
-  clean4sursoi <- function(x, limit = 400){
-    
-    ms <- as.character(unique(x$rows))
-    xs <- x[rows=="SURSOI" & value > limit, .(rall, cols, y, value)]
-    
-    xhigh <- merge(xs[, .(rall, cols, y)], x, by = c("rall", "cols", "y"))
-    if(nrow(xhigh)>0){
-      write.csv(dcast.data.table(xhigh, rall + cols + y ~ rows, value.var="value"),
-                paste0(savepath, "/" , "capridisagg4kipinca_SURSOI_GT_", limit, "~", format(Sys.time(), "%Y%m%d"),".csv"),
-                row.names=FALSE, quote=FALSE, na="")
-      xd <- x[rows=="SURSOI" & value > limit, value := 400]
-    }else{
-      xd <- x
-    }
-    
-    return(xd)
-  }
-  sursoifsu <- clean4sursoi(x=sursoifsu, limit=400)
-  sursoifsu <- sursoifsu[rows %in% sursoi]
-  
-  # Eliminate data with very low level
-  sursoismall <- sursoifsu[rows=="LEVL" & value < 0.0001] 
-  combis2rem <- sursoismall[, .(rall, cols, y)]
-  save(sursoismall, file=paste0(curfile, "LEVL_LT_0.0001", ".rdata"))
-  save(sursoifsu, file=paste0(curfile, "SURSOI_clean400", ".rdata"))
   
   sursoifsu <- dcast.data.table(sursoifsu, rall + cols + y ~ rows, value.var="value")
   sursoifsu <- sursoifsu[ LEVL >= 0.0001 ]
@@ -450,17 +480,8 @@ reload_and_write <- function(reginame="EU27"){
   wrapoverwrite(symmanemissionstot)
   rm(list=objects()[grepl("symmanemissionstot", objects())])
   
-  cat("\nLoad",paste0(curfile, "MMSEMISSIONS", ".rdata"))
-  load(paste0(curfile, "MMSEMISSIONS", ".rdata"))
-  mmsrows <- unique(mmsemissionsfsu$rows)
-  mmsrows <- mmsrows[grepl("HOU|STO", mmsrows)]
-  mmsfsutot <-mmsemissionsfsu[rows %in% mmsrows, sum(value),by=list(rall, cols, y)]
-  mmsfsutot$rows <- 'MMSLOSSES'
-  setnames(mmsfsutot, "V1", "value")
-  mmsfsutot <- mmsfsutot[,.(rall, cols, rows, y, value)]
-  synmanmmstot <- rbind(symmanemissionstot, mmsfsutot)
-  save(synmanmmstot, file=paste0(curfile, "SYNMANMMSLOSTOT_20190925", ".rdata"))
-  
+  #
+  load()
   mmsfsutot <- dcast.data.table(mmsfsutot, rall + cols + y ~ rows, value.var="value")
   mmsfsutot <- merge(mmsfsutot, combis2rem, by=c("rall", "cols", "y"), all.x=TRUE)
   mmsfsutot <- mmsfsutot[is.na(rem), .(rall, cols, y, MMSLOSSES)]
