@@ -204,7 +204,7 @@ opendata<-function(scope,
     if(scope=="capdiscapreg") dataf<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
     if(scope=="capdistimes")  dataf<-paste0("xobs_2_",curcountry,"_",baseyear,curyear)
     #if(scope=="capdistimes") datapath<-paste0(d5space, "capdis_results/20181121_timeseries/")
-    if(scope=="capdistimes")  dataf<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
+    if(grepl("capdistimes", scope))  dataf<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
     datafile<-paste0(datapath,dataf,".gdx")
     dataparm<-"xobs"
     ydim<-""
