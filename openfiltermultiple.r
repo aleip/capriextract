@@ -102,7 +102,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
   }
   capridat<-as.data.table(capridat)
   #View(capridat)
-  save(list=objects(), file="test105.rdata")
+  #save(list=objects(), file="test105.rdata")
   
   fattr$filterCOLS<-paste(curcols, collapse="-")
   fattr$filterROWS<-paste(currows, collapse='-')
@@ -192,7 +192,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
       cat("\n", paste0(curscenshort, ssp, "_", yrs, "_", run))
     }
   }
-  save(list=objects(), file="test.rdata")
+  #save(list=objects(), file="test.rdata")
   #stop()
   return(list(capridat, fattr))
 }
