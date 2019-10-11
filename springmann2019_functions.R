@@ -83,7 +83,7 @@ getSpringmannresults <- function(subfld = NULL, flag = NULL) {
 # Get energy densities
 getenergydensities <- function() {
   #ncnc <- data.table(rgdx.param(gdxName = 'X:/dev/leipadr/results201905/capmod/chk_kcalMAgPIEfix.gdx',
-  loadfromgdx <- FALSE
+  loadfromgdx <- TRUE
   if(loadfromgdx){
     ncnc <-
       data.table(rgdx.param(

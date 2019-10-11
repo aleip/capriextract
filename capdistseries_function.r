@@ -40,6 +40,9 @@ startextract <- function(){
   savepath<<-paste0(d5space, "/capdis_results/20190116_kipinca")
   savepath<<-paste0(d5space, "/capdis_results/20190125_kipinca")
   savepath<<-paste0(d5space, "/capdis_results/20190919_kipinca")
+  savepath<<-paste0(d5space, "/capdis_results/20191010_kipinca")
+  if(! dir.exists(savepath)){dir.create(savepath)}
+  
   n2o<<-c("N2OAPP", "N2OGRA", "N2OSYN", "N2OHOU")
   
   curcountries <<- substr(s$nuts0, 1, 2)
@@ -96,7 +99,9 @@ loadcurfile<-function(scope=scope, xobsname="xobs", reginame="EU27",
                             #regi="HSU", curcountries=nuts2[grepl(a, nuts2)], curyears=tser, baseyear='12', curscens='', curscensshort='')
                             regi=regi, 
                             curcountries=curcountries, 
+                            #curcountries="BL", 
                             curyears=curyears, 
+                            #curyears=curyear,
                             baseyear=baseyear, 
                             curscens=curscens, 
                             curscensshort=curscensshort
@@ -135,41 +140,41 @@ extractall <- function(scope=scope, reginame="EU27",
   xobsname <-"sursoi"
   reginame <- paste(reginame, collapse = "")
   cleanup()
-  # xobshsu<-loadcurfile(scope="capdistimes", xobsname=xobsname, reginame=reginame,
-  #                      cols=mcactuaar, rows=rows, ydim=NULL, #curdim5=NULL, 
-  #                      #regi="HSU", curcountries=nuts2[grepl(a, nuts2)], curyears=tser, baseyear='12', curscens='', curscensshort='')
-  #                      regi=NULL, curcountries=curcountries, curyears=curyears, baseyear='12', curscens='', curscensshort='')
-  # rm(xobshsu)
-  
+  xobshsu<-loadcurfile(scope="capdistimes", xobsname=xobsname, reginame=reginame,
+                       cols=mcactuaar, rows=rows, ydim=NULL, #curdim5=NULL,
+                       #regi="HSU", curcountries=nuts2[grepl(a, nuts2)], curyears=tser, baseyear='12', curscens='', curscensshort='')
+                       regi=NULL, curcountries=curcountries, curyears=curyears, baseyear='12', curscens='', curscensshort='')
+  rm(xobshsu)
+
   soilemissions<-c("N2OAPP", "N2OGRA", "N2OSYN", "NH3APP", "NH3GRA", "NH3SYN", "NOXAPP", "NOXGRA", "NOXSYN", "RUNMIN", "RUNSUR")
   rows <- soilemissions
   xobsname="soilemissions"
   cleanup()
-  # xobshsu<-loadcurfile(scope="capdistimes", xobsname=xobsname, reginame=reginame,
-  #                      cols=mcactuaar, rows=rows, ydim=NULL, #curdim5=NULL, 
-  #                      #regi="HSU", curcountries=nuts2[grepl(a, nuts2)], curyears=tser, baseyear='12', curscens='', curscensshort='')
-  #                      regi=NULL, curcountries=curcountries, curyears=curyears, baseyear='12', curscens='', curscensshort='')
-  # rm(xobshsu, caprid)
-  
+  xobshsu<-loadcurfile(scope="capdistimes", xobsname=xobsname, reginame=reginame,
+                       cols=mcactuaar, rows=rows, ydim=NULL, #curdim5=NULL,
+                       #regi="HSU", curcountries=nuts2[grepl(a, nuts2)], curyears=tser, baseyear='12', curscens='', curscensshort='')
+                       regi=NULL, curcountries=curcountries, curyears=curyears, baseyear='12', curscens='', curscensshort='')
+  rm(xobshsu, caprid)
+
   mmsemissions<-c("LU", "EXCRET", "N2OHOU", "N2OSTO", "NH3HOU", "NH3STO", "NOXHOU", "NOXSTO", "N2STO", "RUNHOU")
   rows <- mmsemissions
   xobsname="mmsemissions"
   cleanup()
-  # xobshsu<-loadcurfile(scope="capdistimes", xobsname=xobsname, reginame=reginame,
-  #                      cols=mcactuaar, rows=rows, ydim=NULL, #curdim5=NULL, 
-  #                      #regi="HSU", curcountries=nuts2[grepl(a, nuts2)], curyears=tser, baseyear='12', curscens='', curscensshort='')
-  #                      regi=NULL, curcountries=curcountries, curyears=curyears, baseyear='12', curscens='', curscensshort='')
-  # rm(xobshsu, caprid)
-  
+  xobshsu<-loadcurfile(scope="capdistimes", xobsname=xobsname, reginame=reginame,
+                       cols=mcactuaar, rows=rows, ydim=NULL, #curdim5=NULL,
+                       #regi="HSU", curcountries=nuts2[grepl(a, nuts2)], curyears=tser, baseyear='12', curscens='', curscensshort='')
+                       regi=NULL, curcountries=curcountries, curyears=curyears, baseyear='12', curscens='', curscensshort='')
+  rm(xobshsu, caprid)
+
   levlyild <- c("LEVL", "YILD")
   rows <- levlyild
   xobsname="levlyild"
   cleanup()
-  # xobshsu<-loadcurfile(scope="capdistimes", xobsname=xobsname, reginame=reginame,
-  #                      cols=mcactuaar, rows=rows, ydim=NULL, #curdim5=NULL, 
-  #                      #regi="HSU", curcountries=nuts2[grepl(a, nuts2)], curyears=tser, baseyear='12', curscens='', curscensshort='')
-  #                      regi=NULL, curcountries=curcountries, curyears=curyears, baseyear='12', curscens='', curscensshort='')
-  # rm(xobshsu, caprid)
+  xobshsu<-loadcurfile(scope="capdistimes", xobsname=xobsname, reginame=reginame,
+                       cols=mcactuaar, rows=rows, ydim=NULL, #curdim5=NULL,
+                       #regi="HSU", curcountries=nuts2[grepl(a, nuts2)], curyears=tser, baseyear='12', curscens='', curscensshort='')
+                       regi=NULL, curcountries=curcountries, curyears=curyears, baseyear='12', curscens='', curscensshort='')
+  rm(xobshsu)
   
   xobsname="livestock"
   cleanup()
@@ -187,7 +192,7 @@ extractall <- function(scope=scope, reginame="EU27",
   
 }
 
-combinedate4kipinca <- function(date2load = ""){
+combinedata4kipinca <- function(date2load = ""){
   
   if(date2load!=""){date2load <- paste0("_", date2load)}
   date2save <- paste0("_", format(Sys.time(), "%Y%m%d"))
@@ -243,13 +248,14 @@ combinedate4kipinca <- function(date2load = ""){
  }
 
 
-cleandate4kipinca <- function(date2load = "", date2save=""){
+cleandate4kipinca <- function(folderdate = "", date2load = "", date2save=""){
   
   if(date2load==""){date2load <- paste0("_", format(Sys.time(), "%Y%m%d"))}
   if(date2save==""){date2save <- paste0("_", format(Sys.time(), "%Y%m%d"))}
+  if(date2save==date2load){date2save <- ""}
   
-  nbpath <- paste0("//ies-ud01.jrc.it/D5_agrienv/Data/capdis_results/20190919_kipinca/")
-  nbfile <- paste0(nbpath, "xobs_EU27_2000-2012_NBUDGET", date2load)
+  nbpath <- paste0("//ies-ud01.jrc.it/D5_agrienv/Data/capdis_results/", folderdate, "_kipinca/")
+  nbfile <- paste0(nbpath, "xobs_EU27_2000-2012_NBUDGET_", date2load)
   load(paste0(nbfile, ".rdata"))
   load("//ies-ud01.jrc.it/D5_agrienv/Data/FSU/fsu_delimdata.rdata")
   y <- sursoifsu
@@ -269,27 +275,27 @@ cleandate4kipinca <- function(date2load = "", date2save=""){
   write.csv(stats, file=paste0(nbfile, "_nonUAAR_stats.csv"))
   #rm(y)
   cat("\nDcast data by rows, save data")
-  x <- dcast.data.table(y, rall + cols + y + CAPRINUTS2 ~ rows, value.var = "value", fill = 0)
-  save(x, file=paste0(nbfile, "temp.rdata"))
+  nbudget <- dcast.data.table(y, rall + cols + y + CAPRINUTS2 + CNTR_CODE ~ rows, value.var = "value", fill = 0)
+  save(nbudget, file=paste0(nbfile, "temp.rdata"))
   
   cat("\nDelete rows with LEVL below 0.01")
   minLEVL <- 0.005
-  xSmallLevl <- x[LEVL < minLEVL]
-  x <- x[LEVL >= minLEVL]
+  xSmallLevl <- nbudget[LEVL < minLEVL]
+  nbudget <- nbudget[LEVL >= minLEVL]
   
   
   cat("\nHigh NinSOI (exclude UAAR) that is not due to CRESID (allow for 400 higher NinSOI)")
   #                         and that is not due to NMANGR/NMANAP
   xlimit <- 2000
-  xHigh_NinSOI <- x[NinSOI > (xlimit+200) & !cols %in% c("UAAR") & CRESID < (xlimit-200) 
+  xHigh_NinSOI <- nbudget[NinSOI > (xlimit+200) & !cols %in% c("UAAR") & CRESID < (xlimit-200) 
                     & NMANGR < (xlimit-200) & NMANAP < (xlimit-200)]
-  x[NinSOI > (xlimit)]
-  x[NinSOI > (xlimit) & NMANGR > 1000]
-  xl <- x[NinSOI > (xlimit)]
+  nbudget[NinSOI > (xlimit)]
+  nbudget[NinSOI > (xlimit) & NMANGR > 1000]
+  xl <- nbudget[NinSOI > (xlimit)]
   xf <- paste0(nbfile, "_NinSOI.gt.", as.character(xlimit))
   write.csv(xl, file=paste0(xf, ".csv"))
   save(xl, file=paste0(xf, ".rdata"))
-  write.csv(x[ATMOSD>80 & cols=="UAAR"], file=paste0(nbfile, "_ATMOSD.gt.80.csv"))
+  write.csv(nbudget[ATMOSD>80 & cols=="UAAR"], file=paste0(nbfile, "_ATMOSD.gt.80.csv"))
   
   
   
@@ -297,92 +303,102 @@ cleandate4kipinca <- function(date2load = "", date2save=""){
   cat("\nFirst correct those that depend on one input term")
   
   sLimit <- 400
-  x[SURSOI > sLimit]
+  nbudget[SURSOI > sLimit]
   
-  xl <- x[SURSOI > sLimit]
+  xl <- nbudget[SURSOI > sLimit]
   xf <- paste0(nbfile, "_SURSOI.gt.", sLimit)
   write.csv(xl, file=paste0(xf, ".csv"))
   save(xl, file=paste0(xf, ".rdata"))
   
-  xHigh_SURSOI <- x[SURSOI > sLimit & NMANAP > 400]
+  xHigh_SURSOI <- nbudget[SURSOI > sLimit & NMANAP > 400]
   XHigh_Sursoi_correct <- xHigh_SURSOI[SURSOI > sLimit & NMANAP > sLimit, 
                             `:=` ( SURSOI = 400, NMANAP = NMANAP+400-SURSOI, NinSOI = NinSOI+400-SURSOI)]
   # NMANAP > sLimit, others below
-  xsel <- x[SURSOI > sLimit & NMANAP > sLimit & CRESID < sLimit & NMINSL < sLimit & NMANGR < sLimit]
-  x <- x[xsel, `:=` ( SURSOI = 400, NMANAP = NMANAP+400-SURSOI, NinSOI = NinSOI+400-SURSOI)]
+  xsel <- nbudget[SURSOI > sLimit & NMANAP > sLimit & CRESID < sLimit & NMINSL < sLimit & NMANGR < sLimit]
+  nbudget <- nbudget[xsel, `:=` ( SURSOI = 400, NMANAP = NMANAP+400-SURSOI, NinSOI = NinSOI+400-SURSOI)]
   # CRESID > sLimit, others below
-  xsel <- x[SURSOI > sLimit & NMANAP < sLimit & CRESID > sLimit & NMINSL < sLimit & NMANGR < sLimit]
-  x <- x[xsel, `:=` ( SURSOI = 400, CRESID = CRESID+400-SURSOI, NinSOI = NinSOI+400-SURSOI)]
+  xsel <- nbudget[SURSOI > sLimit & NMANAP < sLimit & CRESID > sLimit & NMINSL < sLimit & NMANGR < sLimit]
+  nbudget <- nbudget[xsel, `:=` ( SURSOI = 400, CRESID = CRESID+400-SURSOI, NinSOI = NinSOI+400-SURSOI)]
   #NMINSL > sLimit, others below
-  xsel <- x[SURSOI > sLimit & NMANAP < sLimit & CRESID < sLimit & NMINSL > sLimit & NMANGR < sLimit]
-  x <- x[xsel, `:=` ( SURSOI = 400, NMINSL = NMINSL+400-SURSOI, NinSOI = NinSOI+400-SURSOI)]
+  xsel <- nbudget[SURSOI > sLimit & NMANAP < sLimit & CRESID < sLimit & NMINSL > sLimit & NMANGR < sLimit]
+  nbudget <- nbudget[xsel, `:=` ( SURSOI = 400, NMINSL = NMINSL+400-SURSOI, NinSOI = NinSOI+400-SURSOI)]
   #NMANGR > sLimit, others below
-  xsel <- x[SURSOI > sLimit & NMANAP < sLimit & CRESID < sLimit & NMINSL < sLimit & NMANGR > sLimit]
-  x <- x[xsel, `:=` ( SURSOI = 400, NMANGR = NMANGR+400-SURSOI, NinSOI = NinSOI+400-SURSOI)]
-  x[SURSOI > sLimit]
-  max(x$SURSOI, na.rm=TRUE)
+  xsel <- nbudget[SURSOI > sLimit & NMANAP < sLimit & CRESID < sLimit & NMINSL < sLimit & NMANGR > sLimit]
+  nbudget <- nbudget[xsel, `:=` ( SURSOI = 400, NMANGR = NMANGR+400-SURSOI, NinSOI = NinSOI+400-SURSOI)]
+  nbudget[SURSOI > sLimit]
+  max(nbudget$SURSOI, na.rm=TRUE)
   
   cat("\nThen correct in pairs")
   #NMANAP and NMANGR > sLimit, others below
-  xsel <- x[SURSOI > sLimit & NMANAP > sLimit & CRESID < sLimit & NMINSL < sLimit & NMANGR > sLimit]
-  x <- x[xsel, `:=` ( SURSOI = 400, 
+  xsel <- nbudget[SURSOI > sLimit & NMANAP > sLimit & CRESID < sLimit & NMINSL < sLimit & NMANGR > sLimit]
+  nbudget <- nbudget[xsel, `:=` ( SURSOI = 400, 
                       NMANAP = NMANAP+(400-SURSOI)*NMANAP/(NMANAP+NMANGR), 
                       NMANGR = NMANGR+(400-SURSOI)*NMANGR/(NMANAP+NMANGR), 
                       NinSOI = NinSOI+(400-SURSOI))]
   #CRESID and NMINSL > sLimit, others below
-  xsel <- x[SURSOI > sLimit & NMANAP < sLimit & CRESID > sLimit & NMINSL > sLimit & NMANGR < sLimit]
-  x <- x[xsel, `:=` ( SURSOI = 400, 
+  xsel <- nbudget[SURSOI > sLimit & NMANAP < sLimit & CRESID > sLimit & NMINSL > sLimit & NMANGR < sLimit]
+  nbudget <- nbudget[xsel, `:=` ( SURSOI = 400, 
                       CRESID = CRESID+(400-SURSOI)*CRESID/(CRESID+NMINSL), 
                       NMINSL = NMINSL+(400-SURSOI)*NMINSL/(CRESID+NMINSL), 
                       NinSOI = NinSOI+(400-SURSOI))]
   #CRESID, NMANAP and NMANGR > sLimit, others below
-  xsel <- x[SURSOI > sLimit & NMANAP > sLimit & CRESID > sLimit & NMINSL < sLimit & NMANGR > sLimit]
-  x <- x[xsel, `:=` ( SURSOI = 400, 
+  xsel <- nbudget[SURSOI > sLimit & NMANAP > sLimit & CRESID > sLimit & NMINSL < sLimit & NMANGR > sLimit]
+  nbudget <- nbudget[xsel, `:=` ( SURSOI = 400, 
                       NMANAP = NMANAP+(400-SURSOI)*NMANAP/(NMANAP+NMANGR+CRESID), 
                       NMANGR = NMANGR+(400-SURSOI)*NMANGR/(NMANAP+NMANGR+CRESID), 
                       CRESID = CRESID+(400-SURSOI)*CRESID/(NMANAP+NMANGR+CRESID), 
                       NinSOI = NinSOI+(400-SURSOI))]
-  x[SURSOI > sLimit]
-  max(x$SURSOI, na.rm=TRUE)
+  nbudget[SURSOI > sLimit]
+  max(nbudget$SURSOI, na.rm=TRUE)
   
   cat("\nFinally scale")
-  xsel <- x[SURSOI > sLimit]
-  x <- x[xsel, `:=` ( SURSOI = 400, 
+  xsel <- nbudget[SURSOI > sLimit]
+  nbudget <- nbudget[xsel, `:=` ( SURSOI = 400, 
                       NMANAP = NMANAP+(400-SURSOI)*NMANAP/(NMANAP+NMANGR+CRESID+NMINSL), 
                       NMANGR = NMANGR+(400-SURSOI)*NMANGR/(NMANAP+NMANGR+CRESID+NMINSL), 
                       CRESID = CRESID+(400-SURSOI)*CRESID/(NMANAP+NMANGR+CRESID+NMINSL), 
                       NMINSL = NMINSL+(400-SURSOI)*NMINSL/(NMANAP+NMANGR+CRESID+NMINSL), 
                       NinSOI = NinSOI+(400-SURSOI))]
-  x[SURSOI > sLimit]
-  max(x$SURSOI, na.rm=TRUE)
+  nbudget[SURSOI > sLimit]
+  max(nbudget$SURSOI, na.rm=TRUE)
   
   
   cat("\nDelete values close to zero")
-  x <- x[NMANGR > -0.1 & NMANGR < 0.001 , NMANGR := 0]
-  x <- x[NMANAP > -0.1 & NMANAP < 0.001, NMANAP := 0]
-  x <- x[NMINSL > -0.1 & NMINSL < 0.001, NMINSL := 0]
-  x <- x[MINLOSSES > -0.1 & MINLOSSES < 0.001, MINLOSSES := 0]
-  x <- x[MANLOSSES > -0.1 & MANLOSSES < 0.001, MANLOSSES := 0]
-  x <- x[MMSLOSSES > -0.1 & MMSLOSSES < 0.001, MMSLOSSES := 0]
+  nbudget <- nbudget[NMANGR > -0.1 & NMANGR < 0.001 , NMANGR := 0]
+  nbudget <- nbudget[NMANAP > -0.1 & NMANAP < 0.001, NMANAP := 0]
+  nbudget <- nbudget[NMINSL > -0.1 & NMINSL < 0.001, NMINSL := 0]
+  nbudget <- nbudget[MINLOSSES > -0.1 & MINLOSSES < 0.001, MINLOSSES := 0]
+  nbudget <- nbudget[MANLOSSES > -0.1 & MANLOSSES < 0.001, MANLOSSES := 0]
+  nbudget <- nbudget[MMSLOSSES > -0.1 & MMSLOSSES < 0.001, MMSLOSSES := 0]
+  nbudget <- nbudget[CRESID > -0.1 & CRESID < 0.001, CRESID := 0]
   
   cat("\nCheck for negative values where there shouldn't be")
-  xneg <- x[NinSOI < 0]
+  xneg <- nbudget[NinSOI < 0]
   write.csv(xneg, file=paste0(nbfile, "_NinSOInegative.csv"))
-  x <- x[NinSOI >= 0]
+  nbudget <- nbudget[NinSOI >= 0]
   
-  xneg <- x[NMANGR < 0]
-  xneg <- x[NMANAP < 0]
+  xneg <- nbudget[NMANGR < 0]
+  xneg <- nbudget[NMANAP < 0]
   
   cat("\nSave cleaned data")
-  save(x, file=paste0(nbfile, date2load, "_dcastclean", date2save, ".rdata"))
+  
+  save(nbudget, file=paste0(nbfile, "_dcastclean", date2save, ".rdata"))
+  for (c in unique(nbudget$CNTR_CODE)){
+    assign(paste0("nbudget", c), nbudget[CNTR_CODE==c])
+    save(list=paste0("nbudget", c), file=paste0(nbfile, date2load, c, "_dcastclean", date2save, ".rdata"))
+  }
+  
+  
+  
   
   # NRET timeseries
   nrettimeseries <- dcast.data.table(y[rows=="NRET" | rows=="LEVL"], rall + cols + rows ~ y, value.var="value")
   
   
   cat("\nCalculating statistics for cleaned data UAAR data")
-  nbudget <- melt.data.table(x, id.vars = c("rall", "cols", "y", "CAPRINUTS2"))
+  nbudget <- melt.data.table(nbudget, id.vars = c("rall", "cols", "y", "CAPRINUTS2", "CNTR_CODE"))
   nbudget <- nbudget[! is.na(value)]
+  save(nbudget, file=paste0(nbfile, "_tempbeforestatistics.rdata"))
   stats <- nbudget[cols=="UAAR", .( min = min(value),
                               max = max(value),
                               mean = mean(value),
@@ -402,7 +418,6 @@ cleandate4kipinca <- function(date2load = "", date2save=""){
   statsd <- dcast.data.table(stats, cols ~ variable, value.var = c("min", "max", "mean"))
   write.csv(statsd, file=paste0(nbfile, "_all_bycolsonly_statscleaned.csv"), na = "", row.names = FALSE)
   
-  save(nbudget, file=paste0(nbfile, date2load, "_nbudget_clean", date2save, ".rdata"))
   
  
 }
@@ -545,31 +560,34 @@ writemeta<-function(){
     # Write out data
     params<-setdiff(names(x), c("rall", "cols", "y"))
     yrs <- unique(x$y)
-    y <- copy(x)
+    xcopy <- copy(x)
     for(p in params){
+      cat("\n Extract", as.character(p), "for year", yr, "from data (",which(p %in% params),"/",length(params),") ", format(Sys.time(), "%Y%M%d %H:%M"))
+      datap <- xcopy[, c("rall", "cols", "y", p), with=FALSE]
+      setnames(datap, p, "value")
+      datap$rows <- p
+      datap <- datap[, .(fsuID=rall, fsuID_nr = as.numeric(gsub("F", "", rall)), cols, rows, y, value)]
+      datap <- datap[abs(value) < 1e-6, value := 0]
+      cat("dcast for crops ")
       for(yr in yrs){
         cat("\n Extract", as.character(p), "for year", yr, "from data (",which(p %in% params),"/",length(params),") ", format(Sys.time(), "%Y%M%d %H:%M"))
-        wdata <- y[, c("rall", "cols", "y", p), with=FALSE]
-        setnames(wdata, p, "value")
-        wdata$rows <- p
-        wdata <- wdata[, .(fsuID=rall, fsuID_nr = as.numeric(gsub("F", "", rall)), cols, rows, y, value)]
-        wdata <- wdata[abs(value) < 1e-6, value := 0]
-        cat("dcast for crops ")
-        wdata <- dcast.data.table(wdata, fsuID + fsuID_nr ~ cols, drop=TRUE, value.var="value", fun=sum)
-        wdata <- wdata[order(fsuID_nr)]
-        #writefilenow(p, yr)
+        wdata <- dcast.data.table(datap[y==yr], fsuID + fsuID_nr ~ cols, drop=TRUE, value.var="value", fun=sum)
+
         #Add first line with zeros to indicate to ArcGIS that these are numeric data
         firsline <- wdata[1]
         firsline <- firsline[, `:=` (fsuID = "F0", fsuID_nr = 0)]
         r <- setdiff(names(firsline), c("fsuID", "fsuID_nr"))
         v <- rep(0.000001, length(r))
         firsline <- firsline[, as.vector(r) := as.list(v)]
+        wdata <- rbind(firsline, wdata)
         
+        #Create subfolder if it does not exist
         if(! dir.exists(paste0(savepath, "/", p))){
           dir.create(paste0(savepath, "/", p))
         }
         
-        wdata <- rbind(firsline, wdata)
+        # Ensure correct numeric sorting of the data by fsuID
+        wdata <- wdata[order(fsuID_nr)]
         
         con<-file(paste0(savepath, "/", p, "/capridisagg_", reginame, "_", p, "_", yr, "_",format(Sys.time(), "%Y%m%d"),".csv"),open = "wt")
         cat("\n Write data ", format(Sys.time(), "%Y%M%d %H:%M"))
@@ -649,29 +667,41 @@ reload_and_write <- function(reginame="EU27"){
   
 }
 
-regionaldata <- function(){
-  load("//ies-ud01.jrc.it/D5_agrienv/Data/capdis_results/20190919_kipinca/xobs_EU27_2000-2012_SURSOI_20190925.rdata")
+checkregions <- function(folderdate='20191010', savedate='20191011'){
+  
+  if(is.null(savedate)){savedate <- folderdate}
+  kipf <- paste0("//ies-ud01.jrc.it/D5_agrienv/Data/capdis_results/", folderdate, "_kipinca/xobs_EU27_2000-2012_")
   load("//ies-ud01.jrc.it/D5_agrienv/Data/FSU/fsu_delimdata.rdata")
-  xnuts <- dcast.data.table(sursoinuts2[cols=="UAAR"], rall + cols + y ~ rows, value.var="value")
-  setnames(xnuts, "rall", "CAPRINUTS2")
-  allnuts <- merge(unique(fsu_delimdata[, .(CAPRINUTS2)]), xnuts, by="CAPRINUTS2", all.x=TRUE)
   
-  miscntOK <- c("AL", "BA", "CH", "CS", "HR", "MK", "NO", "TR")
-  miscntOK <- paste0("^", miscntOK)
-  miscntOK <- paste(miscntOK, collapse="|")
-  misnuts <- allnuts[is.na(cols)]
-  misnuts <- misnuts[! grepl(miscntOK, CAPRINUTS2)]
+  misnamesall <- data.table()
+  #for (nn in c("SURSOI")){
+  nfiles <- c("SURSOI", "SOILEMISSIONS", "MMSEMISSIONS", "LEVLYILD", "LIVESTOCK", "MAACTLEVL")
+  for ( NbudgetFile in nfiles){
   
+    load(paste0(kipf, nn, "_", savedate, ".rdata"))
+    xnuts <- dcast.data.table(sursoinuts2[cols=="UAAR"], rall + cols + y ~ rows, value.var="value")
+    setnames(xnuts, "rall", "CAPRINUTS2")
+    allnuts <- merge(unique(fsu_delimdata[, .(CAPRINUTS2)]), xnuts, by="CAPRINUTS2", all.x=TRUE)
+    
+    miscntOK <- c("AL", "BA", "CH", "CS", "HR", "MK", "NO", "TR")
+    miscntOK <- paste0("^", miscntOK)
+    miscntOK <- paste(miscntOK, collapse="|")
+    misnuts <- allnuts[is.na(cols)]
+    misnuts <- misnuts[! grepl(miscntOK, CAPRINUTS2)]
+    
+    
+    misnames <- unique(merge(misnuts[! CAPRINUTS2 %in% misregOK, .(CAPRINUTS2)], sdesc[, .(CAPRINUTS2=element, description)], by="CAPRINUTS2"))
+    xnuts[CAPRINUTS2 %in% misnames$CAPRINUTS2]
+    misnamesall <- rbind(misnamesall, cbind(NbudgetFile, misnames))
+  }
+  write.csv(misnamesall, file=paste0(kipf, savedate, "_missingNuts.csv"))
+    
   
-  misnames <- unique(merge(misnuts[! CAPRINUTS2 %in% misregOK, .(CAPRINUTS2)], sdesc[, .(CAPRINUTS2=element, description)], by="CAPRINUTS2"))
-  xnuts[CAPRINUTS2 %in% misnames$CAPRINUTS2]
-  
-  
-  sursoifsu <- merge(sursoifsu, fsu_delimdata[, .(rall = fsuID, CNTR_CODE)], by="rall")
-  sursoifsu <- merge(sursoifsu, fsu_delimdata[, .(rall = fsuID, CAPRINUTS2)], by="rall")
-  dsursoifsu <- dcast.data.table(sursoifsu, CNTR_CODE + rall + cols + y ~ rows, value.var="value")
-  save(dsursoifsu, file=paste0(savepath, "/xobs_EU27_2000-2012_SURSOI_20190925_dcast.rdata"))
-  dsursoifsu <- merge(dsursoifsu, fsu_delimdata[, .(rall = fsuID, CAPRINUTS2)], by="rall")
+  # sursoifsu <- merge(sursoifsu, fsu_delimdata[, .(rall = fsuID, CNTR_CODE)], by="rall")
+  # sursoifsu <- merge(sursoifsu, fsu_delimdata[, .(rall = fsuID, CAPRINUTS2)], by="rall")
+  # dsursoifsu <- dcast.data.table(sursoifsu, CNTR_CODE + rall + cols + y ~ rows, value.var="value")
+  # save(dsursoifsu, file=paste0(savepath, "/xobs_EU27_2000-2012_SURSOI_20190925_dcast.rdata"))
+  # dsursoifsu <- merge(dsursoifsu, fsu_delimdata[, .(rall = fsuID, CAPRINUTS2)], by="rall")
   
 }
 
