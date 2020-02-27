@@ -104,7 +104,7 @@ getenergydensities <- function() {
 eatFoodGrp <- function(x = p_diet) {
   eatFood2O <-
     data.table(rgdx.set(
-      gdxName = paste0(cenv$capri, cenv$resdir, '/capmod/chk_kcalEATvar.gdx'),
+      gdxName = paste0(cenv$capri, cenv$leipadr, cenv$resdir, '/capmod/chk_kcalEATvar.gdx'),
       symName = "eatFood2O",
       names = c('eatFoodGrp', 'rows')
     ))
@@ -121,7 +121,7 @@ eatRefDiet <- function(pp=p_eatdiet) {
   
   flstart <- subfld
   if(subfld == "20190602_Springmann18_used4sendingdata") flstart <- "20190602_Springmann18"
-  resfld <-paste0(cenv$capri, cenv$resdir, "/capmod/", subfld, "/", flstart)
+  resfld <-paste0(cenv$capri, cenv$leipadr, "resultsSpringmann/capmod/", subfld, "/", flstart)
   
   # Attention!! the first four are from baseline
   ns <- sort(unique(pp$n))
@@ -216,7 +216,7 @@ getlca <- function(x = caprid) {
     #lca <- lca[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
     lcayild <- lcayild[, NOX_kgPt := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
     lcayild <- lcayild[, CH4_kgPt := CH4ENT + CH4MAN + CH4RIC]
-    if("run" %in% righthand) {
+    if("run" %in% strsplit(righthand, " \\+ ")[[1]]) {
       lcayild <- lcayild[, .(rall, cols, rows, y, ssp, run, n, NH3_kgPt, NOX_kgPt, CH4_kgPt)]
     }else{
       lcayild <- lcayild[, .(rall, cols, rows, y, ssp, n, NH3_kgPt, NOX_kgPt, CH4_kgPt)]
@@ -235,7 +235,7 @@ getlca <- function(x = caprid) {
     #lcaprod <- lcaprod[, NH3 := NH3APP + NH3GRA + NH3SYN + NH3MAN]
     lcaprod <- lcaprod[, NOX_GgPy := NOXAPP + NOXGRA + NOXSYN + NOXMAN]
     lcaprod <- lcaprod[, CH4_GgPy := CH4ENT + CH4MAN + CH4RIC]
-    if("run" %in% righthand) {
+    if("run" %in% strsplit(righthand, " \\+ ")[[1]]) {
       lcaprod <- lcaprod[, .(rall, cols, rows, y, ssp, run, n, NH3_GgPy, NOX_GgPy, CH4_GgPy)]
     }else{
       lcaprod <- lcaprod[, .(rall, cols, rows, y, ssp, n, NH3_GgPy, NOX_GgPy, CH4_GgPy)]
@@ -244,43 +244,47 @@ getlca <- function(x = caprid) {
     
   #}
   lca <- merge(lcaprod[,-'cols', with=FALSE], lcayild[,-'cols', with=FALSE], by=dims(lcaprod[,-'cols', with=FALSE]))
+
+  checkgrof <- FALSE
+  if(checkgrof == TRUE){
+    testgrof <- x[empty != "" & cols %in% c("PROD", "YILD")]
+    testgrof <- dcast.data.table(testgrof, rall + empty + rows + y + scen + run + n ~ cols, value.var="value")
+    testgrof <- testgrof[, GROF := PROD/YILD]
+    testgrof <- dcast.data.table(testgrof, rall + rows + y + scen + run + n ~ empty, value.var="GROF")
+    testgrof <- testgrof[, id := .I]
+    testgrof <- testgrof[, std := sd(.SD, na.rm=TRUE), by=id, .SDcols = names(testgrof)[7:18]]
+    # --> all standard deviations are zero, therefor PROD and YILD data are consistently calculated
+    t2save <- testgrof[, 1:7]
+    write.csv(t2save, file=paste0(manuscript, "/grof_calculated_from_LCA_PROD_div_YILD.csv"))
+    # --> comparing with GROFs that are calculated for NH3, NOX (aggregates) and CH4 (aggregates)
+    #     results in identical values!
+    p_lca <- p_lca[, GROFNOX := NOX_GgPy/NOX_kgPt*1000]
+    p_lca <- p_lca[, GROFCH4 := CH4_GgPy/CH4_kgPt*1000]
+    
+    ## Compare with PROD
+    grof <- x[empty == "" & cols %in% c("PROD")]
+    grof <- dcast.data.table(grof, dform, value.var = "value")
+    grof <- merge(lca, grof[,-c('cols', 'scen'), with=FALSE], by=dims(lca[,-'GROF', with=FALSE]))
+    grof <- grof[, .(rall, rows, y, ssp, run, n, GROF, PROD=V1*1000, ratio=V1/GROF)]
+    
+    # ==> Calculated GROF and PROD are identic but not for regional aggregates
+    #> unique(grof[ratio>1.01]$rall)
+    #[1] IT000000 WBA      NONEU_EU MID_INC  NONEU    World    EU_WEST  EU_EAST  EU028000 EU013000 EU      
+    
+    #Exception: grof[ratio>1.01 & rall=="IT000000"]
+    #rall rows    y  ssp run  n     GROF    PROD  ratio
+    #1: IT000000 WHEA 2050 SSP1   1 10 4543.629 4589976 1.0102
+    #
+    
+    
+    
+    
+  }
+  
   lca <- lca[, GROF := 1000*NH3_GgPy/NH3_kgPt]
   return(lca)
 }
   
-mergeLCAwithDiets <- function(x=caprid, lca=p_eatemis, y=p_eatintk){
-  p_inha <- getinha(x)
-  
-  lcax <- merge(lca, y, by=dims(lca))
-  lcax <- merge(lcax, p_inha, by=dims(p_inha))
-  
-  lcax <- lcax[, `:=` (INTK_GgPyear = INTK_gPcapday * 365 * INHA / 1000000,
-                       ref_GgPyear = ref * 365 * INHA / 1000000)]
-  
-  st <- lcax[, .(rall, y, ssp, rows, run, n, GROF, INHA, 
-               NH3_GgPy, NH3_kgPt, NOX_GgPy, NOX_kgPt, CH4_GgPy, CH4_kgPt,
-               ENNE_kcalPcapday, INTK_gPcapday, ref, ratio,
-               INTK_GgPyear, ref_GgPyear)]
-  
-  # Food products have not been aggregated
-  st <- st[!rows %in% c("ALLP", "ANIM", "CROPIN", "CROPDE")]
-  # No emissions calculated for fish products
-  st <- st[!rows %in% c("ACQU")]
-  
-  # delete country aggregates if countries exist
-  st <- st[!rall %in% c("BUR", "WBA", "EU", "EU013000", "EU028000", 
-                        "MED", "URUPAR","MER_OTH","NONEU_EU",
-                        "ASIA","AFRICA","N_AM","MS_AM","MER",
-                        "HI_INC","MID_INC","LDCACP","LDC","ACP",
-                        "NONEU","World","EU_WEST","EU_EAST","EU028000")]
-  
-  # Check missing values
-  st_na <- st[is.na(ref)]
-  cat("\nCheck if there are NAs in column ref")
-  print(st_na)
-  return(st)
-}
-
 getLosses <- function(x=caprid){
   
   losses <- caprid[cols %in% c("GROF", "IMPT", "HCON", "LOSMsh", "LOSCsh", "INDMsh")]
@@ -324,11 +328,19 @@ getLosses <- function(x=caprid){
 }
 
 geteatFood2O <- function(){
-  eatFood2O <-  data.table(rgdx.set(
-    gdxName = paste0(cenv$capri, cenv$resdir, '/capmod/chk_kcalEATvar.gdx'),
-    symName = "eatFood2O",
-    names = c('eatFoodGrp', 'rows')
-  ))
+  if(file.exists(paste0(cenv$capri, cenv$resdir, '/capmod/chk_kcalEATvar.gdx'))){
+    eatFood2O <-  data.table(rgdx.set(
+      gdxName = paste0(cenv$capri, cenv$resdir, '/capmod/chk_kcalEATvar.gdx'),
+      symName = "eatFood2O",
+      names = c('eatFoodGrp', 'rows')
+    ))
+  }else if(file.exists(paste0(manuscript, '/chk_kcalEATvar.gdx'))){
+    eatFood2O <-  data.table(rgdx.set(
+      gdxName = paste0(manuscript, '/chk_kcalEATvar.gdx'),
+      symName = "eatFood2O",
+      names = c('eatFoodGrp', 'rows')
+    ))
+  }
   #eatFood2O <- eatFood2O[eatFoodGrp=="MILC", rows := "MILK"]
   #eatFood2O <- eatFood2O[eatFoodGrp=="OILS", rows := "OILS"]
   oils <- eatFood2O[rows=="OTHO"]
@@ -338,7 +350,7 @@ geteatFood2O <- function(){
   #eatFood2O <- unique(eatFood2O)
 }
 
-avByEat <- function(x=caprid, z = p_dietemis) {
+avByEat <- function(x=caprid, z = p_lca) {
   
   
   eatFood2O <- geteatFood2O()
@@ -360,10 +372,48 @@ avByEat <- function(x=caprid, z = p_dietemis) {
     CH4_kgPt = 1000 * CH4_GgPy/GROF
   )]
   
-  
   return(st)
 }
+
+mergeLCAwithDiets <- function(x=caprid, lca=p_eatemis, y=p_eatintk){
+  p_inha <- getinha(x)
+  
+  lcax <- merge(lca, y, by=dims(lca))
+  lcax <- merge(lcax, p_inha, by=dims(p_inha))
+  
+  lcax <- lcax[, `:=` (INTK_GgPyear = INTK_gPcapday * 365 * INHA / 1000000,
+                       ref_GgPyear = ref * 365 * INHA / 1000000)]
+  
+  st <- lcax[, .(rall, y, ssp, rows, run, n, GROF, INHA, 
+                 NH3_GgPy, NH3_kgPt, NOX_GgPy, NOX_kgPt, CH4_GgPy, CH4_kgPt,
+                 ENNE_kcalPcapday, INTK_gPcapday, ref, ratio,
+                 INTK_GgPyear, ref_GgPyear)]
+  
+  # Food products have not been aggregated
+  st <- st[!rows %in% c("ALLP", "ANIM", "CROPIN", "CROPDE")]
+  # No emissions calculated for fish products
+  st <- st[!rows %in% c("ACQU")]
+  
+  # delete country aggregates if countries exist
+  st <- st[!rall %in% c("BUR", "WBA", "EU", "EU013000", "EU028000", 
+                        "MED", "URUPAR","MER_OTH","NONEU_EU",
+                        "ASIA","AFRICA","N_AM","MS_AM","MER",
+                        "HI_INC","MID_INC","LDCACP","LDC","ACP",
+                        "NONEU","World","EU_WEST","EU_EAST","EU028000")]
+  
+  # Check missing values
+  st_na <- st[is.na(ref)]
+  cat("\nCheck if there are NAs in column ref")
+  print(st_na)
+  return(st)
+}
+
 scale4losses <- function(x=caprid, st=p_eatemis) {
+  # Active: 
+  # - merging p_eatemis with the share of intake (INTK) over total household demand (INTK + LOSC)
+  
+  
+  # Not active: 
   # Scale total emissions according to the share of Intake on total household demand
   # If intake changes by factor 'ratio' then so does also total household demand
   losses <- getLosses(x=caprid)
@@ -431,7 +481,10 @@ GlobalPoolMarket <- function(x=caprid, xx = p_eatemisscaled){
   
   #eatFood2O <- geteatFood2O()
   eatFood2O <- fread(paste0(manuscript, "eatFood2O.csv"), header = TRUE)
-  mktbal <- merge(mktbal, eatFood2O, by="rows")
+  #Emissions are avaialble for primary foods, therefore link to 'prim' and not 'rows'
+  #mktbal <- merge(mktbal, eatFood2O, by="rows")
+  mktbal <- merge(mktbal, eatFood2O, by.x="rows", by.y="prim")
+  mktbal <- unique(mktbal[, -'rows', with=FALSE])
   mktbal <- mktbal[, lapply(.SD, sum, na.rm=TRUE), by=.(rall, y, ssp, run, eatFoodGrp), .SDcols=smktbal]
   setnames(mktbal, "eatFoodGrp", "rows")
   mktbal[is.na(mktbal)] <- 0
@@ -444,14 +497,20 @@ GlobalPoolMarket <- function(x=caprid, xx = p_eatemisscaled){
   mktbal <- mktbal[, IMPTsh := IMPORTS / (IMPORTS + PROD)]
   
   mm1 <- merge(xx, mktbal, by=c("rall", "y", "ssp", "run", "rows"))
-  
+  checkmm1 <- mm1[, .(rall, y, ssp, run, rows, n, GROF, PROD, sh=round(GROF/PROD,2))]
+  checkmm1 <- checkmm1[sh !=1]
+  write.csv(checkmm1, file=paste0(manuscript, "/checkGlobalPoolMarket502_compare_PRODvsGROF_different", format(Sys.time(), "%Y%m%d"), ".csv"))
+  mm1 <- mm1[, PROD := GROF]
+    
   # b) we know domestic emissions from a food NH3_GgPy and the by 
   # how much the consumption must be changed: 
   # x (to go from INTK_capri -> INTK_target; xr = (INTK_target-INTK_capri)/INTK_capri)
   
   mm1 <- mm1[, scale_INTK := (ref - INTK_gPcapday)/INTK_gPcapday]
   
-   
+  # Remove the data from the un-shocked run - are not relevant for the results
+  mm1 <- mm1[run != 0 | y == 2010]
+  
   # c) crop products are used for hcom, feed, exports and proc. we calculate the share of HCOM and FEED
   # HCONshr := HCON / (HCON + FEED + EXPORT + PROC)
   # FEEDshr := FEED / (HCON + FEED + EXPORT + PROC)
@@ -564,20 +623,28 @@ adjustEmissions <- function(x = caprid, mm4 = p_eatglobm){
   emicols <- c(nh3cols, ch4cols, noxcols)
   deltacl <- names(mm4)[grepl("DELTA", names(mm4))]
   
+  # ==> Do normal scaling ignoring trade
+  GgPycols <- c("PROD", "NH3_GgPy", "NOX_GgPy", "CH4_GgPy")
+  GgPyscales <- paste0(GgPycols, "_scaled")
+  mm4 <- mm4[, (GgPyscales) := (.SD * ratio), .SDcols = GgPycols]
+  
   ## Apply changes on production in the countries 
   ## to the emissions 
   mm4[, `:=` (NH3adj_GgPy = NH3_GgPy * ( 1 + DELTAtot),
               NOXadj_GgPy = NOX_GgPy * ( 1 + DELTAtot),
               CH4adj_GgPy = CH4_GgPy * ( 1 + DELTAtot),
               PRODadj_kt  = PROD     * ( 1 + DELTAtot))]
+
   
+  
+    
   nh3cols <- names(mm4)[grepl("NH3", names(mm4))]
   ch4cols <- names(mm4)[grepl("CH4", names(mm4))]
   noxcols <- names(mm4)[grepl("NOX", names(mm4))]
+  prdcols <- names(mm4)[grepl("PROD", names(mm4))]
+  prdcols <- prdcols[! prdcols == "PRODtot"]
   emicols <- c(nh3cols, ch4cols, noxcols)
-  smktbal <- c("IMPORTS", "EXPORTS", "HCON", 
-               "PROD", "PRODadj_kt", 
-               "PROC", "FEED", "YILD", "BIOF", "HCOM")
+  smktbal <- c("IMPORTS", "EXPORTS", "HCON", prdcols, "PROC", "FEED", "YILD", "BIOF", "HCOM")
   colorder <- c(dims(mm4), smktbal, "totIN", "totEX", "GROF", "INHA",  
                 names(mm4)[grepl("sh", names(mm4))], 
                 "ENNE_kcalPcapday", "INTK_gPcapday", "ref", "ratio" ,
@@ -638,7 +705,10 @@ getheader <- function(){
                    "\n#",
                    "\n# *adj: Emissions as defined above but changes due to scaled to target diets are included.",
                    "\n#       To this purpose the footprints from the 'shocked' runs are scaled to match the target intake values.",
-                   "\n#       The 'unshocked' data are not scaled.",
+                   "\n#       The 'unshocked' data are not scaled. The scaling procedure considers trade flows; i.e. emissions",
+                   "\n#       are differentiated if from domestic production or imports.",
+                   "\n# *scaled: Emissions as defined above are scaled to target diet using footprints directly and ",
+                   "\n#       ignoring trade flows.",
                    "\n#"
   )
   
