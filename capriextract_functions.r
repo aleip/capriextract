@@ -398,37 +398,6 @@ opendata<-function(scope,
 #   return(list(capridat, fdat))
 # }
 
-convertarguments2values<-function(f=NULL, ...){
-  # Function that helps debugging - converts all arguments into values
-  #          in the global environment so that the function can
-  #          be checked directly line by line
-  
-  l<-as.list(match.call())
-  save(l, file="l.rdata")
-  for (i in 2:length(l)){
-    #cat("\n", i, "Assigning ", l[[i]], " to ", paste(names(l)[i],collapse="") , "...")
-    cat("\nstart",i,":", names(l)[i])
-    n<-names(l)[i]
-    if(! exists("n")){
-      cat("\nNo argument name given for ", l[[i]],". Tentatively set to ",l[[i]])
-      n<-l[[i]]
-    }
-    g<-eval(l[[i]])
-    cat(". ", n, " is character", g)
-    assign(n, g, envir=.GlobalEnv)
-  }
-  #print(as.list(match.call()))
-  # Get all arguments requested and their default values
-  if(! is.null(f)) {
-    a <- formals(f)
-    na <- names(a)
-    va <- as.character(unlist(a))
-    
-  }
-  
-  return(l)
-}
-
 getcapriversion<-function(){
   capriversion <- as.data.frame(matrix(nrow=1, ncol=6))
   colnames(capriversion) = c("CAPRI_task", "Date", "Revision", "FilesOutput","Branch", "Note")
