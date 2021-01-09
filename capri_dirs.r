@@ -16,13 +16,13 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   google <- "x:/adrian/google/"
 
 }else if(Sys.info()[4]=="D01RI1600881"){ #checks machine name
-
+  
   # PC in office 27b  
   serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/"
   d5space<-"\\\\ies-ud01.jrc.it/D5_agrienv/Data/"
   localpath<-"x:/adrian/models/capri/"
   curdir<-serverpath
-
+  
   gamspath<-"X:/dev/GAMS/win64/24.4"
   gamspath<-"C:/GAMS/win64/24.8"
   gamspath<-"C:/Program Files/GAMS/win64/24.8"
@@ -36,16 +36,20 @@ if(Sys.info()[4]=="L01RI1203587"){ #checks machine name
   
 }else if(Sys.info()[4]=="S-JRCIPRAP246P"){ #checks machine name
   
-  # CAPRI server (new 2018)
-  serverpath<-"D:/dev/CAPRImodel/"
+  # PC in office 27b  
+  serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/"
+  d5space<-"\\\\ies-ud01.jrc.it/D5_agrienv/Data/"
   localpath<-"x:/adrian/models/capri/"
   curdir<-serverpath
-
-  gamspath<-"c:/Apps/GAMS//win64/25.1"
-  workpath<-"\\\\tsclient/x/adrian/tools/rprojects/"
+  
+  gamspath<-"C:/Apps/GAMS/win64/25.1"
+  workpath<-"x:/adrian/tools/rprojects/"
+  workpath<-"D:/dev/"
   capridat<-paste0(curdir, "capriresults_ecampa3/")
+  datapath<-paste0(curdir, "capriresults_ecampa3/")
   datapath<-paste0(curdir, "users/leipadr/results/")
-  cgams<-"D:/dev/CAPRImodel/epnf/gams/"
+  cgams<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/epnf/gams/"
+  google <- "x:/adrian/google/"
   
 }else if(Sys.info()[4]=="D01RI1701864"){ #checks machine name
   serverpath<-"\\\\s-jrciprap246p.jrc.it/dev/CAPRImodel/"

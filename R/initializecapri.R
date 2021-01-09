@@ -13,12 +13,14 @@ require(data.table)
 
 
 InitCapriEnv <- function(capri.runfile = NULL,
-                         scope = NULL){
+                         addcomment = "",
+                         scope = NULL,
+                         startextraction=FALSE){
   
-  require(gdxrrw)
+  rm(list=setdiff(objects(), c("capri.runfile", "addcomment", "scope", "startextraction")))
   
-  
-  
+  #require(gdxrrw)
+  source("f_tools.r")
   
   if(! is.null(capri.runfile)){
     
@@ -27,14 +29,14 @@ InitCapriEnv <- function(capri.runfile = NULL,
     # therefore here all lines with $SETGLOBAL will be retrieved.
     # However, some are removed as they are irrelevant for most CAPRI data extraction tasks.
     # Note that the spelling has to follow CAPRI customs...
-    con <- file(caprirunfile, open = "r")
+    con <- file(capri.runfile, open = "r")
     setglobal <- readLines(con)
     setglobal <- setglobal[grepl("setglobal|time and date", setglobal, ignore.case=TRUE)]
     setglobal <- setglobal[! grepl("Rexe|Trollexe|gamsArg|procSpeed|JAVA|CMD", setglobal)]
     setglobal <- setglobal[! grepl("regcge_scenario|countries|result_type_underScores|lst2|fst[24]", setglobal)]
     setglobal <- setglobal[! grepl("regLevel|initialLUfile_|tradeMatrixInputFileName_", setglobal)]
     setglobal <- setglobal[! grepl("policy_blocks|modArmington|explicit_NTM|tagg_module|yani_m|REGCGE", setglobal)]
-    setglobal <- setglobal[! grepl("altLicense|NET_MIGR|FIX_BUDGET_FAC_SUBS|Supply|abMob|closure_|solpringSupply|limrow|limcol", setglobal)]
+    setglobal <- setglobal[! grepl("NET_MIGR|FIX_BUDGET_FAC_SUBS|Supply|abMob|closure_|solpringSupply|limrow|limcol", setglobal)]
     setglobal <- gsub("\\*   Time and date   :", "$SETGLOBAL Time", setglobal)
     close(con)
     
@@ -62,32 +64,49 @@ InitCapriEnv <- function(capri.runfile = NULL,
     # Folder of results-data. As sometimes runs build on results,
     # but don't want to overwrite, a separate result-folder can 
     # be defined for the storing the results of the current CAPRI run.
-    cenv$resin <- setglobals[V1 == "results_in", V2]
-    cenv$resout <- setglobals[V1 == "results_out", V2]
+    cenv$resin <- paste0(setglobals[V1 == "results_in", V2], "/")
+    cenv$resout <- paste0(setglobals[V1 == "results_out", V2], "/")
     if(cenv$resin == '') cenv$resin <- setglobals[V1 == "Resdir", V2]
     if(cenv$resout == '') cenv$resout <- setglobals[V1 == "Resdir", V2]
+    if(cenv$resin == 'results_in/') cenv$resin <- paste0(setglobals[V1 == "Resdir", V2], "/")
+    if(cenv$resout == 'results_out/') cenv$resout <- paste0(setglobals[V1 == "Resdir", V2], "/")
+    
+    # Time of cur_run file
+    cenv$time <- gsub(":", "", setglobals[V1 == "Time", V2])
+    cenv$time <- paste0(substr(cenv$time, 1, 10), "_", substr(cenv$time, 11, 16))
     
     # Folder where input data for CAPRI runs are stored
-    cenv$datdir <- setglobals[V1 == "Datdir", V2]
+    cenv$datdir <- paste0(setglobals[V1 == "Datdir", V2], "/")
     
     # Scratch dir - directory for temporary files or for debugging files
-    cenv$scrdir <- setglobals[V1 == "scrdir", V2]
+    cenv$scrdir <- paste0(setglobals[V1 == "scrdir", V2], "/")
+    
+    # GAMS dir - directory with current gams version
+    cenv$gamsdir <- paste0(setglobals[V1 == "gamsPath", V2], "/")
     
     # Additional suffix for the result files
     cenv$resid <- setglobals[V1 == "ResId", V2]
     if(cenv$resid == 'ResId') cenv$resid <- ''
+    
+    cenvfile <- paste0("cur_run_", substr(cenv$time, 1, 10), "_", substr(cenv$time, 11, 16), ".gms")
+    wfile <- file(paste0("capriextractions/", cenvfile), open = "w")
+    writeLines(addcomment, wfile)
+    writeLines(setglobal, wfile)
+    close(wfile)
+    
   }else{
     RetrieveCapriInit()
   }
   
-  startextract(scope=scope)  
+  if(startextraction) startextract(scope=scope)  
   
   # Push updated c into the global environnment
   cenv <<- cenv
-  if(gdxrrw::igdx() == FALSE){
-    gdxrrw::igdx(cenv$gamsdir)
-  }
+  # if(gdxrrw::igdx() == FALSE){
+  #   gdxrrw::igdx(cenv$gamsdir)
+  # }
   
+  GetCapriSets()
   StoreCapriInit()
   invisible()
   

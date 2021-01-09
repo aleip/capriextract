@@ -26,8 +26,8 @@
 
 
 filtermultiple<-function(scope, 
-                         cols=curcols, rows=currows, ydim="Y", curdim5=NULL, regi, 
-                         curcountries, curyears="08", baseyear='08', curscens='', curscensshort='',
+                         cols=curcols, rows=currows, ydim="Y", curdim5=NULL, regi=NULL, 
+                         curcountries, curyears="12", baseyear='12', curscens='', curscensshort='',
                          resultfile=NULL){
   
   nfiles<-length(curcountries)*length(curscens)*length(curyears)
@@ -78,8 +78,8 @@ filtermultiple<-function(scope,
   if(! exists("commonname")) commonname <- ""
   if(! exists("flag")) flag <- paste0("temp_", paste(curcountries, collapse = ""), scope)
   capridat<-Reduce(rbind, cdat)
-  info <<- fdat
-  caprid <<- capridat
+  info <- fdat
+  caprid <- capridat
   
   if(! is.null(resultfile)) {
     cat("\nSave to ", resultfile)
@@ -90,8 +90,8 @@ filtermultiple<-function(scope,
 }
 
 filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=NULL,
-                     ydim="Y", curdim5=NULL,regi, 
-                     curcountry, curyear="08", baseyear='08', 
+                     ydim="Y", curdim5=NULL,regi=NULL, 
+                     curcountry, curyear="12", baseyear='12', 
                      curscen='', curscenshort=''){
   
   if(reload==1){
@@ -291,8 +291,8 @@ opendata<-function(scope,
     #if(scope=="capdistimes") datapath<-paste0(d5space, "capdis_results/20181121_timeseries/")
     if(scope=="capdistimes") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear,curyear)
     if(grepl("capdistimes", scope)) datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
-    datafile<-paste0(datapath,datafile,".gdx")
-    dataparm<-"xobs"
+    datafile<-paste0(cenv$resout,datafile,".gdx")
+    dataparm<-"XOBS"
     ydim<-""
     datanames<-c("rall", "cols", "rows", "value")
     if(scope=="capdistimesLU"){
@@ -305,7 +305,12 @@ opendata<-function(scope,
     #d<-list(datafile,dataparm,datanames,ydim)
     #Wrap a 'try' around in case there is a problem with the gdx file
     capridat <- NULL
-    try(capridat<-rgdx.param(datafile,dataparm), silent = TRUE)
+    #if(igdx()==TRUE){
+    #  try(capridat<-as.data.table(rgdx.param(datafile,dataparm)), silent = TRUE)
+    #}else{
+      system(paste0("gdxdump.exe ", datafile, " output=capriextract.csv format=CSV symb=", dataparm))
+      capridat <- fread("capriextract.csv")
+    #}
     if(! is.null(capridat)){
       names(capridat)<-datanames
       if(scope=="capdistimes") {

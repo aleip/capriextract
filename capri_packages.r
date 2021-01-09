@@ -5,7 +5,8 @@ library(data.table)
 library(plyr)
 #library(devtools)
 #install_github("hadley/dplyr@master")   #to install the last version of dplyr
-library(dplyr)    #installed the dev version from https://github.com/hadley/dplyr
+
+###library(dplyr)    #installed the dev version from https://github.com/hadley/dplyr
 #library(reshape)
 library(reshape2)
 library(stats)
