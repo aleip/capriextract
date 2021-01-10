@@ -72,7 +72,7 @@ extract4kipinca <- function(
   
   # 5. Combine data for KIP-INCA : extract relevant data that are submitted to the EEA
   #    Note 20210108 off-farm grazing data are not yet included
-  done <- combinedata4kipinca(date2load=savedate, reginame = reginame, yearrange = yearrange)
+  # done <- combinedata4kipinca(date2load=savedate, reginame = reginame, yearrange = yearrange)
   
   # 6. Perform checks on distributions and outliers and clean very small (delete) and high MANAPP (put cap) values
   #    Some additional tests are carried out below with the nbudget data loaded. If still necessary 
@@ -82,8 +82,8 @@ extract4kipinca <- function(
   # 7. Write out in the format agreed with EEA
   # Note 20200108 the function requires 'HeadperHa' which was loaded from p_livestock
   #      This is currently not extracted and needs to be added
-  cat("\n", paste0(savepath, "/xobs_", reginame, "_", yearrange, "_NBUDGET", savedate, "_dcastclean.rdata"))
-  load(     paste0(savepath, "/xobs_", reginame, "_", yearrange, "_NBUDGET", savedate, "_dcastclean.rdata"))
+  cat("\n", paste0(savepath, "/xobs_", reginame, "_", yearrange, "_GHGNtot", savedate, "_dcastclean.rdata"))
+  load(     paste0(savepath, "/xobs_", reginame, "_", yearrange, "_GHGNtot", savedate, "_dcastclean.rdata"))
   wrapoverwrite(x = nbudget[, -c("CAPRINUTS2", "CNTR_CODE"), with=FALSE], reginame = reginame, yearrange=yearrange)
   writelivestock(paste0(savepath, "/xobs_", reginame, "_", yearrange, "_LIVESTOCK_", format(Sys.time(), "%Y%m%d"), ".rdata"), reginame = reginame)
   
