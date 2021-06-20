@@ -351,3 +351,22 @@ checkCropNbudget<-function(x, crop, output="error"){
   checkaggvsdet(capridat, "NMAN", c("NMANAP", "NMANGR"), output)
   
 }
+
+checkduration <- function(){
+  # Check speed of capdis_timeseries
+  require(openxlsx)
+  source("R/initializecapri.R")
+  currun <- "cur_run.gms"
+  InitCapriEnv(capri.runfile = currun, addcomment = "KIP-INCA run")
+  
+  xobsfiles <- data.table(regions=list.files(path = paste0(cenv$resout, "capdis/xobstseries/"), pattern = "xobs.*2012.*gdx", full.names = FALSE))
+  xobsfiles[, ctime12 := file.info(paste0(cenv$resout, "capdis/xobstseries/", regions))$mtime ]
+  xobsfiles[, ctime18 := file.info(paste0(cenv$resout, "capdis/xobstseries/", gsub("2012", "2018", regions)))$mtime ]
+  xobsfiles[ctime18>ctime12, tdiff_hours := as.numeric(ctime18 - ctime12)/60]
+  hist(as.numeric(xobsfiles[!is.na(tdiff_hours)]$tdiff_hours), breaks = seq(0, ceiling(max(xobsfiles$tdiff_hours, na.rm = TRUE)), 0.5))
+  head(xobsfiles[order(tdiff_hours, decreasing = TRUE)], 20)
+  as.numeric(max(xobsfiles$ctime18, na.rm = TRUE)-min(xobsfiles$ctime12, na.rm = TRUE))*24
+  write.xlsx(xobsfiles[order(tdiff_hours, decreasing = TRUE)], 
+             file=paste0(cenv$resout, "capdis/xobstseries/duration_of_runs", format(Sys.time(), "%Y%m%d"), ".xlsx"))
+  
+}

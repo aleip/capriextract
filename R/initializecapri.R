@@ -546,3 +546,77 @@ startextract<-function(scope){
   source("plotrelem.r")
   
 }
+startextractcapdis <- function(folderdate){
+  
+  #' Extraction of Nitrogen surplus data at HSU level for the KIP-INCA project
+  #'
+  #' Extracts relevant elements for the Gross Nitrogen Surplus by crop at the 
+  #' spatial levle of Spatial Homogeneous Units (HSU) and writes them (i) into 
+  #' rdata-files and (ii) into csv files for distribution.
+  #' 
+  #' @author Adrian Leip \email{adrian.leip@ec.europa.eu}
+  #' @references Leip, A., Koeble, R., 2018 The CAPRI disaggregation. Report in preparation
+  #' @referemces Leip, A., Koeble, R., Reuter, H.I., Lamboni, M., Homogeneous Spatial Units (HSU) - a Pan-European geographical basis for environmental and socio-economic modelling. PANGAEA. https://doi.org/10.1594/PANGAEA.860284, Unpublished data archive
+  #' @references Lamboni, M., Koeble, R., Leip, A., 2016. Multi-scale land-use disaggregation modelling: Concept and application to EU countries. Environ. Model. Softw. 82, 183-217. https://doi.org/10.1016/j.envsoft.2016.04.028
+  #' @references Leip, A., Marchi, G., Koeble, R., Kempen, M., Britz, W., Li, C., 2008. Linking an economic model for European agriculture with a mechanistic model to estimate nitrogen and carbon losses from arable soils in Europe. Biogeosciences 5, 73-94. https://doi.org/10.5194/bg-5-73-2008
+  #' 
+  #' @return saves rdata and csv files with relevant data
+  #' 
+  
+  # Hard-coded elements embedded as a function of (different) scopes
+  scope<<-"capdistimes"                 
+  #rm(list=setdiff(objects(), "capri")); 
+  setwd(gsub("logfiles", "capriextract", getwd())); 
+  
+  #CAPRI already initialized - startextract called from InitCapriEnv
+  #source("R/initializecapri.R"); 
+  #InitCapriEnv(scope = scope)
+  
+  #source("capri_packages.r")           # Data libararies require
+  require(openxlsx)
+  #' CAPRI-EPNF branch used on 
+  svnpath <<- "https://svn1.agp.uni-bonn.de/svn/capri/branches/epnf"
+  svnrespath <<- "https://svn.jrc.es/repos/GHG/ECAMPA4Results"
+  
+  #' @source 
+  capriversion <- as.data.frame(matrix(nrow=1, ncol=6))
+  colnames(capriversion) = c("CAPRI_task", "Date", "Code-Revision", "FilesOutput","Branch", "Note")
+  capriversion[1,] <- c("CAPREG-12", "20200706", "351", "res_%BAS%%MS%.gdx", "ECAMPA4Results", "BAS=Base year, MS=Member State") 
+  capriversion[2,] <- c("Inventories-12", "20210305", "9319", "res_time_series_GHG_%MS%.gdx'", "ECAMPA4Results", "MS=Member State") 
+  capriversion[3,] <- c("CAPDIS-LAPM", "20210107", "9185", "capdis_%regionname%_10GRID.gdx", "JRC", "regionname: first four characters of NUTS2") 
+  capriversion[4,] <- c("CAPDIS-CAPREG", "20210112", "9188", "xobs_2_%MS%_%BAS%%BAS%", "JRC", "BAS=Base year, MS=Member State") 
+  capriversion[5,] <- c("CAPDIS-12-2xxx", "20210115", "9224", "xobs_2_%MS%_%BAS%%Y%", "JRC", "BAS=Base year 2 digits, Y=Simulation year 4 digits") 
+  capriversion <<- capriversion
+  
+  #source("capri_dirs.r")               # Defines paths to data depending machine
+  #source("capri_sets.r")               # Loads all relevant sets from a CAPRI dump-file
+  source("capriextract_functions.r")
+  source("xobsfunctions.r")
+  source("openfiltermultiple.r")
+  #source("R/initializecapri.R"); 
+  #source(".init_leipadrD01RI1600881")
+  d5space<<-"\\\\ies-ud01.jrc.it/D5_agrienv/Data/"
+  savepath<<-paste0(d5space, "/capdis_results/", folderdate, "_", project)
+  if(! dir.exists(savepath)){dir.create(savepath)}
+  
+  n2o<<-c("N2OAPP", "N2OGRA", "N2OSYN", "N2OHOU")
+  
+  curcountries <<- substr(s$nuts0, 1, 2)
+  cntnodisagg <<- c("AL", "MK", "CH", "CS", "MO", "BA", "KO", "NO", "TU", "HR")
+  eu28<<-setdiff(curcountries, cntnodisagg)
+  misregOK <<- c("AT130000", # Wien
+                 "BL100000", # Region de Bruxelles-Capitale
+                 "DE300000", # Berlin
+                 "DE500000", # Bremen
+                 "DE600000", # Hamburg
+                 "ES630000", # Ciudad Autonoma de Ceuta (ES)
+                 "ES640000", # Ciudad Autonoma de Melilla (ES)
+                 "ES700000", # Canarias
+                 "PT200000", # Acores
+                 "PT300000" # Madeira
+  )
+  
+  mcactuaar <<- c(s$mcact, "UAAR")
+  #datapath <<- paste0(cenv$capri, "epnfresults/")
+  writemeta()
+  }

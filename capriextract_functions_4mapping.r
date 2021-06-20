@@ -1,4 +1,5 @@
-loadGISenv<-function(loadHSU=FALSE, hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
+loadGISenv<-function(loadHSU=FALSE, loadFSU = TRUE,
+                     hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
                      n23_dir = "\\\\ies\\d5\\agrienv\\Data\\FSU\\admin_units",
                      uscie_dir = "\\\\ies\\d5\\agrienv\\Data\\uscie\\uscie_raster_FSU",
                      fsu_dir = "\\\\ies\\d5\\agrienv\\Data\\FSU"
@@ -8,14 +9,10 @@ loadGISenv<-function(loadHSU=FALSE, hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
   require(data.table)
   require(raster)
   require(rgdal)
-  if(!exists("nuts23")) {
-    cat("\n GISCO_NUTS2_3_2010_with_attr_laea loading ...")
-    nuts0 <<- readOGR(dsn = n23_dir, layer = "CAPRI_NUTS_RG_01M_2016_3035_LEVL_0_plus_BA_XK_final_wfoa")
-    nuts2 <<- readOGR(dsn = n23_dir, layer = "CAPRI_NUTS_RG_01M_2016_3035_LEVL_2_plus_BA_XK_final_wfoa")
-    nuts3 <<- readOGR(dsn = n23_dir, layer = "CAPRI_NUTS_RG_01M_2016_3035_LEVL_3_plus_BA_XK_final_wfoa")
-  }else{
-    #cat("\n CAPRI_NUTS_RG_01M_2016_3035_LEVL_0-2-3_plus_BA_XK_final_wfoa already loaded")
-  }
+  #cat("\n GISCO_NUTS2_3_2010_with_attr_laea loading ...")
+  if(! exists("nuts0")) nuts0 <<- readOGR(dsn = n23_dir, layer = "CAPRI_NUTS_RG_01M_2016_3035_LEVL_0_plus_BA_XK_final_wfoa")
+  if(! exists("nuts2")) nuts2 <<- readOGR(dsn = n23_dir, layer = "CAPRI_NUTS_RG_01M_2016_3035_LEVL_2_plus_BA_XK_final_wfoa")
+  if(! exists("nuts3")) nuts3 <<- readOGR(dsn = n23_dir, layer = "CAPRI_NUTS_RG_01M_2016_3035_LEVL_3_plus_BA_XK_final_wfoa")
   #ogrInfo(dsn = n23_dir)
   #summary(nuts23)
   #nuts23@proj4string
@@ -31,6 +28,15 @@ loadGISenv<-function(loadHSU=FALSE, hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
       hsu <<- readOGR(dsn = hsu_dir, layer = "hsu_eu28_CH_NO_EXYUG")
     }else{
       cat("\n hsu_eu28_CH_NO_EXYUG already loaded")
+    }
+  }
+  
+  if(loadFSU){
+    if(!exists("fsu")) {
+      cat("\n FSU_delimdata_layer_only_fsuID...")
+      fsu <<- readOGR(dsn = fsu_dir, layer = "FSU_delimdata_layer_only_fsuID")
+    }else{
+      cat("\n FSU_delimdata_layer_only_fsuID already loaded")
     }
   }
   
@@ -53,8 +59,10 @@ loadGISenv<-function(loadHSU=FALSE, hsu_dir = "\\\\ies\\d5\\agrienv\\Data\\HSU",
     alluscies <- as.data.table(values(uscie1km))
     alluscies <<- alluscies[, n := .I]
     
-    load(paste0(fsu_dir, "/FSU_delin.rdata"))
-    fsu2nuts2 <- FSU_delim_aggr[, .(fsu=fsuID, CAPRINUTS2)]
+    #load(paste0(fsu_dir, "/FSU_delin.rdata"))
+    #fsu2nuts2 <- FSU_delim_aggr[, .(fsu=fsuID, CAPRINUTS2)]
+    load(paste0(fsu_dir, "/fsu_delimdata.rdata"))
+    fsu2nuts2 <- fsu_delimdata[, .(fsu=fsuID, CAPRINUTS2)]
     fsu2nuts2 <<- fsu2nuts2[CAPRINUTS2!=""]
   }
   

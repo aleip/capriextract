@@ -31,13 +31,12 @@ filtermultiple<-function(scope,
                          resultfile=NULL){
   
   nfiles<-length(curcountries)*length(curscens)*length(curyears)
-  cat("\n", length(curcountries), curcountries, length(curscens), length(curyears), nfiles)
+  #cat("\n", length(curcountries), curcountries, length(curscens), length(curyears), nfiles)
   
   if(length(curscensshort) == 1){
     # They get all the name - copy to vector of length curscens
     curscensshort <- rep(curscensshort, length(curscens))
   }
-  cat("\ncols=", cols)
   cdat<-list()
   fdat<-data.frame(nrow=0)
   n<-0
@@ -45,6 +44,7 @@ filtermultiple<-function(scope,
     for(y in 1:max(1,1:length(curcountries))){
       for(z in 1:max(1,length(curscens))){
         n<-n+1
+        #cat("\n filtermultiple curcountries", curcountries)
         capridat<- filteropen(scope, 
                               reload=1, 
                               # Filtering options
@@ -93,7 +93,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
                      ydim="Y", curdim5=NULL,regi=NULL, 
                      curcountry, curyear="12", baseyear='12', 
                      curscen='', curscenshort=''){
-  
+  #cat("\n filteropen: curcountry", curcountry)
   if(reload==1){
     capridat<-opendata(scope,curcountry,curyear,baseyear, curscen, curscenshort)
     fattr<-capridat[[2]]
@@ -104,6 +104,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
   #View(capridat)
   #save(list=objects(), file="test105.rdata")
   
+  save(list=objects(), file="t.rdata")
   fattr$filterCOLS<-paste(curcols, collapse="-")
   fattr$filterROWS<-paste(currows, collapse='-')
   fattr$filterCountry<-paste(curcountry, collapse="-")
@@ -132,7 +133,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
   if(! scope%in%c("capdistimes","capdistimesLU","capmod", "tseriesGHG", "lapm")){
     if(! grepl("capmod", scope)){
       if(ncol(capridat)>4){
-        if(exists("ydim")) capridat<-capridat[capridat$Y%in%as.character(ydim),]
+        if(exists("ydim") & ! grepl("baseyear|capreg", scope)) capridat<-capridat[capridat$Y%in%as.character(ydim),]
         if(! is.null(curyear)){
           if(!grepl("^20",curyear)){curyear<-paste0("20",curyear)}
           capridat$y<-curyear
@@ -192,7 +193,7 @@ filteropen<-function(scope, reload=0, capridat=capridat, curcols=NULL, currows=N
       cat("\n", paste0(curscenshort, ssp, "_", yrs, "_", run))
     }
   }
-  #save(list=objects(), file="test.rdata")
+  save(capridat, file="test.rdata")
   #stop()
   return(list(capridat, fattr))
 }
@@ -226,6 +227,7 @@ opendata<-function(scope,
   #' @export
   #' 
   # Check if datafile contains already a path
+  datapath <- cenv$resin
   if(grepl(":", curscen) | grepl("jrciprap246p", curscen)) {
     pathincluded <- 1
     datapath <- ""
@@ -237,18 +239,27 @@ opendata<-function(scope,
     datafile<-paste0(datafile,curcountry,".gdx")
     datafile<-paste0(datapath,"capreg/",datafile)
     dataparm<-"DATA2"
-    ydim<-"Y"
+    datanames<-c("rall", "cols", "rows", "y", "value")
+    ydim<-"y"
+  }
+  if(grepl("capreg", scope)){
+    datafile<-paste0("res_", baseyear)
+    datafile<-paste0(datafile,curcountry,".gdx")
+    datafile<-paste0(datapath,"capreg/",datafile)
+    dataparm<-"DATA2"
+    datanames<-c("rall", "cols", "rows", "y", "value")
+    ydim<-"y"
   }
   if(grepl("nbalance|tseries",scope)){
     datafile<-paste0(curcountry,"_12.gdx")
     datafile<-paste0(datapath,datafile)
   }
   if(grepl("tseriesGHG", scope)){
-    datafile<-paste0("Capreg_tseries/GHGperCountry/")
-    datafile<-paste0(datafile, "res_time_series_GHG_", curcountry, ".gdx")
+    datafile<-paste0("inventories/GHGperCountry/")
+    datafile<-paste0(datafile, "res_time_series_GHG_", curcountry, curyear, ".gdx")
     datafile<-paste0(datapath, datafile)
     dataparm <- 'DATA2'
-    datanames <- data4dim
+    datanames<-c("rall", "cols", "rows", "y", "value")
   }
   if(grepl("nlca",scope)){
     datafile<-paste0("capmod/res_2_0830",curscen,".gdx")
@@ -289,8 +300,10 @@ opendata<-function(scope,
     if(scope=="capdis") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
     if(scope=="capdiscapreg") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear, baseyear)
     #if(scope=="capdistimes") datapath<-paste0(d5space, "capdis_results/20181121_timeseries/")
-    if(scope=="capdistimes") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear,curyear)
+    #if(scope=="capdistimes") datafile<-paste0("capdis/xobs_2_",curcountry,"_",baseyear,curyear)
     if(grepl("capdistimes", scope)) datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"_",baseyear,curyear)
+    if(grepl("capdistimes", scope)) if(grepl("NO", curcountry)) {
+      datafile<-paste0("capdis/xobstseries/xobs_2_",curcountry,"000_",baseyear,curyear)}
     datafile<-paste0(cenv$resout,datafile,".gdx")
     dataparm<-"XOBS"
     ydim<-""
